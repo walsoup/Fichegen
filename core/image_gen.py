@@ -4,7 +4,7 @@ from typing import Optional, Dict, List, Any
 from google import genai
 from google.genai import types
 
-from src.config import (
+from config import (
     API_KEYS, IMAGE_MODEL, STYLE_TEMPLATES, COMPLEXITY_LEVELS
 )
 

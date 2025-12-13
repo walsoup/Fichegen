@@ -5,8 +5,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PyQt6 import QtWidgets, QtGui
-from src.ui.main_window import MainWindow
-from src.config import ICON_PATH
+from ui.main_window import MainWindow
+from config import ICON_PATH
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

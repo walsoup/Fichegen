@@ -7,27 +7,27 @@ from typing import Optional, List, Dict, Any
 
 from PyQt6 import QtCore
 
-from src.config import (
+from config import (
     DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, API_KEYS,
     get_configured_fiche_prompt, get_configured_flash_model,
     get_configured_pro_model, HAS_IMAGE_GENERATION, HAS_DOCX,
     get_configured_page_finding_prompt, GEMINI_TOC_MODEL
 )
-from src.core.ai import (
+from core.ai import (
     generate_with_fallback, _fiche_response_schema, _parse_structured_response,
     _render_fiche_markdown, _evaluation_response_schema, _render_evaluation_markdown,
     _generate_with_model
 )
-from src.core.toc import (
+from core.toc import (
     find_guide_file, find_textbook_file, extract_table_of_contents,
     get_cached_toc, parse_full_toc_with_ai, save_toc_to_cache,
     detect_page_offset, correct_lesson_topic_syntax, parse_page_numbers,
     find_pages_from_cached_toc, get_pages_from_toc, extract_lesson_text
 )
-from src.core.image_gen import (
+from core.image_gen import (
     generate_fiche_illustration, generate_evaluation_illustrations, image_to_base64
 )
-from src.utils.helpers import get_top_rated_examples
+from utils.helpers import get_top_rated_examples
 
 # --- QThread worker that bridges queue events to Qt signals ---
 class QueueProxy:

@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets, QtCore, QtGui
-from src.config import (
+from config import (
     PDF_TEMPLATES,
     DEFAULT_PRO_MODEL,
     DEFAULT_FLASH_MODEL,

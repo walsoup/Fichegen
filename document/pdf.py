@@ -10,8 +10,8 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 
-from src.config import PDF_TEMPLATES
-from src.utils.helpers import safe_color
+from config import PDF_TEMPLATES
+from utils.helpers import safe_color
 
 def create_pdf_styles(template):
     """Create sophisticated ReportLab styles based on template configuration"""

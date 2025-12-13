@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from PyQt6 import QtCore
 
-from src.config import (
+from config import (
     API_KEYS, _GENAI_CLIENT, _GENAI_CLIENT_KEY, _GENAI_CLIENT_LOCK,
     get_configured_gemini_model, get_configured_flash_model,
     _clamp_temperature

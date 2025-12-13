@@ -4,7 +4,7 @@ from datetime import datetime
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtGui import QAction
 
-from src.config import (
+from config import (
     PDF_TEMPLATES,
     DEFAULT_PRO_MODEL,
     DEFAULT_FLASH_MODEL,
@@ -22,11 +22,11 @@ from src.config import (
     load_api_keys_from_settings,
     save_rating_record
 )
-from src.core.workers import GenerationWorker, EvaluationWorker, QuizWorker
-from src.core.toc import find_guide_file, get_cached_toc
-from src.document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
-from src.document.docx import save_fiche_to_docx, save_evaluation_to_docx
-from src.ui.preferences import PreferencesDialog
+from core.workers import GenerationWorker, EvaluationWorker, QuizWorker
+from core.toc import find_guide_file, get_cached_toc
+from document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
+from document.docx import save_fiche_to_docx, save_evaluation_to_docx
+from ui.preferences import PreferencesDialog
 
 PYQT6 = True
 

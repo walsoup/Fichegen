@@ -6,7 +6,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from src.document.pdf import generate_smart_filename
+from document.pdf import generate_smart_filename
 
 HAS_DOCX = True
 

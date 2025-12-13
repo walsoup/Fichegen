@@ -4,13 +4,13 @@ import re
 from typing import List, Dict, Any, Optional
 import pdfplumber
 
-from src.config import (
+from config import (
     TOC_CACHE_DIR, TABLE_OF_CONTENTS_PAGES, API_KEYS,
     get_configured_toc_prompt, get_configured_gemini_toc_model,
     get_configured_gemini_offset_model, get_configured_gemma_syntax_model,
     get_configured_page_finding_prompt, GEMINI_TOC_MODEL
 )
-from src.core.ai import _generate_with_model
+from core.ai import _generate_with_model
 
 def get_cached_toc(guide_path: str, guides_dir: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
     """

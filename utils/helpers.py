@@ -2,7 +2,7 @@ import os
 import json
 from typing import Optional, List, Dict, Any
 from reportlab.lib import colors
-from src.config import RATINGS_FILE
+from config import RATINGS_FILE
 
 def _clamp_temperature(value: Optional[float]) -> float:
     if value is None:
