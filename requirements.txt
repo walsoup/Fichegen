@@ -1,0 +1,6 @@
+PyQt6
+google-genai
+pdfplumber
+python-docx
+reportlab
+Pillow
