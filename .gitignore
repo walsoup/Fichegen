@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.env
+keys.txt
+logs/
+toc_cache/
+fiches/
+*.log
