@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, XPreformatted, KeepInFrame
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
-from reportlab.lib.units import cm
+from reportlab.lib.units import cm, inch
 from reportlab.lib import colors
 
 from config import PDF_TEMPLATES
@@ -124,6 +124,37 @@ def create_pdf_styles(template):
         textColor=colors.black,
         spaceAfter=4,
         alignment=TA_LEFT
+    ))
+
+    # Code Block Style
+    styles.add(ParagraphStyle(
+        name='CodeBlockStyle',
+        fontName='Courier',
+        fontSize=body_size - 1,
+        leading=line_height,
+        leftIndent=20,
+        rightIndent=20,
+        backColor=colors.whitesmoke,
+        borderPadding=10,
+        spaceAfter=12,
+        spaceBefore=12,
+        textColor=colors.black
+    ))
+
+    # Blockquote Style
+    styles.add(ParagraphStyle(
+        name='BlockquoteStyle',
+        fontName=f'{font_family}-Oblique',
+        fontSize=body_size,
+        leading=line_height,
+        leftIndent=30,
+        rightIndent=20,
+        spaceAfter=12,
+        spaceBefore=12,
+        textColor=colors.darkslategray,
+        borderWidth=0,
+        borderColor=safe_color(accent_color),
+        borderPadding=0
     ))
     
     # Special styles for different templates
@@ -457,8 +488,12 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
     
     def format_inline_markdown(text, accent):
         """Convert minimal markdown to ReportLab-friendly inline tags"""
+        # Bold
         formatted = re.sub(r'\*\*(.*?)\*\*', f'<b><font color="{accent}">\\1</font></b>', text)
+        # Italic
         formatted = re.sub(r'\*(.*?)\*', r'<i>\1</i>', formatted)
+        # Links: [text](url) -> <link href="url" color="blue">text</link>
+        formatted = re.sub(r'\[(.*?)\]\((.*?)\)', f'<link href="\\2" color="blue">\\1</link>', formatted)
         return formatted
 
     def is_table_line(line):
@@ -482,23 +517,101 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
         accent_hex = colors.HexColor(accent_color)
     except Exception:
         accent_hex = colors.HexColor('#2E8B57')
+        
     idx = 0
     total_lines = len(lines)
 
     while idx < total_lines:
         line = lines[idx].strip()
-        idx += 1
-
+        
         if not line:
+            idx += 1
             continue
 
         # Skip metadata lines if meta banner is shown to avoid duplication
         if show_meta_banner and is_metadata_line(line):
+            idx += 1
             continue
 
-        # Markdown tables
+        # 1. Handle Code Blocks
+        if line.startswith('```'):
+            idx += 1
+            code_lines = []
+            while idx < total_lines:
+                curr_line = lines[idx] # Don't strip to preserve indentation
+                if curr_line.strip().startswith('```'):
+                    idx += 1
+                    break
+                code_lines.append(curr_line)
+                idx += 1
+            
+            if code_lines:
+                code_text = '\n'.join(code_lines)
+                story.append(XPreformatted(code_text, styles['CodeBlockStyle']))
+                story.append(Spacer(1, 10))
+            continue
+
+        # 2. Handle Blockquotes
+        if line.startswith('> '):
+            quote_lines = []
+            # Collect consecutive blockquote lines
+            while idx < total_lines:
+                curr_line = lines[idx].strip()
+                if not curr_line.startswith('> '):
+                    break
+                quote_lines.append(curr_line.lstrip('> ').strip())
+                idx += 1
+            
+            if quote_lines:
+                quote_text = ' '.join(quote_lines)
+                formatted_quote = format_inline_markdown(quote_text, accent_color)
+                story.append(Paragraph(formatted_quote, styles['BlockquoteStyle']))
+                story.append(Spacer(1, 10))
+            continue
+
+        # 3. Handle Images
+        # Format: ![Alt text](path/to/image.png)
+        img_match = re.match(r'!\[(.*?)\]\((.*?)\)', line)
+        if img_match:
+            alt_text = img_match.group(1)
+            img_path = img_match.group(2)
+            
+            # Check if file exists (resolving relative paths if needed)
+            # Assuming paths are absolute or relative to CWD
+            if os.path.exists(img_path):
+                try:
+                    # Resize image if too wide
+                    available_width = 460 # Approx A4 width minus margins
+                    
+                    img_elem = Image(img_path)
+                    img_width = img_elem.drawWidth
+                    img_height = img_elem.drawHeight
+                    
+                    if img_width > available_width:
+                        factor = available_width / img_width
+                        img_elem.drawWidth = available_width
+                        img_elem.drawHeight = img_height * factor
+                    
+                    story.append(img_elem)
+                    story.append(Spacer(1, 6))
+                    
+                    # Add caption if alt text is present
+                    if alt_text:
+                        story.append(Paragraph(alt_text, styles['MetaValueStyle'])) # Use smallish font for caption
+                    
+                    story.append(Spacer(1, 12))
+                except Exception as e:
+                    story.append(Paragraph(f"[Image Error: {e}]", styles['BodyStyle']))
+            else:
+                story.append(Paragraph(f"[Image not found: {img_path}]", styles['BodyStyle']))
+            
+            idx += 1
+            continue
+
+        # 4. Handle Markdown Tables
         if is_table_line(line):
             table_lines = [line]
+            idx += 1
             # Collect subsequent table lines
             while idx < total_lines and is_table_line(lines[idx].strip()):
                 table_lines.append(lines[idx].strip())
@@ -556,15 +669,18 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
                 story.append(Spacer(1, 12))
             continue
 
+        # 5. Handle Headings
         # Main title (#)
         if line.startswith('# '):
             story.append(Paragraph(line.lstrip('# '), styles[template_styles['title']]))
             story.append(Spacer(1, 15))
+            idx += 1
 
         # Section headings (##)
         elif line.startswith('## '):
             story.append(Paragraph(line.lstrip('## '), styles[template_styles['heading']]))
             story.append(Spacer(1, 10))
+            idx += 1
 
         # Sub-headings / Metadata (###)
         elif line.startswith('### '):
@@ -585,18 +701,21 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
             else:
                 # Regular sub-heading
                 story.append(Paragraph(line_content, styles[template_styles['subheading']]))
+            idx += 1
 
-        # Bullet points
+        # 6. Handle Bullet points
         elif line.startswith('- ') or line.startswith('* '):
             bullet_char = template.get('bullet_style', '•')
             bullet_text = line.lstrip('-* ')
             bullet_text = format_inline_markdown(bullet_text, accent_color)
             story.append(Paragraph(bullet_text, styles[template_styles['bullet']], bulletText=bullet_char))
+            idx += 1
 
-        # Regular paragraphs
+        # 7. Regular paragraphs
         else:
             formatted_line = format_inline_markdown(line, accent_color)
             story.append(Paragraph(formatted_line, styles[template_styles['body']]))
+            idx += 1
     
     return story
 

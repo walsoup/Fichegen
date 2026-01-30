@@ -1,3 +1,4 @@
+import sys
 import os
 import threading
 import json
@@ -5,9 +6,15 @@ from PyQt6 import QtCore
 from reportlab.lib.units import cm
 import json
 
-# Base directory
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ICON_PATH = os.path.join(BASE_DIR, "icon.png")
+# Base directory resolution (Compatible with PyInstaller)
+if getattr(sys, 'frozen', False):
+    # Running as compiled app
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running from source
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+ICON_PATH = os.path.join(BASE_DIR, "icon.icns")
 
 try:
     import docx

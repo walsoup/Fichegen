@@ -22,7 +22,7 @@ from config import (
     load_api_keys_from_settings,
     save_rating_record
 )
-from core.workers import GenerationWorker, EvaluationWorker, QuizWorker
+from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ModelUpdateWorker
 from core.toc import find_guide_file, get_cached_toc
 from document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
 from document.docx import save_fiche_to_docx, save_evaluation_to_docx
@@ -164,13 +164,64 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Ready")
         self.resize(1200, 800)
 
+        # Start background model update check
+        current_pro = self.settings.value("custom_pro_model", DEFAULT_PRO_MODEL)
+        current_flash = self.settings.value("custom_flash_model", DEFAULT_FLASH_MODEL)
+        self.model_updater = ModelUpdateWorker(current_pro, current_flash)
+        self.model_updater.models_found.connect(self.on_models_updated)
+        self.model_updater.start()
+
+    def on_models_updated(self, old_pro, new_pro, old_flash, new_flash):
+        """Called when ModelUpdateWorker finds newer models via Gemma analysis."""
+        try:
+            # Build the message for the dialog
+            changes = []
+            if new_pro:
+                changes.append(f"Pro model:\n   {old_pro}  →  {new_pro}")
+            if new_flash:
+                changes.append(f"Flash model:\n   {old_flash}  →  {new_flash}")
+            
+            if not changes:
+                return
+            
+            message = "🆕 New Gemini model(s) available!\n\n" + "\n\n".join(changes)
+            
+            # Show confirmation dialog
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "New Gemini Models Available",
+                message,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                QtWidgets.QMessageBox.StandardButton.Yes
+            )
+            
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+                # Apply the updates
+                if new_pro:
+                    self.settings.setValue("custom_pro_model", new_pro)
+                if new_flash:
+                    self.settings.setValue("custom_flash_model", new_flash)
+                
+                self.statusBar().showMessage("✨ Models updated!", 5000)
+            else:
+                self.statusBar().showMessage("Model update skipped", 3000)
+                
+        except Exception as e:
+            print(f"Error showing model update dialog: {e}")
+
     def _apply_style(self, mode: str):
-        # On macOS we avoid global stylesheets and follow the system appearance.
+        # On macOS we prefer native appearance with optional minimal polish
         self.current_theme = "light" if mode not in ("light", "dark") else mode
         try:
-            self.setStyleSheet("")
+            # Apply minimal polish that doesn't override native look
+            from ui.styles import get_stylesheet
+            self.setStyleSheet(get_stylesheet(mode))
         except Exception:
-            pass
+            # Fallback: no stylesheet at all (pure native)
+            try:
+                self.setStyleSheet("")
+            except Exception:
+                pass
         # Minimal header label styling without overriding platform look
         try:
             if hasattr(self, 'title_label'):
@@ -2850,6 +2901,9 @@ Documents/
         self.current_content = ""
 
     def _load_settings(self):
+        # Ensure API keys are loaded first
+        load_api_keys_from_settings()
+
         # Load settings into the sidebar controls
         self.class_combo.setCurrentText(self.settings.value("class_level", "cm2"))
         self.topic_edit.setText(self.settings.value("topic", ""))

@@ -45,29 +45,81 @@ def _call_model(
     response_mime_type: Optional[str] = None,
     tools: Optional[List[types.Tool]] = None,
     tool_config: Optional[types.ToolConfig] = None,
-):
-    """Shared helper to invoke Gemini models with consistent config handling."""
+    thinking_level: Optional[str] = None,
+    enable_google_search: bool = False,
+    enable_url_context: bool = False,
+    ):
+    """
+    Shared helper to invoke Gemini models with consistent config handling.
+    
+    """
 
     client = get_genai_client()
     if client is None:
         raise RuntimeError("Missing Gemini API key")
 
     config_kwargs: Dict[str, Any] = {"temperature": _clamp_temperature(temperature)}
+    
     if response_schema is not None:
         config_kwargs["response_schema"] = response_schema
     if response_mime_type is not None:
         config_kwargs["response_mime_type"] = response_mime_type
-    if tools is not None:
-        config_kwargs["tools"] = tools
+    
+    # Sanitize config based on model capabilities
+    model_lower = model_name.lower()
+    
+    # Gemma models generally do not support tools/search/thinking
+    if "gemma" in model_lower:
+        thinking_level = None
+        enable_google_search = False
+        enable_url_context = False
+
+    # Build tools list - combine provided tools with search/url tools
+    all_tools = list(tools) if tools else []
+    
+    if enable_google_search:
+        all_tools.append(types.Tool(google_search=types.GoogleSearch()))
+    
+    if enable_url_context:
+        all_tools.append(types.Tool(url_context=types.UrlContext()))
+    
+    if all_tools:
+        config_kwargs["tools"] = all_tools
+    
     if tool_config is not None:
         config_kwargs["tool_config"] = tool_config
+    
+    # Add thinking config if specified
+    if thinking_level:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(
+            thinking_level=thinking_level
+        )
 
     config = types.GenerateContentConfig(**config_kwargs)
-    return client.models.generate_content(
-        model=model_name,
-        contents=contents,
-        config=config,
-    )
+    
+    try:
+        return client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=config,
+        )
+    except Exception as e:
+        # Fallback for models that don't support Thinking Mode (even if we thought they might)
+        # e.g. "Thinking level is not supported for this model."
+        if thinking_level and "thinking level is not supported" in str(e).lower():
+            # Remove thinking config and retry
+            if "thinking_config" in config_kwargs:
+                del config_kwargs["thinking_config"]
+            
+            # Recreate config without thinking
+            fallback_config = types.GenerateContentConfig(**config_kwargs)
+            
+            return client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=fallback_config,
+            )
+        raise e
 
 def _generate_with_model(
     model_name: str,
@@ -78,6 +130,9 @@ def _generate_with_model(
     response_mime_type: Optional[str] = None,
     tools: Optional[List[types.Tool]] = None,
     tool_config: Optional[types.ToolConfig] = None,
+    thinking_level: Optional[str] = None,
+    enable_google_search: bool = False,
+    enable_url_context: bool = False,
 ):
     return _call_model(
         model_name,
@@ -87,6 +142,9 @@ def _generate_with_model(
         response_mime_type=response_mime_type,
         tools=tools,
         tool_config=tool_config,
+        thinking_level=thinking_level,
+        enable_google_search=enable_google_search,
+        enable_url_context=enable_url_context,
     )
 
 def _generate_with_gemini(
@@ -97,6 +155,9 @@ def _generate_with_gemini(
     response_mime_type: Optional[str] = None,
     tools: Optional[List[types.Tool]] = None,
     tool_config: Optional[types.ToolConfig] = None,
+    thinking_level: Optional[str] = "HIGH",  # Default to HIGH for main content gen
+    enable_google_search: bool = False,       # Default to True for main content gen
+    enable_url_context: bool = False,         # Default to True for main content gen
 ):
     return _generate_with_model(
         get_configured_gemini_model(),
@@ -106,6 +167,9 @@ def _generate_with_gemini(
         response_mime_type=response_mime_type,
         tools=tools,
         tool_config=tool_config,
+        thinking_level=thinking_level,
+        enable_google_search=enable_google_search,
+        enable_url_context=enable_url_context,
     )
 
 def generate_with_fallback(
@@ -122,8 +186,14 @@ def generate_with_fallback(
     """
     Generate content using Gemini API with the configured model.
     If Pro model fails and fallback is enabled, automatically retries with Flash model.
-    purpose: for logs ("page-finding", "fiche-generation", "evaluation-generation", etc.)
-    Returns the generated text or None if failed.
+    
+    Args:
+        purpose: for logs ("page-finding", "fiche-generation", "evaluation-generation", etc.)
+        thinking_level: "NONE", "LOW", "MEDIUM", "HIGH" for thinking mode
+        enable_google_search: Allow model to search Google
+        enable_url_context: Allow model to fetch and read URLs
+        
+    Returns the generated response or None if failed.
     """
     settings = QtCore.QSettings("FicheGen", "Pedago")
     enable_fallback = settings.value("enable_model_fallback", "true") == "true"

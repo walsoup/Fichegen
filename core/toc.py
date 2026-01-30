@@ -186,47 +186,59 @@ def detect_page_offset(pdf_path: str, queue) -> int:
                     page = pdf.pages[i]
                     h = page.height
                     w = page.width
-                    # Focus on header (top 12%) and footer (bottom 12%) regions
-                    header = page.within_bbox((0, 0, w, h * 0.12)).extract_text() or ""
-                    footer = page.within_bbox((0, h * 0.88, w, h)).extract_text() or ""
-                    text = f"{header}\n{footer}".strip()
-                    if not text:
-                        # fallback to full page if nothing in header/footer
-                        text = page.extract_text() or ""
-                    if not text:
-                        continue
-
+                    # Focus on header (top 18%) and footer (bottom 18%) regions
+                    header = page.within_bbox((0, 0, w, h * 0.18)).extract_text() or ""
+                    footer = page.within_bbox((0, h * 0.82, w, h)).extract_text() or ""
+                    hf_text = f"{header}\n{footer}".strip()
+                    
+                    text_source = "hf"
+                    text = hf_text
+                    
+                    # If potential candidates logic needs full page for context or valid labels
+                    # We start with HF. If we find nothing, we might look at full page strictly.
+                    
                     physical = i + 1  # 1-based physical index
-
-                    # Prefer explicit formats first
                     candidates: list[int] = []
 
-                    for m in re.finditer(r"(?i)\b(?:page|p\.?|pag\.)\s*([0-9]{1,4})\b", text):
-                        try:
-                            candidates.append(int(m.group(1)))
-                        except Exception:
-                            pass
+                    # Helper to find candidates in text
+                    def find_candidates(search_text, allow_bare=True):
+                        cands = []
+                        # Prefer explicit formats first
+                        for m in re.finditer(r"(?i)\b(?:page|p\.?|pag\.)\s*([0-9]{1,4})\b", search_text):
+                            try:
+                                cands.append(int(m.group(1)))
+                            except Exception:
+                                pass
+                        
+                        # Roman numerals in explicit formats
+                        for m in re.finditer(r"(?i)\b(?:page|p\.?|pag\.)\s*([ivxlcdm]{1,7})\b", search_text):
+                            val = roman_to_int(m.group(1))
+                            if val:
+                                cands.append(val)
+                        
+                        # Bare numbers on isolated lines (only if allow_bare is True)
+                        if allow_bare:
+                            lines = [ln.strip() for ln in search_text.splitlines() if ln.strip()]
+                            for ln in lines:
+                                if 1 <= len(ln) <= 4:
+                                    if re.fullmatch(r"[0-9]{1,4}", ln):
+                                        try:
+                                            cands.append(int(ln))
+                                        except Exception:
+                                            pass
+                                    elif re.fullmatch(r"(?i)[ivxlcdm]{1,7}", ln):
+                                        val = roman_to_int(ln)
+                                        if val:
+                                            cands.append(val)
+                        return cands
 
-                    # Roman numerals in explicit formats
-                    for m in re.finditer(r"(?i)\b(?:page|p\.?|pag\.)\s*([ivxlcdm]{1,7})\b", text):
-                        val = roman_to_int(m.group(1))
-                        if val:
-                            candidates.append(val)
-
-                    # Bare numbers on isolated lines (short)
-                    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-                    for ln in lines:
-                        # very short line likely to be a page number
-                        if 1 <= len(ln) <= 4:
-                            if re.fullmatch(r"[0-9]{1,4}", ln):
-                                try:
-                                    candidates.append(int(ln))
-                                except Exception:
-                                    pass
-                            elif re.fullmatch(r"(?i)[ivxlcdm]{1,7}", ln):
-                                val = roman_to_int(ln)
-                                if val:
-                                    candidates.append(val)
+                    # First try Header/Footer with bare numbers allowed
+                    candidates = find_candidates(hf_text, allow_bare=True)
+                    
+                    # If no candidates in H/F, try full page but ONLY explicit labels to avoid noise
+                    if not candidates:
+                        full_text = page.extract_text() or ""
+                        candidates = find_candidates(full_text, allow_bare=False)
 
                     # Filter and compute deltas
                     for printed in candidates:
@@ -249,8 +261,11 @@ def detect_page_offset(pdf_path: str, queue) -> int:
                         best_count = c
 
                 if best_delta is not None:
-                    queue.put(("log", f"📄 Detected page offset by heuristic: {best_delta:+d} (from {hits} hits)"))
-                    return int(best_delta)
+                    # Require at least a few hits to be confident, unless we only scanned a few pages
+                    threshold = 2 if (end_idx - start_idx) > 5 else 1
+                    if best_count >= threshold:
+                        queue.put(("log", f"📄 Detected page offset by heuristic: {best_delta:+d} (from {hits} hits, mode_count={best_count})"))
+                        return int(best_delta)
 
             # Heuristic failed: optional AI fallback if available
             if not API_KEYS.get("GEMINI_API_KEY"):

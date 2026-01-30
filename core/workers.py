@@ -28,6 +28,7 @@ from core.image_gen import (
     generate_fiche_illustration, generate_evaluation_illustrations, image_to_base64
 )
 from utils.helpers import get_top_rated_examples
+from core.model_fetcher import fetch_available_models, find_best_models_with_ai
 
 # --- QThread worker that bridges queue events to Qt signals ---
 class QueueProxy:
@@ -209,7 +210,7 @@ Je propose un court exercice (oral ou écrit) pour vérifier que chacun a compri
 
 ## Remarques et conclusion
 Rappeler aux élèves l’idée principale de la leçon.  
-**Conclusion à recopier :** (phrase simple, claire, à noter dans le cahier)
+**Conclusion à recopier :** (un paragraphe de 3-5 lignes, claire, à noter dans le cahier)
 
 """.strip()
 
@@ -430,7 +431,7 @@ Je propose un court exercice (oral ou écrit) pour vérifier que chacun a compri
 
 ## Remarques et conclusion
 Rappeler aux élèves l'idée principale de la leçon.  
-**Conclusion à recopier :** (phrase simple, claire, à noter dans le cahier)
+**Conclusion à recopier :** (un paragraphe de 3-5 lignes, claire, à noter dans le cahier)
 
 """.strip()
 
@@ -1683,3 +1684,50 @@ class GenerationWorker(QtCore.QThread):
             self.generate_image,
             self.use_student_textbook
         )
+
+class ModelUpdateWorker(QtCore.QThread):
+    """
+    Background worker to check for newer Gemini models using Gemma-3-27b analysis.
+    Emits signals with old and new model names for user confirmation.
+    """
+    # Signal: (old_pro, new_pro, old_flash, new_flash)
+    models_found = QtCore.pyqtSignal(str, str, str, str)
+    
+    def __init__(self, current_pro: str = "", current_flash: str = ""):
+        super().__init__()
+        self.current_pro = current_pro
+        self.current_flash = current_flash
+    
+    def run(self):
+        try:
+            # Short delay to let the app start up fully before querying network
+            time.sleep(3)
+            
+            # Check if API key is available
+            if not API_KEYS.get("GEMINI_API_KEY"):
+                return
+
+            model_names = fetch_available_models()
+            if not model_names:
+                return
+                
+            # Use Gemma to intelligently determine the best models
+            new_pro, new_flash = find_best_models_with_ai(
+                model_names, 
+                self.current_pro, 
+                self.current_flash
+            )
+            
+            # Only emit if at least one model has an update
+            if new_pro or new_flash:
+                self.models_found.emit(
+                    self.current_pro,
+                    new_pro or "",
+                    self.current_flash,
+                    new_flash or ""
+                )
+        except Exception as e:
+            print(f"Model update check failed: {e}")
+
+
+

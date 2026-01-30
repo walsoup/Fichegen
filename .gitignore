@@ -9,3 +9,13 @@ logs/
 toc_cache/
 fiches/
 *.log
+build/
+dist/
+.venv/
+.venv/*
+oldui
+test_output
+FicheGen.spec
+icon.png
+.gitignore
+.DS_Store
