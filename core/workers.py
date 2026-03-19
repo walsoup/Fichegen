@@ -31,6 +31,7 @@ from core.toc import (
 from core.image_gen import (
     generate_illustration, image_to_base64
 )
+from core.updater import check_update_status, update_and_build, REPO_URL, REPO_BRANCH
 from utils.helpers import get_top_rated_examples
 
 
@@ -370,6 +371,61 @@ class ExportWorker(QtCore.QThread):
                 self.success.emit(path, self.export_format, self.content_type)
             else:
                 self.failed.emit(f"Failed to export {self.export_format.upper()} file.")
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
+class UpdateWorker(QtCore.QThread):
+    """Background worker that checks for updates and optionally rebuilds from GitHub source."""
+
+    log = QtCore.pyqtSignal(str)
+    progress = QtCore.pyqtSignal(int)
+    checked = QtCore.pyqtSignal(bool, str, str, str)  # available, local_sha, remote_sha, message
+    success = QtCore.pyqtSignal(str)
+    failed = QtCore.pyqtSignal(str)
+
+    def __init__(
+        self,
+        *,
+        mode: str,
+        repo_dir: str,
+        repo_url: str = REPO_URL,
+        branch: str = REPO_BRANCH,
+    ):
+        super().__init__()
+        self.mode = (mode or "check").lower()
+        self.repo_dir = repo_dir
+        self.repo_url = repo_url
+        self.branch = branch
+
+    def run(self):
+        try:
+            if self.mode == "check":
+                self.progress.emit(15)
+                available, local_sha, remote_sha, message = check_update_status(
+                    self.repo_dir,
+                    repo_url=self.repo_url,
+                    branch=self.branch,
+                    log=lambda line: self.log.emit(str(line)),
+                )
+                self.progress.emit(100)
+                self.checked.emit(available, local_sha or "", remote_sha or "", message)
+                return
+
+            if self.mode == "update":
+                self.progress.emit(5)
+                self.log.emit("🔍 Checking update source...")
+                app_path = update_and_build(
+                    self.repo_dir,
+                    repo_url=self.repo_url,
+                    branch=self.branch,
+                    log=lambda line: self.log.emit(str(line)),
+                )
+                self.progress.emit(100)
+                self.success.emit(app_path)
+                return
+
+            self.failed.emit(f"Unsupported updater mode: {self.mode}")
         except Exception as exc:
             self.failed.emit(str(exc))
 

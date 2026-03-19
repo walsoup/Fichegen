@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import re
 from datetime import datetime
@@ -21,7 +22,8 @@ from config import (
     load_api_keys_from_settings,
     save_rating_record
 )
-from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ExportWorker
+from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ExportWorker, UpdateWorker
+from core.updater import REPO_URL, REPO_BRANCH
 from core.toc import find_guide_file, get_cached_toc
 from ui.preferences import PreferencesDialog
 
@@ -48,6 +50,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.worker = None
         self.export_worker = None
+        self.update_worker = None
         self.current_content = ""
         self.current_content_type = "unknown"
         self.current_topics_list = []
@@ -55,6 +58,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self._preview_large_mode = False
         self.log_file_handle = None
         self.current_theme = "light"  # retained for settings compatibility
+        self._last_update_check_manual = False
+        self._update_dialog = None
+        self._update_log_edit = None
+        self._update_progress = None
+        self._update_check_btn = None
+        self._update_install_btn = None
 
         # Central layout with splitter
         central = QtWidgets.QWidget()
@@ -169,6 +178,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.setStatusBar(QtWidgets.QStatusBar())
         self.statusBar().showMessage("Ready")
         self.resize(1200, 800)
+
+        # Optional automatic update checks (availability only, no auto-install).
+        QtCore.QTimer.singleShot(2500, self._maybe_auto_check_updates)
 
     def _apply_style(self, mode: str):
         # On macOS we prefer native appearance with optional minimal polish
@@ -1125,6 +1137,10 @@ class MainWindow(QtWidgets.QMainWindow):
         act_help.setShortcut("Meta+?")
         act_help.triggered.connect(self._show_api_help)  # Reuse existing help
         help_menu.addAction(act_help)
+
+        act_updates = QAction("Check for &Updates…", self)
+        act_updates.triggered.connect(lambda: self._show_update_manager(manual=True))
+        help_menu.addAction(act_updates)
         
         help_menu.addSeparator()
         
@@ -2007,64 +2023,221 @@ Documents/
         """
         self._show_help_dialog("Conseils et astuces", content)
 
+    def _resolve_updater_repo_dir(self) -> str:
+        configured = (self.settings.value("updater_repo_dir", "") or "").strip()
+        if configured:
+            return configured
+
+        if not getattr(sys, "frozen", False):
+            return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+        return os.path.join(
+            os.path.expanduser("~"),
+            "Library",
+            "Application Support",
+            "FicheGen",
+            "updater",
+            "Fichegen-source",
+        )
+
+    def _maybe_auto_check_updates(self):
+        enabled = self.settings.value("updates_auto_check", "true") == "true"
+        if not enabled:
+            return
+        self._start_update_check(manual=False)
+
+    def _show_update_manager(self, manual: bool = True):
+        if self._update_dialog is None:
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("Update Manager")
+            dialog.resize(760, 520)
+
+            layout = QtWidgets.QVBoxLayout(dialog)
+
+            intro = QtWidgets.QLabel(
+                "Check for updates from GitHub and rebuild the app automatically.\n"
+                "Updates are always manual; automatic mode only checks availability."
+            )
+            intro.setWordWrap(True)
+            layout.addWidget(intro)
+
+            self._update_progress = QtWidgets.QProgressBar()
+            self._update_progress.setRange(0, 100)
+            self._update_progress.setValue(0)
+            layout.addWidget(self._update_progress)
+
+            self._update_log_edit = QtWidgets.QPlainTextEdit()
+            self._update_log_edit.setReadOnly(True)
+            self._update_log_edit.setMaximumBlockCount(5000)
+            layout.addWidget(self._update_log_edit, 1)
+
+            button_row = QtWidgets.QHBoxLayout()
+            self._update_check_btn = QtWidgets.QPushButton("Check Now")
+            self._update_install_btn = QtWidgets.QPushButton("Build & Update")
+            self._update_install_btn.setEnabled(False)
+            close_btn = QtWidgets.QPushButton("Close")
+
+            self._update_check_btn.clicked.connect(lambda: self._start_update_check(manual=True))
+            self._update_install_btn.clicked.connect(self._start_update_build)
+            close_btn.clicked.connect(dialog.accept)
+
+            button_row.addWidget(self._update_check_btn)
+            button_row.addWidget(self._update_install_btn)
+            button_row.addStretch(1)
+            button_row.addWidget(close_btn)
+            layout.addLayout(button_row)
+
+            self._update_dialog = dialog
+
+        if manual and self._update_log_edit is not None:
+            self._append_update_log("🔎 Manual update check requested.")
+
+        self._update_dialog.show()
+        self._update_dialog.raise_()
+        self._update_dialog.activateWindow()
+
+        if manual:
+            self._start_update_check(manual=True)
+
+    def _append_update_log(self, text: str):
+        if not self._update_log_edit:
+            return
+        self._update_log_edit.appendPlainText(text)
+        cursor = self._update_log_edit.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+        self._update_log_edit.setTextCursor(cursor)
+
+    def _start_update_check(self, manual: bool):
+        if self.update_worker is not None and self.update_worker.isRunning():
+            if manual:
+                QtWidgets.QMessageBox.information(self, "Updater Busy", "An update operation is already running.")
+            return
+
+        self._last_update_check_manual = manual
+        if self._update_check_btn is not None:
+            self._update_check_btn.setEnabled(False)
+        if self._update_install_btn is not None:
+            self._update_install_btn.setEnabled(False)
+        repo_dir = self._resolve_updater_repo_dir()
+        self.update_worker = UpdateWorker(
+            mode="check",
+            repo_dir=repo_dir,
+            repo_url=REPO_URL,
+            branch=REPO_BRANCH,
+        )
+        self.update_worker.log.connect(self._append_update_log)
+        self.update_worker.progress.connect(self._on_update_progress)
+        self.update_worker.checked.connect(self._on_update_checked)
+        self.update_worker.failed.connect(self._on_update_failed)
+        self.update_worker.finished.connect(self._on_update_finished)
+        self.update_worker.start()
+
+    def _start_update_build(self):
+        if self.update_worker is not None and self.update_worker.isRunning():
+            QtWidgets.QMessageBox.information(self, "Updater Busy", "An update operation is already running.")
+            return
+
+        self._append_update_log("🚀 Starting full update and build...")
+        if self._update_check_btn is not None:
+            self._update_check_btn.setEnabled(False)
+        if self._update_install_btn is not None:
+            self._update_install_btn.setEnabled(False)
+
+        repo_dir = self._resolve_updater_repo_dir()
+        self.update_worker = UpdateWorker(
+            mode="update",
+            repo_dir=repo_dir,
+            repo_url=REPO_URL,
+            branch=REPO_BRANCH,
+        )
+        self.update_worker.log.connect(self._append_update_log)
+        self.update_worker.progress.connect(self._on_update_progress)
+        self.update_worker.success.connect(self._on_update_success)
+        self.update_worker.failed.connect(self._on_update_failed)
+        self.update_worker.finished.connect(self._on_update_finished)
+        self.update_worker.start()
+
+    def _on_update_progress(self, value: int):
+        if self._update_progress is not None:
+            self._update_progress.setValue(max(0, min(100, int(value))))
+
+    def _on_update_checked(self, available: bool, local_sha: str, remote_sha: str, message: str):
+        short_local = local_sha[:8] if local_sha else "unknown"
+        short_remote = remote_sha[:8] if remote_sha else "unknown"
+        self._append_update_log(f"ℹ️ {message}")
+        self._append_update_log(f"   Local: {short_local} | Remote: {short_remote}")
+
+        if self._update_install_btn is not None:
+            self._update_install_btn.setEnabled(available)
+
+        if self._last_update_check_manual:
+            title = "Update Available" if available else "Up To Date"
+            QtWidgets.QMessageBox.information(self, title, message)
+            return
+
+        if available:
+            self.statusBar().showMessage("Update available. Open Help > Check for Updates…", 10000)
+
+    def _on_update_success(self, built_app_path: str):
+        self._append_update_log(f"✅ Update completed and installed: {built_app_path}")
+        self.statusBar().showMessage("Update installed to /Applications.", 6000)
+
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            "Update Ready",
+            "A new version has been installed to /Applications/FicheGen.app.\n\nOpen /Applications now?",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+        )
+        if answer == QtWidgets.QMessageBox.StandardButton.Yes:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile("/Applications"))
+
+    def _on_update_failed(self, message: str):
+        self._append_update_log(f"❌ Update failed: {message}")
+        if self._last_update_check_manual:
+            QtWidgets.QMessageBox.warning(self, "Update Error", f"Update process failed:\n{message}")
+
+    def _on_update_finished(self):
+        self.update_worker = None
+        if self._update_check_btn is not None:
+            self._update_check_btn.setEnabled(True)
+
     def _show_about(self):
-        """Show about dialog"""
-        content = """
-        <div style="text-align: center; padding: 20px;">
-            <h1>🎓 FicheGen</h1>
-            <h2>Générateur intelligent de fiches pédagogiques</h2>
-            
-            <p style="font-size: 18px; margin: 30px 0;"><strong>Version 1.0</strong></p>
-            
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3>🎯 Mission</h3>
-                <p>FicheGen transforme la préparation de cours en assistant les enseignants marocains 
-                dans la création automatique de fiches pédagogiques de qualité professionnelle.</p>
+        """Show about dialog with direct access to update manager."""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("About FicheGen")
+        dialog.resize(760, 620)
+
+        layout = QtWidgets.QVBoxLayout(dialog)
+
+        info = QtWidgets.QTextEdit()
+        info.setReadOnly(True)
+        info.setHtml(
+            """
+            <div style="text-align: center; padding: 16px;">
+                <h1>FicheGen</h1>
+                <h2>Smart Pedagogical Content Generator</h2>
+                <p style="font-size: 16px;"><strong>Version 1.0</strong></p>
+                <p>Built for teachers with a simple workflow and reliable outputs.</p>
+                <p><strong>Core features:</strong> lesson generation, evaluations, quizzes, PDF/DOCX export.</p>
+                <p><strong>Privacy:</strong> keys and settings stay local on your Mac.</p>
+                <p style="margin-top: 24px; color: #666;">© 2026 FicheGen</p>
             </div>
-            
-            <h3>✨ Fonctionnalités principales</h3>
-            <ul style="text-align: left; max-width: 500px; margin: 0 auto;">
-                <li><strong>Analyse intelligente</strong> des guides pédagogiques</li>
-                <li><strong>Génération automatique</strong> de fiches structurées</li>
-                <li><strong>Multiple formats</strong> d'export (PDF, DOCX)</li>
-                <li><strong>Thèmes professionnels</strong> personnalisables</li>
-                <li><strong>Cache intelligent</strong> pour performance optimale</li>
-                <li><strong>Système d'évaluation</strong> et d'amélioration continue</li>
-            </ul>
-            
-            <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3>🤖 Technologie IA</h3>
-                <p>Propulsé par des modèles d'intelligence artificielle de pointe :</p>
-                <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
-                    <li>Google Gemini 2.5 Flash</li>
-                    <li>OpenRouter (Gemma, DeepSeek, Mistral, Llama)</li>
-                    <li>Fallback intelligent multi-modèles</li>
-                    <li>Spécialisation par tâche</li>
-                </ul>
-            </div>
-            
-            <h3>🎨 Interface</h3>
-            <p>Interface native macOS avec PyQt6, optimisée pour la productivité 
-            et l'expérience utilisateur moderne.</p>
-            
-            <div style="background: #f0f8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3>📚 Compatibilité</h3>
-                <p><strong>Programmes marocains :</strong> CP, CE1, CE2, CM1, CM2, 6e, 5e, 4e, 3e<br>
-                <strong>Formats :</strong> PDF et DOCX<br>
-                <strong>Système :</strong> macOS 10.14+</p>
-            </div>
-            
-            <h3>🔒 Confidentialité</h3>
-            <p>Vos données et clés API restent strictement privées et locales. 
-            Aucune information n'est collectée ou transmise.</p>
-            
-            <div style="margin-top: 40px; font-size: 14px; color: #666;">
-                <p>Développé avec passion pour l'éducation marocaine 🇲🇦</p>
-                <p>© 2025 FicheGen - Tous droits réservés</p>
-            </div>
-        </div>
-        """
-        self._show_help_dialog("À propos de FicheGen", content)
+            """
+        )
+        layout.addWidget(info, 1)
+
+        buttons = QtWidgets.QHBoxLayout()
+        updates_btn = QtWidgets.QPushButton("Check for Updates…")
+        close_btn = QtWidgets.QPushButton("Close")
+        updates_btn.clicked.connect(lambda: self._show_update_manager(manual=True))
+        close_btn.clicked.connect(dialog.accept)
+        buttons.addWidget(updates_btn)
+        buttons.addStretch(1)
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+
+        dialog.exec()
 
     def _on_model_toggle_changed(self):
         """Handle changes to the Gemini model toggle (Pro vs Flash)"""

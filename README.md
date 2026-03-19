@@ -10,6 +10,7 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
 *   **Customizable**: Supports various PDF templates and formatting options.
 *   **Multi-language Support**: Interface available in English and French.
 *   **Provider Visibility Toggle**: OpenRouter references can be shown/hidden from the UI in Preferences.
+*   **Built-in Updater**: Manual update manager (Help/About) can fetch latest source from GitHub and rebuild the macOS app.
 
 ## Prerequisites
 
@@ -48,6 +49,22 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
     *   Optionally enable OpenRouter UI references from the same tab if you want provider-related guidance visible.
     *   Set the **Input Guides** folder (where your PDF guides are stored).
     *   Set the **Output Folder** (where generated files will be saved).
+    *   Optional: enable/disable automatic update checks in **Preferences > General**.
+
+## Updates
+
+FicheGen now includes a user-friendly update flow:
+
+1. Open **Help > Check for Updates…** or use the **Check for Updates…** button in **About**.
+2. Click **Check Now**.
+3. If an update is available, click **Build & Update**.
+4. The updater pulls from `https://github.com/walsoup/Fichegen`, installs dependencies, rebuilds the app, and replaces `/Applications/FicheGen.app` automatically.
+
+Notes:
+
+* Updates are always manual to avoid surprise installs.
+* Automatic mode only checks availability at startup (can be turned off).
+* If needed, macOS will ask for admin privileges during installation to `/Applications`.
 
 ## Security Notes
 

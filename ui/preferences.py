@@ -79,6 +79,12 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.save_logs_chk = QtWidgets.QCheckBox("Save logs to file during generation")
         layout.addRow("Logging:", self.save_logs_chk)
 
+        # Auto update checks
+        self.auto_update_checks_chk = QtWidgets.QCheckBox("Automatically check for updates at startup")
+        self.auto_update_checks_chk.setToolTip("Only checks availability. Updates are always manual from About/Help.")
+        self.auto_update_checks_chk.setChecked(True)
+        layout.addRow("Updates:", self.auto_update_checks_chk)
+
         # Defaults
         layout.addRow("", QtWidgets.QLabel("<b>Defaults</b>"))
         self.default_duration_spin = QtWidgets.QSpinBox()
@@ -407,6 +413,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.temp_slider.setValue(int(float(settings.value("temperature", "0.5")) * 100))
         self.use_top_examples_chk.setChecked(settings.value("use_top_examples", "true") == "true")
         self.save_logs_chk.setChecked(settings.value("save_logs", "false") == "true")
+        self.auto_update_checks_chk.setChecked(settings.value("updates_auto_check", "true") == "true")
         self.preview_source_chk.setChecked(settings.value("preview_source", "false") == "true")
         self.special_instructions_edit.setText(settings.value("special_instructions", ""))
         self.compact_sidebar_chk.setChecked(settings.value("ui_compact_sidebar", "false") == "true")
@@ -487,6 +494,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         settings.setValue("temperature", f"{self.temp_slider.value()/100:.2f}")
         settings.setValue("use_top_examples", "true" if self.use_top_examples_chk.isChecked() else "false")
         settings.setValue("save_logs", "true" if self.save_logs_chk.isChecked() else "false")
+        settings.setValue("updates_auto_check", "true" if self.auto_update_checks_chk.isChecked() else "false")
         settings.setValue("preview_source", "true" if self.preview_source_chk.isChecked() else "false")
         settings.setValue("special_instructions", self.special_instructions_edit.toPlainText())
         settings.setValue("ui_compact_sidebar", "true" if self.compact_sidebar_chk.isChecked() else "false")
