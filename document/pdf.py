@@ -1114,14 +1114,25 @@ def _build_redesigned_fiche_story(content: str, styles, template, ui_metadata=No
 
     return story
 
-def save_fiche_to_pdf(content, lesson_topic, class_level, output_dir, queue, template_name: str | None = "Normal", subject: str | None = None):
+def save_fiche_to_pdf(
+    content,
+    lesson_topic,
+    class_level,
+    output_dir,
+    queue,
+    template_name: str | None = "Normal",
+    subject: str | None = None,
+    show_meta_banner: Optional[bool] = None,
+):
     """Save fiche content as PDF using ReportLab"""
     try:
         os.makedirs(output_dir, exist_ok=True)
         
         # Get template configuration - ensure template_name is a string
         template_key = template_name if template_name is not None else "Normal"
-        template = PDF_TEMPLATES.get(template_key, PDF_TEMPLATES["Normal"])
+        template = dict(PDF_TEMPLATES.get(template_key, PDF_TEMPLATES["Normal"]))
+        if show_meta_banner is not None:
+            template["show_meta_banner"] = bool(show_meta_banner)
         
         # Create smart filename that doesn't overwrite
         filename = generate_smart_filename("Fiche", lesson_topic, class_level, output_dir, "pdf")
@@ -1478,14 +1489,25 @@ def _build_reimagined_evaluation_story(content: str, styles, template, ui_metada
 
     return story
 
-def save_evaluation_to_pdf(content, topics_list, class_level, output_dir, queue, template_name: str | None = "Normal", subject: str | None = None):
+def save_evaluation_to_pdf(
+    content,
+    topics_list,
+    class_level,
+    output_dir,
+    queue,
+    template_name: str | None = "Normal",
+    subject: str | None = None,
+    show_meta_banner: Optional[bool] = None,
+):
     """Save evaluation content as PDF using ReportLab"""
     try:
         os.makedirs(output_dir, exist_ok=True)
         
         # Get template configuration
         template_key = template_name if template_name is not None else "Normal"
-        template = PDF_TEMPLATES.get(template_key, PDF_TEMPLATES["Normal"])
+        template = dict(PDF_TEMPLATES.get(template_key, PDF_TEMPLATES["Normal"]))
+        if show_meta_banner is not None:
+            template["show_meta_banner"] = bool(show_meta_banner)
         
         # Create smart filename for evaluation
         topics_text = "_".join(topics_list[:2])  # Use first 2 topics to keep filename reasonable

@@ -273,6 +273,112 @@ class QueueProxy:
             except Exception:
                 pass
 
+
+class ExportWorker(QtCore.QThread):
+    """Background worker for PDF/DOCX exports to keep the UI responsive."""
+
+    log = QtCore.pyqtSignal(str)
+    success = QtCore.pyqtSignal(str, str, str)  # path, format, content_type
+    failed = QtCore.pyqtSignal(str)
+
+    def __init__(
+        self,
+        *,
+        export_format: str,
+        content_type: str,
+        markdown: str,
+        class_level: str,
+        output_dir: str,
+        template_name: str,
+        subject: Optional[str],
+        lesson_topic: str,
+        topics_list: Optional[List[str]],
+        show_meta_banner: bool,
+    ):
+        super().__init__()
+        self.export_format = (export_format or "").lower()
+        self.content_type = content_type or "fiche"
+        self.markdown = markdown or ""
+        self.class_level = class_level or ""
+        self.output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self.template_name = template_name or "Normal"
+        self.subject = subject
+        self.lesson_topic = lesson_topic or "Lecon"
+        self.topics_list = topics_list or ["Unknown"]
+        self.show_meta_banner = bool(show_meta_banner)
+
+    def run(self):
+        class _Queue:
+            def __init__(self, emitter):
+                self.emitter = emitter
+
+            def put(self, item):
+                try:
+                    kind, payload = item
+                    if kind == "log":
+                        self.emitter.emit(str(payload))
+                except Exception:
+                    pass
+
+        q = _Queue(self.log)
+
+        try:
+            if self.export_format == "pdf":
+                from document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
+
+                if self.content_type == "evaluation":
+                    path = save_evaluation_to_pdf(
+                        self.markdown,
+                        self.topics_list,
+                        self.class_level,
+                        self.output_dir,
+                        q,
+                        self.template_name,
+                        self.subject,
+                        self.show_meta_banner,
+                    )
+                else:
+                    path = save_fiche_to_pdf(
+                        self.markdown,
+                        self.lesson_topic,
+                        self.class_level,
+                        self.output_dir,
+                        q,
+                        self.template_name,
+                        self.subject,
+                        self.show_meta_banner,
+                    )
+            elif self.export_format == "docx":
+                from document.docx import save_fiche_to_docx, save_evaluation_to_docx
+
+                if self.content_type == "evaluation":
+                    path = save_evaluation_to_docx(
+                        self.markdown,
+                        self.topics_list,
+                        self.class_level,
+                        self.output_dir,
+                        q,
+                    )
+                else:
+                    path = save_fiche_to_docx(
+                        self.markdown,
+                        self.lesson_topic,
+                        self.class_level,
+                        self.output_dir,
+                        q,
+                        template_name=self.template_name,
+                    )
+            else:
+                self.failed.emit(f"Unsupported export format: {self.export_format}")
+                return
+
+            if path:
+                self.success.emit(path, self.export_format, self.content_type)
+            else:
+                self.failed.emit(f"Failed to export {self.export_format.upper()} file.")
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
 def build_examples_block(use_top_rated: bool):
     builtin_example = """
 ## EXEMPLE DE STYLE (référence de style et pas de format)

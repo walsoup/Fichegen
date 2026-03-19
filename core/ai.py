@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Optional, List, Dict, Any
 from functools import lru_cache
 from google import genai
@@ -104,29 +105,86 @@ def _call_model(
 
     config = types.GenerateContentConfig(**config_kwargs)
     
-    try:
-        return client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
+    def _is_invalid_api_key_error(message: str) -> bool:
+        return any(
+            token in message for token in (
+                "api key not valid",
+                "invalid api key",
+                "permission denied",
+                "unauthorized",
+                "authentication",
+            )
         )
-    except Exception as e:
-        # Fallback for models that don't support Thinking Mode (even if we thought they might)
-        # e.g. "Thinking level is not supported for this model."
-        if thinking_level and "thinking level is not supported" in str(e).lower():
-            # Remove thinking config and retry
-            if "thinking_config" in config_kwargs:
-                del config_kwargs["thinking_config"]
-            
-            # Recreate config without thinking
-            fallback_config = types.GenerateContentConfig(**config_kwargs)
-            
+
+    def _is_transient_error(message: str) -> bool:
+        return any(
+            token in message for token in (
+                "rate limit",
+                "quota",
+                "429",
+                "temporarily unavailable",
+                "service unavailable",
+                "deadline exceeded",
+                "timed out",
+                "timeout",
+                "connection reset",
+                "network",
+            )
+        )
+
+    max_retries = 2
+    backoff = 1.0
+
+    for attempt in range(max_retries + 1):
+        try:
+            config = types.GenerateContentConfig(**config_kwargs)
             return client.models.generate_content(
                 model=model_name,
                 contents=contents,
-                config=fallback_config,
+                config=config,
             )
-        raise e
+        except Exception as e:
+            message = str(e).lower()
+
+            # Normalize auth errors for clearer UX in callers.
+            if _is_invalid_api_key_error(message):
+                raise RuntimeError(
+                    "Gemini API key is invalid or unauthorized. "
+                    "Update it in Preferences and try again."
+                ) from e
+
+            # Capability fallback: disable thinking and retry once.
+            if "thinking_config" in config_kwargs and "thinking level is not supported" in message:
+                config_kwargs.pop("thinking_config", None)
+                continue
+
+            # Capability fallback: remove Google Search tool and retry once.
+            if "tools" in config_kwargs and (
+                "google_search is not enabled" in message or "google search is not enabled" in message
+            ):
+                filtered_tools = []
+                for tool in config_kwargs.get("tools", []):
+                    try:
+                        if getattr(tool, "google_search", None) is not None:
+                            continue
+                    except Exception:
+                        pass
+                    filtered_tools.append(tool)
+
+                if len(filtered_tools) != len(config_kwargs.get("tools", [])):
+                    if filtered_tools:
+                        config_kwargs["tools"] = filtered_tools
+                    else:
+                        config_kwargs.pop("tools", None)
+                    continue
+
+            # Transient failures: short exponential backoff retries.
+            if attempt < max_retries and _is_transient_error(message):
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            raise
 
 def _generate_with_model(
     model_name: str,

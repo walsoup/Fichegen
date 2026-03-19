@@ -21,10 +21,8 @@ from config import (
     load_api_keys_from_settings,
     save_rating_record
 )
-from core.workers import GenerationWorker, EvaluationWorker, QuizWorker
+from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ExportWorker
 from core.toc import find_guide_file, get_cached_toc
-from document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
-from document.docx import save_fiche_to_docx, save_evaluation_to_docx
 from ui.preferences import PreferencesDialog
 
 PYQT6 = True
@@ -49,7 +47,10 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         self.worker = None
+        self.export_worker = None
         self.current_content = ""
+        self.current_content_type = "unknown"
+        self.current_topics_list = []
         self.log_file_handle = None
         self.current_theme = "light"  # retained for settings compatibility
 
@@ -631,6 +632,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not topic:
             QtWidgets.QMessageBox.warning(self, "Missing Topic", "Please enter a quiz topic.")
             return
+        self.current_topics_list = [topic]
 
         class_level = self.quiz_class_combo.currentText()
         subject = self.quiz_subject_combo.currentText().strip()
@@ -659,6 +661,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.preview_editor.clear()
         self.preview_edit.clear()
         self.current_content = ""
+        self.current_content_type = "quiz"
         self.save_pdf_btn.setEnabled(False)
         self.save_docx_btn.setEnabled(False)
         self._set_rating_enabled(False)
@@ -2119,6 +2122,7 @@ Documents/
                 "Please enter a lesson topic."
             )
             return
+        self.current_topics_list = [topic]
         
         # Check API key availability
         if not API_KEYS.get("GEMINI_API_KEY"):
@@ -2185,6 +2189,7 @@ Documents/
         self.preview_editor.clear()
         self.preview_edit.clear()
         self.current_content = ""
+        self.current_content_type = "fiche"
         self.save_pdf_btn.setEnabled(False)
         self.save_docx_btn.setEnabled(False)
         self._set_rating_enabled(False)
@@ -2289,6 +2294,7 @@ Documents/
                 "Please select or type at least one lesson topic for the evaluation."
             )
             return
+        self.current_topics_list = list(topics_set)
 
         eval_duration = self.eval_duration_spin.value()
         question_types_text = self.eval_question_types_edit.toPlainText().strip()
@@ -2357,6 +2363,7 @@ Documents/
         self.preview_editor.clear()
         self.preview_edit.clear()
         self.current_content = ""
+        self.current_content_type = "evaluation"
         self.save_pdf_btn.setEnabled(False)
         self.save_docx_btn.setEnabled(False)
         self._set_rating_enabled(False)
@@ -2625,6 +2632,15 @@ Documents/
     def on_content_ready(self, content):
         # Show in preview and enable Save & Rating
         self.current_content = content or ""
+        sender = self.sender()
+        if isinstance(sender, EvaluationWorker):
+            self.current_content_type = "evaluation"
+        elif isinstance(sender, QuizWorker):
+            self.current_content_type = "quiz"
+        elif isinstance(sender, GenerationWorker):
+            self.current_content_type = "fiche"
+        elif self.current_content_type not in {"fiche", "evaluation", "quiz"}:
+            self.current_content_type = "fiche"
         # Populate both the preview (rendered) and editor (raw)
         self.preview_editor.blockSignals(True)
         self.preview_editor.setPlainText(self.current_content)
@@ -2764,108 +2780,98 @@ Documents/
             self._save_settings()
 
     def _is_current_content_evaluation(self):
-        """Check if the current content is an evaluation based on the worker type"""
-        return isinstance(getattr(self, 'worker', None), EvaluationWorker)
+        """Check if the current preview content should be exported as an evaluation."""
+        if self.current_content_type == "evaluation":
+            return True
 
-    def save_current_pdf(self):
+        # Fallback heuristic for legacy/edited markdown when mode is uncertain.
+        md = (self.get_current_markdown() or "").lower()
+        return "## exercice" in md and ("## corrigé" in md or "## corrige" in md)
+
+    def _export_in_progress(self) -> bool:
+        return self.export_worker is not None and self.export_worker.isRunning()
+
+    def _start_export(self, export_format: str):
         md = self.get_current_markdown().strip()
         if not md:
             content_type = "evaluation" if self._is_current_content_evaluation() else "fiche"
             QtWidgets.QMessageBox.information(self, "Nothing to save", f"Generate a {content_type} first.")
             return
-        
-        output_dir = (self.settings.value("output_dir", DEFAULT_OUTPUT_DIR) or DEFAULT_OUTPUT_DIR).strip()
-        
-        class_level = self.class_combo.currentText()
-        
-        template_name = self.pdf_template_combo.currentText() or self.settings.value("default_pdf_style", list(PDF_TEMPLATES.keys())[0])
-        
-        subject = self.subject_combo.currentText().strip() or None
-            
-        class UQ:
-            def __init__(uqself, outer): uqself.outer = outer
-            def put(uqself, item):
-                try:
-                    k, v = item
-                    if k == "log": self.append_log(v)
-                except Exception:
-                    pass
 
-        # Honor user preference for meta banner
-        show_meta = self.settings.value("pdf_show_meta", "false") == "true"
-        # Temporarily inject preference into template
-        orig_show = PDF_TEMPLATES.get(template_name, {}).get("show_meta_banner")
-        if template_name in PDF_TEMPLATES:
-            PDF_TEMPLATES[template_name]["show_meta_banner"] = show_meta
-        
-        try:
-            if self._is_current_content_evaluation():
-                # For evaluations, get topics from the worker
-                topics_list = getattr(self.worker, 'topics_list', ['Unknown'])
-                path = save_evaluation_to_pdf(md, topics_list, class_level, output_dir, UQ(self), template_name, subject)
-            else:
-                # For fiches, use lesson topic
-                lesson_topic = self.topic_edit.text().strip()
-                path = save_fiche_to_pdf(md, lesson_topic, class_level, output_dir, UQ(self), template_name, subject)
-        except Exception as e:
-            self.append_log(f"❌ PDF Save Error: {e}")
-            import traceback
-            self.append_log(f"Stack trace: {traceback.format_exc()}")
-            QtWidgets.QMessageBox.critical(self, "PDF Save Failed", f"Failed to save PDF:\n{str(e)}\n\nCheck the log for details.")
+        if self._export_in_progress():
+            QtWidgets.QMessageBox.information(self, "Export in progress", "Please wait for the current export to finish.")
             return
-        finally:
-            # restore
-            if template_name in PDF_TEMPLATES and orig_show is not None:
-                PDF_TEMPLATES[template_name]["show_meta_banner"] = orig_show
-        
-        if path:
-            content_type = "Evaluation" if self._is_current_content_evaluation() else "Fiche"
-            self.append_log(f"🎉 {content_type} PDF export complete.")
-            QtWidgets.QMessageBox.information(self, "Saved", f"{content_type} PDF exported to:\n{path}")
 
-    def save_current_docx(self):
-        md = self.get_current_markdown().strip()
-        if not md:
-            content_type = "evaluation" if self._is_current_content_evaluation() else "fiche"
-            QtWidgets.QMessageBox.information(self, "Nothing to save", f"Generate a {content_type} first.")
-            return
-        if not HAS_DOCX:
+        if export_format == "docx" and not HAS_DOCX:
             QtWidgets.QMessageBox.warning(self, "Missing dependency", "Install python-docx to export DOCX:\n\npip install python-docx")
             return
-        
+
+        is_eval = self._is_current_content_evaluation()
         output_dir = (self.settings.value("output_dir", DEFAULT_OUTPUT_DIR) or DEFAULT_OUTPUT_DIR).strip()
-        class_level = self.class_combo.currentText()
         template_name = self.pdf_template_combo.currentText() or self.settings.value("default_pdf_style", list(PDF_TEMPLATES.keys())[0])
+        show_meta = self.settings.value("pdf_show_meta", "false") == "true"
 
-        class UQ:
-            def __init__(uqself, outer): uqself.outer = outer
-            def put(uqself, item):
-                try:
-                    k, v = item
-                    if k == "log": self.append_log(v)
-                except Exception:
-                    pass
+        if is_eval and hasattr(self, "eval_class_combo"):
+            class_level = self.eval_class_combo.currentText()
+        elif self.current_content_type == "quiz" and hasattr(self, "quiz_class_combo"):
+            class_level = self.quiz_class_combo.currentText()
+        else:
+            class_level = self.class_combo.currentText()
 
-        try:
-            if self._is_current_content_evaluation():
-                # For evaluations, get topics from the worker
-                topics_list = getattr(self.worker, 'topics_list', ['Unknown'])
-                path = save_evaluation_to_docx(md, topics_list, class_level, output_dir, UQ(self))
-            else:
-                # For fiches, use lesson topic
-                lesson_topic = self.topic_edit.text().strip()
-                path = save_fiche_to_docx(md, lesson_topic, class_level, output_dir, UQ(self), template_name=template_name)
-        except Exception as e:
-            self.append_log(f"❌ DOCX Save Error: {e}")
-            import traceback
-            self.append_log(f"Stack trace: {traceback.format_exc()}")
-            QtWidgets.QMessageBox.critical(self, "DOCX Save Failed", f"Failed to save DOCX:\n{str(e)}\n\nCheck the log for details.")
-            return
-        
-        if path:
-            content_type = "Evaluation" if self._is_current_content_evaluation() else "Fiche"
-            self.append_log(f"🎉 {content_type} DOCX export complete.")
-            QtWidgets.QMessageBox.information(self, "Saved", f"{content_type} DOCX exported to:\n{path}")
+        if is_eval and hasattr(self, "eval_subject_combo"):
+            subject = self.eval_subject_combo.currentText().strip() or None
+        elif self.current_content_type == "quiz" and hasattr(self, "quiz_subject_combo"):
+            subject = self.quiz_subject_combo.currentText().strip() or None
+        else:
+            subject = self.subject_combo.currentText().strip() or None
+
+        lesson_topic = self.topic_edit.text().strip() or "Lecon"
+        topics_list = self.current_topics_list or [lesson_topic]
+
+        self.export_worker = ExportWorker(
+            export_format=export_format,
+            content_type="evaluation" if is_eval else "fiche",
+            markdown=md,
+            class_level=class_level,
+            output_dir=output_dir,
+            template_name=template_name,
+            subject=subject,
+            lesson_topic=lesson_topic,
+            topics_list=topics_list,
+            show_meta_banner=show_meta,
+        )
+        self.export_worker.log.connect(self.append_log)
+        self.export_worker.success.connect(self._on_export_success)
+        self.export_worker.failed.connect(self._on_export_failed)
+        self.export_worker.finished.connect(self._on_export_finished)
+
+        self.save_pdf_btn.setEnabled(False)
+        self.save_docx_btn.setEnabled(False)
+        self.status_label.setText(f"Exporting {export_format.upper()}...")
+        self.append_log(f"💾 Export started ({export_format.upper()}).")
+        self.export_worker.start()
+
+    def _on_export_success(self, path: str, export_format: str, content_type: str):
+        label = "Evaluation" if content_type == "evaluation" else "Fiche"
+        self.append_log(f"🎉 {label} {export_format.upper()} export complete.")
+        QtWidgets.QMessageBox.information(self, "Saved", f"{label} {export_format.upper()} exported to:\n{path}")
+
+    def _on_export_failed(self, message: str):
+        self.append_log(f"❌ Export failed: {message}")
+        QtWidgets.QMessageBox.critical(self, "Export Failed", f"Failed to export file:\n{message}\n\nCheck the log for details.")
+
+    def _on_export_finished(self):
+        self.export_worker = None
+        can_save = bool(self.get_current_markdown().strip())
+        self.save_pdf_btn.setEnabled(can_save)
+        self.save_docx_btn.setEnabled(can_save and HAS_DOCX)
+        self.status_label.setText("Ready")
+
+    def save_current_pdf(self):
+        self._start_export("pdf")
+
+    def save_current_docx(self):
+        self._start_export("docx")
 
     def clear_preview(self):
         self.preview_editor.clear()
@@ -2875,6 +2881,8 @@ Documents/
         self.save_docx_btn.setEnabled(False)
         self._set_rating_enabled(False)
         self.current_content = ""
+        self.current_content_type = "unknown"
+        self.current_topics_list = []
 
     def _load_settings(self):
         # Ensure API keys are loaded first
