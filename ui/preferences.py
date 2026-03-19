@@ -141,6 +141,12 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.enable_openrouter_chk = QtWidgets.QCheckBox("Enable OpenRouter references in UI")
         self.enable_openrouter_chk.setToolTip("When disabled, OpenRouter mentions are hidden from app help and UI copy")
         layout.addRow("Providers:", self.enable_openrouter_chk)
+
+        self.allow_legacy_keys_chk = QtWidgets.QCheckBox("Allow legacy key sources (env, settings, keys.txt)")
+        self.allow_legacy_keys_chk.setToolTip(
+            "Compatibility mode for older installs. Disable to enforce keychain-only key loading."
+        )
+        layout.addRow("Security:", self.allow_legacy_keys_chk)
         
         # Add some spacing
         layout.addRow("", QtWidgets.QLabel(""))
@@ -392,6 +398,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         gemini_key = get_secret("gemini_api_key") or settings.value("gemini_api_key", "")
         self.gemini_key_edit.setText(gemini_key)
         self.enable_openrouter_chk.setChecked(settings.value("enable_openrouter_ui", "false") == "true")
+        self.allow_legacy_keys_chk.setChecked(settings.value("security_allow_legacy_keys", "true") == "true")
         
         # Load other settings
         self.input_edit.setText(settings.value("input_dir", DEFAULT_INPUT_DIR))
@@ -471,6 +478,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         delete_secret("gemini_fiche_api_key")
         settings.remove("gemini_fiche_api_key")
         settings.setValue("enable_openrouter_ui", "true" if self.enable_openrouter_chk.isChecked() else "false")
+        settings.setValue("security_allow_legacy_keys", "true" if self.allow_legacy_keys_chk.isChecked() else "false")
         
         # Save other settings
         settings.setValue("input_dir", self.input_edit.text() or DEFAULT_INPUT_DIR)

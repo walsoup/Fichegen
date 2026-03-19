@@ -17,7 +17,7 @@ def _get_image_client(api_key: Optional[str] = None) -> Optional[genai.Client]:
     """Return a cached google-genai client for image-related calls."""
     global _IMAGE_CLIENT, _IMAGE_CLIENT_KEY
     
-    key = (api_key or os.getenv("GEMINI_API_KEY") or API_KEYS.get("GEMINI_API_KEY") or "").strip()
+    key = (api_key or API_KEYS.get("GEMINI_API_KEY") or "").strip()
     if not key:
         return None
     with _IMAGE_CLIENT_LOCK:

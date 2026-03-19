@@ -13,7 +13,8 @@ from config import (
     DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, API_KEYS,
     get_configured_fiche_prompt, get_configured_flash_model,
     get_configured_pro_model, HAS_IMAGE_GENERATION, HAS_DOCX,
-    get_configured_page_finding_prompt, GEMINI_TOC_MODEL
+    get_configured_page_finding_prompt, GEMINI_TOC_MODEL,
+    load_api_keys_from_settings
 )
 from core.ai import (
     generate_with_fallback, _fiche_response_schema, _parse_structured_response,
@@ -34,21 +35,14 @@ from utils.helpers import get_top_rated_examples
 
 
 def _resolve_image_api_key() -> str:
-    """Resolve API key for image generation with backward-compatible fallbacks."""
-    key = API_KEYS.get("GEMINI_API_KEY")
-
+    """Resolve API key for image generation via centralized config loading."""
+    key = (API_KEYS.get("GEMINI_API_KEY") or "").strip()
     if key:
-        return key.strip()
+        return key
 
-    # Legacy fallback for users who still keep plaintext settings/env keys.
-    settings_obj = QtCore.QSettings("FicheGen", "Pedago")
-    legacy_key = (
-        settings_obj.value("gemini_api_key", "")
-        or settings_obj.value("gemini_fiche_api_key", "")
-        or os.getenv("GEMINI_API_KEY", "")
-        or os.getenv("GEMINI_FICHE_API_KEY", "")
-    )
-    return (legacy_key or "").strip()
+    # Ensure in-memory keys are synced from the configured secure source policy.
+    load_api_keys_from_settings()
+    return (API_KEYS.get("GEMINI_API_KEY") or "").strip()
 
 
 _IMG_TAG_RE = re.compile(r'<generateimage\s*:\s*(["\'])(.*?)\1\s*>', re.IGNORECASE | re.DOTALL)

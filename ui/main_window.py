@@ -51,6 +51,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_content = ""
         self.current_content_type = "unknown"
         self.current_topics_list = []
+        self.preview_markdown_limit = 300_000
+        self._preview_large_mode = False
         self.log_file_handle = None
         self.current_theme = "light"  # retained for settings compatibility
 
@@ -2605,10 +2607,7 @@ Documents/
             # Leaving edit mode: sync preview from editor
             text = self.preview_editor.toPlainText()
             self.current_content = text
-            try:
-                self.preview_edit.setMarkdown(text)
-            except Exception:
-                self.preview_edit.setPlainText(text)
+            self._render_preview_content(text)
         # Enable save buttons if there's content
         can_save = bool(self.get_current_markdown().strip())
         self.save_pdf_btn.setEnabled(can_save)
@@ -2620,10 +2619,7 @@ Documents/
         text = self.preview_editor.toPlainText()
         self.current_content = text
         if self.preview_edit_toggle.isChecked():
-            try:
-                self.preview_edit.setMarkdown(text)
-            except Exception:
-                self.preview_edit.setPlainText(text)
+            self._render_preview_content(text)
         can_save = bool(text.strip())
         self.save_pdf_btn.setEnabled(can_save)
         self.save_docx_btn.setEnabled(can_save and HAS_DOCX)
@@ -2645,16 +2641,32 @@ Documents/
         self.preview_editor.blockSignals(True)
         self.preview_editor.setPlainText(self.current_content)
         self.preview_editor.blockSignals(False)
-        try:
-            self.preview_edit.setMarkdown(self.current_content)
-        except Exception:
-            self.preview_edit.setPlainText(self.current_content)
+        self._render_preview_content(self.current_content)
         can_save = bool(self.current_content.strip())
         self.save_pdf_btn.setEnabled(can_save)
         self.save_docx_btn.setEnabled(can_save and HAS_DOCX)
         self._set_rating_enabled(can_save)
         # Switch to Preview tab for wow factor
         self.right_tabs.setCurrentWidget(self.preview_tab)
+
+    def _render_preview_content(self, text: str):
+        """Render markdown preview with safety fallback for very large payloads."""
+        payload = text or ""
+        if len(payload) > self.preview_markdown_limit:
+            self.preview_edit.setPlainText(payload)
+            if not self._preview_large_mode:
+                self.append_log(
+                    f"ℹ️ Preview switched to plain text (content too large: {len(payload)} chars)."
+                )
+            self._preview_large_mode = True
+            return
+
+        self._preview_large_mode = False
+
+        try:
+            self.preview_edit.setMarkdown(payload)
+        except Exception:
+            self.preview_edit.setPlainText(payload)
 
     def get_current_markdown(self) -> str:
         # If editing, source of truth is the editor; else use current_content
@@ -2791,22 +2803,8 @@ Documents/
     def _export_in_progress(self) -> bool:
         return self.export_worker is not None and self.export_worker.isRunning()
 
-    def _start_export(self, export_format: str):
-        md = self.get_current_markdown().strip()
-        if not md:
-            content_type = "evaluation" if self._is_current_content_evaluation() else "fiche"
-            QtWidgets.QMessageBox.information(self, "Nothing to save", f"Generate a {content_type} first.")
-            return
-
-        if self._export_in_progress():
-            QtWidgets.QMessageBox.information(self, "Export in progress", "Please wait for the current export to finish.")
-            return
-
-        if export_format == "docx" and not HAS_DOCX:
-            QtWidgets.QMessageBox.warning(self, "Missing dependency", "Install python-docx to export DOCX:\n\npip install python-docx")
-            return
-
-        is_eval = self._is_current_content_evaluation()
+    def _collect_export_context(self, is_eval: bool) -> dict:
+        """Build export context from current UI state and content mode."""
         output_dir = (self.settings.value("output_dir", DEFAULT_OUTPUT_DIR) or DEFAULT_OUTPUT_DIR).strip()
         template_name = self.pdf_template_combo.currentText() or self.settings.value("default_pdf_style", list(PDF_TEMPLATES.keys())[0])
         show_meta = self.settings.value("pdf_show_meta", "false") == "true"
@@ -2828,17 +2826,45 @@ Documents/
         lesson_topic = self.topic_edit.text().strip() or "Lecon"
         topics_list = self.current_topics_list or [lesson_topic]
 
+        return {
+            "output_dir": output_dir,
+            "template_name": template_name,
+            "show_meta": show_meta,
+            "class_level": class_level,
+            "subject": subject,
+            "lesson_topic": lesson_topic,
+            "topics_list": topics_list,
+        }
+
+    def _start_export(self, export_format: str):
+        md = self.get_current_markdown().strip()
+        if not md:
+            content_type = "evaluation" if self._is_current_content_evaluation() else "fiche"
+            QtWidgets.QMessageBox.information(self, "Nothing to save", f"Generate a {content_type} first.")
+            return
+
+        if self._export_in_progress():
+            QtWidgets.QMessageBox.information(self, "Export in progress", "Please wait for the current export to finish.")
+            return
+
+        if export_format == "docx" and not HAS_DOCX:
+            QtWidgets.QMessageBox.warning(self, "Missing dependency", "Install python-docx to export DOCX:\n\npip install python-docx")
+            return
+
+        is_eval = self._is_current_content_evaluation()
+        ctx = self._collect_export_context(is_eval)
+
         self.export_worker = ExportWorker(
             export_format=export_format,
             content_type="evaluation" if is_eval else "fiche",
             markdown=md,
-            class_level=class_level,
-            output_dir=output_dir,
-            template_name=template_name,
-            subject=subject,
-            lesson_topic=lesson_topic,
-            topics_list=topics_list,
-            show_meta_banner=show_meta,
+            class_level=ctx["class_level"],
+            output_dir=ctx["output_dir"],
+            template_name=ctx["template_name"],
+            subject=ctx["subject"],
+            lesson_topic=ctx["lesson_topic"],
+            topics_list=ctx["topics_list"],
+            show_meta_banner=ctx["show_meta"],
         )
         self.export_worker.log.connect(self.append_log)
         self.export_worker.success.connect(self._on_export_success)

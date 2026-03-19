@@ -4,7 +4,6 @@ import threading
 import json
 from PyQt6 import QtCore
 from reportlab.lib.units import cm
-import json
 from utils.secret_store import get_secret, set_secret
 
 # Base directory resolution (Compatible with PyInstaller)
@@ -68,6 +67,12 @@ _GENAI_CLIENT = None
 _GENAI_CLIENT_KEY = None
 _GENAI_CLIENT_LOCK = threading.Lock()
 
+
+def legacy_key_sources_allowed() -> bool:
+    """Whether insecure legacy key sources (env/plaintext files) are allowed."""
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+    return settings.value("security_allow_legacy_keys", "true") == "true"
+
 def _store_api_key(value: str, key_name: str = "GEMINI_API_KEY"):
     """Persist key in memory and reset cached client if it changes."""
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY
@@ -87,20 +92,23 @@ def load_api_keys_from_settings() -> bool:
     settings = QtCore.QSettings("FicheGen", "Pedago")
     loaded = False
 
+    allow_legacy_sources = legacy_key_sources_allowed()
+
     # Primary Gemini key
     gemini_key = get_secret("gemini_api_key")
-    if not gemini_key:
+
+    if not gemini_key and allow_legacy_sources:
         gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not gemini_key:
+    if not gemini_key and allow_legacy_sources:
         # Backward compatibility: accept old env var and migrate in memory.
         gemini_key = os.getenv("GEMINI_FICHE_API_KEY", "").strip()
-    if not gemini_key:
+    if not gemini_key and allow_legacy_sources:
         # Legacy plaintext fallback (migrated to keychain when possible)
         gemini_key = settings.value("gemini_api_key", "").strip()
         if gemini_key and len(gemini_key) > 10:
             if set_secret("gemini_api_key", gemini_key):
                 settings.remove("gemini_api_key")
-    if not gemini_key:
+    if not gemini_key and allow_legacy_sources:
         # Backward compatibility for old fiche-only setting.
         legacy_fiche = settings.value("gemini_fiche_api_key", "").strip()
         if legacy_fiche and len(legacy_fiche) > 10:
@@ -115,26 +123,27 @@ def load_api_keys_from_settings() -> bool:
     # Keep memory clean in single-key mode.
     API_KEYS.pop("GEMINI_FICHE_API_KEY", None)
 
-    # Final fallback to keys.txt
-    try:
-        keys_path = os.path.join(BASE_DIR, "keys.txt")
-        if os.path.exists(keys_path) and not API_KEYS.get("GEMINI_API_KEY"):
-            with open(keys_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if '=' not in line:
-                        continue
-                    key, value = line.split('=', 1)
-                    key, value = key.strip(), value.strip()
-                    if key in ("GEMINI_API_KEY", "GEMINI_FICHE_API_KEY") and value and len(value) > 10:
-                        _store_api_key(value, "GEMINI_API_KEY")
-                        set_secret("gemini_api_key", value)
-                        loaded = True
-                        break
-    except (FileNotFoundError, IOError, UnicodeDecodeError):
-        pass
+    # Final fallback to keys.txt (legacy mode only)
+    if allow_legacy_sources:
+        try:
+            keys_path = os.path.join(BASE_DIR, "keys.txt")
+            if os.path.exists(keys_path) and not API_KEYS.get("GEMINI_API_KEY"):
+                with open(keys_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                        if '=' not in line:
+                            continue
+                        key, value = line.split('=', 1)
+                        key, value = key.strip(), value.strip()
+                        if key in ("GEMINI_API_KEY", "GEMINI_FICHE_API_KEY") and value and len(value) > 10:
+                            _store_api_key(value, "GEMINI_API_KEY")
+                            set_secret("gemini_api_key", value)
+                            loaded = True
+                            break
+        except (FileNotFoundError, IOError, UnicodeDecodeError):
+            pass
 
     return loaded
 
