@@ -4,6 +4,7 @@ import re
 import threading
 import time
 import random
+import hashlib
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -29,7 +30,7 @@ from core.toc import (
     PdfExtractionSession
 )
 from core.image_gen import (
-    generate_illustration, image_to_base64
+    generate_illustration, save_image_to_file
 )
 from core.updater import check_update_status, update_and_build, REPO_URL, REPO_BRANCH
 from utils.helpers import get_top_rated_examples
@@ -48,6 +49,32 @@ def _resolve_image_api_key() -> str:
 
 _IMG_TAG_RE = re.compile(r'<generateimage\s*:\s*(["\'])(.*?)\1\s*>', re.IGNORECASE | re.DOTALL)
 _EXERCISE_HEADER_RE = re.compile(r'^##\s+Exercice\s+(\d+)\s+-', re.IGNORECASE)
+_IMAGE_OUTPUT_SUBDIR = "Images"
+
+
+def _images_output_dir(base_output_dir: str = DEFAULT_OUTPUT_DIR) -> str:
+    """Ensure and return an absolute output directory for generated images."""
+    images_dir = os.path.abspath(os.path.join(base_output_dir or DEFAULT_OUTPUT_DIR, _IMAGE_OUTPUT_SUBDIR))
+    os.makedirs(images_dir, exist_ok=True)
+    return images_dir
+
+
+def _make_image_filename(prefix: str, prompt: str, index: int) -> str:
+    """Create a stable, filesystem-safe image filename."""
+    prompt_hash = hashlib.sha1((prompt or "").encode("utf-8", errors="ignore")).hexdigest()[:10]
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{prefix}_{timestamp}_{index:02d}_{prompt_hash}.png"
+
+
+def _persist_generated_image(image_data: bytes, prompt: str, index: int, queue, prefix: str = "fiche") -> Optional[str]:
+    """Write image bytes to fiches/Images and return an absolute file path."""
+    images_dir = _images_output_dir(DEFAULT_OUTPUT_DIR)
+    filename = _make_image_filename(prefix=prefix, prompt=prompt, index=index)
+    output_path = os.path.join(images_dir, filename)
+    if not save_image_to_file(image_data, output_path):
+        queue.put(("log", f"⚠️ Failed to save image file: {output_path}"))
+        return None
+    return output_path
 
 
 def _collect_image_prompts_from_markdown(markdown_text: str, max_prompts: int = 5) -> List[str]:
@@ -92,10 +119,18 @@ def _replace_image_tags_with_images(markdown_text: str, class_level: str, api_ke
                 return f"\n\n*⚠️ Image not generated for prompt:* {prompt}\n\n"
 
             generated_count += 1
-            base64_img = image_to_base64(image_data)
+            saved_image_path = _persist_generated_image(
+                image_data=image_data,
+                prompt=prompt,
+                index=generated_count,
+                queue=queue,
+                prefix="fiche",
+            )
+            if not saved_image_path:
+                return f"\n\n*⚠️ Image generated but failed to persist for prompt:* {prompt}\n\n"
             return (
                 "\n\n"
-                f"![Illustration {generated_count}](data:image/png;base64,{base64_img})\n"
+                f"![Illustration {generated_count}]({saved_image_path})\n"
                 f"*Prompt image: {prompt}*\n\n"
             )
         except Exception as exc:
@@ -1195,10 +1230,20 @@ class EvaluationWorker(QtCore.QThread):
                                             queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}."))
                                             continue
 
-                                        base64_img = image_to_base64(image_bytes)
+                                        saved_image_path = _persist_generated_image(
+                                            image_data=image_bytes,
+                                            prompt=prompt,
+                                            index=ordinal,
+                                            queue=queue,
+                                            prefix="evaluation",
+                                        )
+                                        if not saved_image_path:
+                                            queue.put(("log", f"⚠️ Image generated but not saved for Exercice {ex_idx}."))
+                                            continue
+
                                         caption = f"Illustration ciblée pour Exercice {ex_idx}: {job.get('title') or ''}".strip()
                                         image_blocks[ex_idx] = (
-                                            f"![Illustration Exercice {ex_idx}](data:image/png;base64,{base64_img})\n"
+                                            f"![Illustration Exercice {ex_idx}]({saved_image_path})\n"
                                             f"*{caption}*"
                                         )
 
