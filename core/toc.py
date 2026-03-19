@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 import re
@@ -573,23 +575,61 @@ def find_textbook_file(class_level, textbook_dir, queue):
     return None
 
 
-def extract_lesson_text(pdf_path, page_numbers, queue, cancel_event=None):
-    lesson_text = ""
+class PdfExtractionSession:
+    """Reusable PDF reader with per-page text cache for multi-topic extraction."""
+
+    def __init__(self, pdf_path, queue):
+        self.pdf_path = pdf_path
+        self.queue = queue
+        self._pdf = None
+        self._text_cache = {}
+
+    def __enter__(self):
+        self._pdf = pdfplumber.open(self.pdf_path)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self._pdf is not None:
+            try:
+                self._pdf.close()
+            except Exception:
+                pass
+        self._pdf = None
+
+    def extract_pages(self, page_numbers, cancel_event=None):
+        if self._pdf is None:
+            raise RuntimeError("PdfExtractionSession is not open")
+
+        lesson_parts = []
+        total_pages = len(self._pdf.pages)
+        for page_num in page_numbers:
+            if cancel_event and cancel_event.is_set():
+                self.queue.put(("log", "⏹️ Cancelled during PDF extraction."))
+                return None
+
+            if not (1 <= page_num <= total_pages):
+                self.queue.put(("log", f"⚠️ Warning: Page {page_num} is out of bounds."))
+                continue
+
+            if page_num not in self._text_cache:
+                page = self._pdf.pages[page_num - 1]
+                self._text_cache[page_num] = page.extract_text() or ""
+
+            text = self._text_cache.get(page_num, "")
+            if text:
+                lesson_parts.append(f"\n\n--- TEXT FROM PAGE {page_num} ---\n\n{text}")
+
+        self.queue.put(("log", "✅ Lesson text extracted."))
+        return "".join(lesson_parts)
+
+
+def extract_lesson_text(pdf_path, page_numbers, queue, cancel_event=None, session: PdfExtractionSession | None = None):
+    if session is not None:
+        return session.extract_pages(page_numbers, cancel_event=cancel_event)
+
     try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for page_num in page_numbers:
-                if cancel_event and cancel_event.is_set():
-                    queue.put(("log", "⏹️ Cancelled during PDF extraction."))
-                    return None
-                if 1 <= page_num <= len(pdf.pages):
-                    page = pdf.pages[page_num - 1]
-                    text = page.extract_text()
-                    if text:
-                        lesson_text += f"\n\n--- TEXT FROM PAGE {page_num} ---\n\n{text}"
-                else:
-                    queue.put(("log", f"⚠️ Warning: Page {page_num} is out of bounds."))
-        queue.put(("log", "✅ Lesson text extracted."))
-        return lesson_text
+        with PdfExtractionSession(pdf_path, queue) as local_session:
+            return local_session.extract_pages(page_numbers, cancel_event=cancel_event)
     except Exception as e:
         queue.put(("log", f"❌ PDF Extraction Error: {e}"))
         return None

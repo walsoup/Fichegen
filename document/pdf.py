@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import os
 import re
+import base64
+from io import BytesIO
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from xml.sax.saxutils import escape
 
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, XPreformatted, KeepInFrame
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, XPreformatted, KeepInFrame, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.units import cm, inch
@@ -144,17 +149,44 @@ def create_pdf_styles(template):
     # Blockquote Style
     styles.add(ParagraphStyle(
         name='BlockquoteStyle',
-        fontName=f'{font_family}-Oblique',
+        fontName=font_family,
         fontSize=body_size,
         leading=line_height,
-        leftIndent=30,
-        rightIndent=20,
+        leftIndent=20,
+        rightIndent=12,
         spaceAfter=12,
         spaceBefore=12,
-        textColor=colors.darkslategray,
-        borderWidth=0,
+        textColor=colors.HexColor('#1F2937'),
+        borderWidth=1,
         borderColor=safe_color(accent_color),
-        borderPadding=0
+        borderPadding=10,
+        backColor=safe_color(template.get('background_accent', '#F8FAFC'))
+    ))
+
+    styles.add(ParagraphStyle(
+        name='NumberedStyle',
+        fontName=font_family,
+        fontSize=body_size,
+        leading=line_height,
+        alignment=TA_LEFT,
+        spaceAfter=4,
+        spaceBefore=2,
+        leftIndent=24,
+        bulletIndent=8,
+        bulletFontName=f'{font_family}-Bold'
+    ))
+
+    styles.add(ParagraphStyle(
+        name='ExerciseHeadingStyle',
+        fontName=f'{font_family}-Bold',
+        fontSize=heading_size - 1,
+        spaceAfter=10,
+        spaceBefore=12,
+        textColor=safe_color(template.get('title_color', heading_color)),
+        borderWidth=1,
+        borderColor=safe_color(accent_color),
+        borderPadding=8,
+        backColor=safe_color(template.get('background_accent', '#F8FAFC'))
     ))
     
     # Special styles for different templates
@@ -304,6 +336,67 @@ def create_pdf_styles(template):
             textColor=safe_color(heading_color),
             leftIndent=10
         ))
+
+    # Dedicated fiche layout styles (used by the redesigned fiche renderer)
+    styles.add(ParagraphStyle(
+        name='FicheHeroTitle',
+        fontName=f'{font_family}-Bold',
+        fontSize=title_size + 1,
+        leading=(title_size + 1) * 1.15,
+        alignment=TA_CENTER,
+        textColor=colors.white,
+        spaceAfter=0,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='FicheSummary',
+        fontName=f'{font_family}-Bold',
+        fontSize=meta_size,
+        leading=meta_size * 1.4,
+        alignment=TA_CENTER,
+        textColor=safe_color(heading_color),
+        spaceAfter=0,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='FicheSectionHeading',
+        fontName=f'{font_family}-Bold',
+        fontSize=heading_size - 1,
+        leading=(heading_size - 1) * 1.2,
+        textColor=colors.white,
+        spaceAfter=0,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='FicheSubHeading',
+        fontName=f'{font_family}-Bold',
+        fontSize=heading_size - 3,
+        leading=(heading_size - 3) * 1.2,
+        textColor=safe_color(heading_color),
+        spaceAfter=4,
+        spaceBefore=8,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='FicheBody',
+        fontName=font_family,
+        fontSize=body_size,
+        leading=line_height,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        spaceAfter=5,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='FicheBullet',
+        fontName=font_family,
+        fontSize=body_size,
+        leading=line_height,
+        alignment=TA_LEFT,
+        leftIndent=16,
+        bulletIndent=4,
+        spaceAfter=3,
+    ))
     
     return styles
 
@@ -533,6 +626,12 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
             idx += 1
             continue
 
+        if line == '---':
+            story.append(Spacer(1, 4))
+            story.append(HRFlowable(width='100%', thickness=1, color=accent_hex, spaceBefore=4, spaceAfter=8))
+            idx += 1
+            continue
+
         # 1. Handle Code Blocks
         if line.startswith('```'):
             idx += 1
@@ -576,34 +675,35 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
             alt_text = img_match.group(1)
             img_path = img_match.group(2)
             
-            # Check if file exists (resolving relative paths if needed)
-            # Assuming paths are absolute or relative to CWD
-            if os.path.exists(img_path):
-                try:
-                    # Resize image if too wide
-                    available_width = 460 # Approx A4 width minus margins
-                    
+            try:
+                available_width = 460
+                if img_path.startswith('data:image/') and ';base64,' in img_path:
+                    _, encoded = img_path.split(';base64,', 1)
+                    img_elem = Image(BytesIO(base64.b64decode(encoded)))
+                elif os.path.exists(img_path):
                     img_elem = Image(img_path)
-                    img_width = img_elem.drawWidth
-                    img_height = img_elem.drawHeight
-                    
-                    if img_width > available_width:
-                        factor = available_width / img_width
-                        img_elem.drawWidth = available_width
-                        img_elem.drawHeight = img_height * factor
-                    
-                    story.append(img_elem)
-                    story.append(Spacer(1, 6))
-                    
-                    # Add caption if alt text is present
-                    if alt_text:
-                        story.append(Paragraph(alt_text, styles['MetaValueStyle'])) # Use smallish font for caption
-                    
-                    story.append(Spacer(1, 12))
-                except Exception as e:
-                    story.append(Paragraph(f"[Image Error: {e}]", styles['BodyStyle']))
-            else:
+                else:
+                    raise FileNotFoundError(img_path)
+
+                img_width = img_elem.drawWidth
+                img_height = img_elem.drawHeight
+                
+                if img_width > available_width:
+                    factor = available_width / img_width
+                    img_elem.drawWidth = available_width
+                    img_elem.drawHeight = img_height * factor
+                
+                story.append(img_elem)
+                story.append(Spacer(1, 6))
+                
+                if alt_text:
+                    story.append(Paragraph(alt_text, styles['MetaValueStyle']))
+                
+                story.append(Spacer(1, 12))
+            except FileNotFoundError:
                 story.append(Paragraph(f"[Image not found: {img_path}]", styles['BodyStyle']))
+            except Exception as e:
+                story.append(Paragraph(f"[Image Error: {e}]", styles['BodyStyle']))
             
             idx += 1
             continue
@@ -678,7 +778,9 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
 
         # Section headings (##)
         elif line.startswith('## '):
-            story.append(Paragraph(line.lstrip('## '), styles[template_styles['heading']]))
+            heading_text = line.lstrip('## ')
+            heading_style = 'ExerciseHeadingStyle' if heading_text.lower().startswith(('exercice', 'partie', 'illustrations')) else template_styles['heading']
+            story.append(Paragraph(heading_text, styles[heading_style]))
             story.append(Spacer(1, 10))
             idx += 1
 
@@ -707,8 +809,21 @@ def parse_markdown_to_story(content, styles, template, ui_metadata=None):
         elif line.startswith('- ') or line.startswith('* '):
             bullet_char = template.get('bullet_style', '•')
             bullet_text = line.lstrip('-* ')
+            if bullet_text.startswith('[ ] '):
+                bullet_char = '☐'
+                bullet_text = bullet_text[4:]
+            elif bullet_text.startswith('[x] '):
+                bullet_char = '☑'
+                bullet_text = bullet_text[4:]
             bullet_text = format_inline_markdown(bullet_text, accent_color)
             story.append(Paragraph(bullet_text, styles[template_styles['bullet']], bulletText=bullet_char))
+            idx += 1
+
+        elif re.match(r'^\d+\.\s+', line):
+            match = re.match(r'^(\d+)\.\s+(.*)$', line)
+            bullet_num = match.group(1)
+            numbered_text = format_inline_markdown(match.group(2), accent_color)
+            story.append(Paragraph(numbered_text, styles['NumberedStyle'], bulletText=f"{bullet_num}."))
             idx += 1
 
         # 7. Regular paragraphs
@@ -746,6 +861,259 @@ def generate_smart_filename(prefix, topic, class_level, output_dir, extension):
             return counter_filename
         counter += 1
 
+
+def _format_inline_reportlab(text: str, accent_color: str) -> str:
+    safe = escape(text or "")
+    safe = re.sub(r'\*\*(.+?)\*\*', rf'<b><font color="{accent_color}">\1</font></b>', safe)
+    safe = re.sub(r'\*(.+?)\*', r'<i>\1</i>', safe)
+    return safe
+
+
+def _parse_fiche_markdown(content: str) -> Dict[str, Any]:
+    parsed: Dict[str, Any] = {
+        "title": "Fiche pédagogique",
+        "summary": "",
+        "metadata": [],
+        "sections": [],
+    }
+
+    current_section: Optional[Dict[str, Any]] = None
+    current_subsection: Optional[Dict[str, Any]] = None
+    metadata_re = re.compile(r'^###\s+\*\*([^*]+)\*\*\s*:\s*(.+)$')
+    metadata_bullet_re = re.compile(r'^-\s+\*\*([^*]+)\*\*\s*:\s*(.+)$')
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if line.startswith('# '):
+            parsed["title"] = line[2:].strip() or parsed["title"]
+            continue
+
+        if line.startswith('> '):
+            if not parsed["summary"]:
+                parsed["summary"] = line[2:].strip().replace('**', '')
+            elif current_subsection is not None:
+                current_subsection["lines"].append(line)
+            elif current_section is not None:
+                current_section["lines"].append(line)
+            continue
+
+        meta_match = metadata_re.match(line)
+        if meta_match:
+            parsed["metadata"].append((meta_match.group(1).strip(), meta_match.group(2).strip()))
+            continue
+
+        bullet_meta_match = metadata_bullet_re.match(line)
+        if bullet_meta_match:
+            parsed["metadata"].append((bullet_meta_match.group(1).strip(), bullet_meta_match.group(2).strip()))
+            if current_subsection is not None:
+                current_subsection["lines"].append(line)
+            elif current_section is not None:
+                current_section["lines"].append(line)
+            continue
+
+        if line.startswith('## '):
+            current_section = {"title": line[3:].strip(), "lines": [], "subsections": []}
+            parsed["sections"].append(current_section)
+            current_subsection = None
+            continue
+
+        if line.startswith('### '):
+            if current_section is None:
+                current_section = {"title": "Contenu", "lines": [], "subsections": []}
+                parsed["sections"].append(current_section)
+            current_subsection = {"title": line[4:].strip(), "lines": []}
+            current_section["subsections"].append(current_subsection)
+            continue
+
+        if current_subsection is not None:
+            current_subsection["lines"].append(line)
+        elif current_section is not None:
+            current_section["lines"].append(line)
+
+    return parsed
+
+
+def _build_redesigned_fiche_story(content: str, styles, template, ui_metadata=None):
+    accent_color = template.get('accent_color', template.get('title_color', '#2E8B57'))
+    title_color = safe_color(template.get('title_color', '#2E8B57'))
+    section_color = safe_color(template.get('heading_color', '#2F4F4F'))
+    soft_bg = safe_color(template.get('background_accent', '#F5F7FA'))
+    parsed = _parse_fiche_markdown(content)
+
+    # Distinct layout systems per template family
+    if template.get('minimal'):
+        layout_mode = 'minimal'
+    elif template.get('serif') or template.get('formal_layout'):
+        layout_mode = 'manuscript'
+    elif template.get('use_borders'):
+        layout_mode = 'inspector'
+    elif template.get('decorative') or template.get('warm_styling'):
+        layout_mode = 'atelier'
+    else:
+        layout_mode = 'timeline'
+
+    hero_fill = title_color
+    section_fill = section_color
+    if layout_mode == 'atelier':
+        hero_fill = safe_color(template.get('gradient_colors', ['#355C7D'])[0])
+        section_fill = safe_color(template.get('gradient_colors', ['#355C7D', '#F08A4B'])[-1])
+    elif layout_mode == 'minimal':
+        hero_fill = safe_color('#2E3D45')
+        section_fill = safe_color('#5D7A86')
+    elif layout_mode == 'manuscript':
+        hero_fill = safe_color('#2B2A28')
+        section_fill = safe_color('#7F5C3C')
+
+    if ui_metadata:
+        fallback_items = [
+            ('Titre de la leçon', ui_metadata.get('titre de la leçon', '')),
+            ('Classe', ui_metadata.get('classe', '')),
+            ('Matière', ui_metadata.get('matière', '')),
+        ]
+        known = {k.lower() for k, _ in parsed['metadata']}
+        for key, value in fallback_items:
+            if value and key.lower() not in known:
+                parsed['metadata'].append((key, value))
+
+    story: List[Any] = []
+
+    if layout_mode == 'minimal':
+        story.append(Paragraph(escape(parsed['title']), styles['SubHeadingStyle']))
+        story.append(HRFlowable(width='100%', thickness=1, color=hero_fill, spaceBefore=2, spaceAfter=8))
+    elif layout_mode == 'manuscript':
+        story.append(Paragraph(escape(parsed['title']), styles.get('SerifTitleStyle', styles['TitleStyle'])))
+        story.append(HRFlowable(width='75%', thickness=1, color=hero_fill, spaceBefore=1, spaceAfter=10))
+    else:
+        hero = Table([[Paragraph(escape(parsed['title']), styles['FicheHeroTitle'])]], colWidths=[16 * cm])
+        hero.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), hero_fill),
+            ('BOX', (0, 0), (-1, -1), 0.8, hero_fill),
+            ('LEFTPADDING', (0, 0), (-1, -1), 14),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 14),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ]))
+        story.append(hero)
+        story.append(Spacer(1, 10))
+
+    if parsed['summary']:
+        story.append(Paragraph(_format_inline_reportlab(parsed['summary'], accent_color), styles['FicheSummary']))
+        story.append(Spacer(1, 8))
+
+    if parsed['metadata']:
+        if layout_mode == 'minimal':
+            compact = ' · '.join([f"{label}: {value}" for label, value in parsed['metadata']])
+            story.append(Paragraph(_format_inline_reportlab(compact, accent_color), styles['FicheBody']))
+            story.append(Spacer(1, 10))
+        elif layout_mode == 'manuscript':
+            story.append(Paragraph("Repères de séance", styles.get('SerifSubHeadingStyle', styles['SubHeadingStyle'])))
+            for label, value in parsed['metadata']:
+                story.append(Paragraph(f"<b>{escape(label)}:</b> {escape(value)}", styles.get('SerifBodyStyle', styles['FicheBody'])))
+            story.append(Spacer(1, 10))
+        else:
+            meta_rows = []
+            for label, value in parsed['metadata']:
+                meta_rows.append([
+                    Paragraph(f"<b><font color='{accent_color}'>{escape(label)}:</font></b>", styles['FicheBody']),
+                    Paragraph(escape(value), styles['FicheBody'])
+                ])
+            meta_table = Table(meta_rows, colWidths=[4.6 * cm, 11.4 * cm])
+            meta_style = [
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]
+            if layout_mode == 'inspector':
+                meta_style.extend([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                    ('BOX', (0, 0), (-1, -1), 1.0, section_color),
+                    ('INNERGRID', (0, 0), (-1, -1), 0.8, section_color),
+                ])
+            else:
+                meta_style.extend([
+                    ('BACKGROUND', (0, 0), (-1, -1), soft_bg),
+                    ('BOX', (0, 0), (-1, -1), 0.6, section_color),
+                    ('INNERGRID', (0, 0), (-1, -1), 0.3, section_color),
+                ])
+            meta_table.setStyle(TableStyle(meta_style))
+            story.append(meta_table)
+            story.append(Spacer(1, 12))
+
+    for section in parsed['sections']:
+        if layout_mode == 'minimal':
+            story.append(Paragraph(escape(section['title'].upper()), styles['SubHeadingStyle']))
+            story.append(HRFlowable(width='100%', thickness=0.7, color=section_fill, spaceBefore=1, spaceAfter=6))
+        elif layout_mode == 'manuscript':
+            story.append(Paragraph(escape(section['title']), styles.get('SerifHeadingStyle', styles['HeadingStyle'])))
+        else:
+            section_banner = Table([[Paragraph(escape(section['title']), styles['FicheSectionHeading'])]], colWidths=[16 * cm])
+            banner_style = [
+                ('BACKGROUND', (0, 0), (-1, -1), section_fill),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]
+            if layout_mode == 'inspector':
+                banner_style.append(('BOX', (0, 0), (-1, -1), 1, hero_fill))
+            section_banner.setStyle(TableStyle(banner_style))
+            story.append(section_banner)
+            story.append(Spacer(1, 6))
+
+        for line in section['lines']:
+            bullet_char = '•'
+            if layout_mode == 'timeline':
+                bullet_char = '▸'
+            elif layout_mode == 'atelier':
+                bullet_char = '◆'
+            elif layout_mode == 'minimal':
+                bullet_char = '-'
+            elif layout_mode == 'manuscript':
+                bullet_char = '•'
+            if line.startswith('- '):
+                text = _format_inline_reportlab(line[2:].strip(), accent_color)
+                story.append(Paragraph(text, styles['FicheBullet'], bulletText=bullet_char))
+            elif re.match(r'^\d+\.\s+', line):
+                m = re.match(r'^(\d+)\.\s+(.*)$', line)
+                story.append(Paragraph(_format_inline_reportlab(m.group(2), accent_color), styles['FicheBullet'], bulletText=f"{m.group(1)}."))
+            elif line.startswith('> '):
+                story.append(Paragraph(f"<i>{_format_inline_reportlab(line[2:].strip(), accent_color)}</i>", styles['FicheBody']))
+            else:
+                story.append(Paragraph(_format_inline_reportlab(line, accent_color), styles['FicheBody']))
+
+        for subsection in section['subsections']:
+            subsection_style = styles['FicheSubHeading']
+            if layout_mode == 'manuscript':
+                subsection_style = styles.get('SerifSubHeadingStyle', styles['FicheSubHeading'])
+            story.append(Paragraph(escape(subsection['title']), subsection_style))
+            for line in subsection['lines']:
+                bullet_char = '•'
+                if layout_mode == 'timeline':
+                    bullet_char = '▸'
+                elif layout_mode == 'atelier':
+                    bullet_char = '◆'
+                elif layout_mode == 'minimal':
+                    bullet_char = '-'
+                if line.startswith('- '):
+                    text = _format_inline_reportlab(line[2:].strip(), accent_color)
+                    story.append(Paragraph(text, styles['FicheBullet'], bulletText=bullet_char))
+                elif re.match(r'^\d+\.\s+', line):
+                    m = re.match(r'^(\d+)\.\s+(.*)$', line)
+                    story.append(Paragraph(_format_inline_reportlab(m.group(2), accent_color), styles['FicheBullet'], bulletText=f"{m.group(1)}."))
+                elif line.startswith('> '):
+                    story.append(Paragraph(f"<i>{_format_inline_reportlab(line[2:].strip(), accent_color)}</i>", styles['FicheBody']))
+                else:
+                    story.append(Paragraph(_format_inline_reportlab(line, accent_color), styles['FicheBody']))
+
+        story.append(Spacer(1, 10))
+
+    return story
+
 def save_fiche_to_pdf(content, lesson_topic, class_level, output_dir, queue, template_name: str | None = "Normal", subject: str | None = None):
     """Save fiche content as PDF using ReportLab"""
     try:
@@ -770,7 +1138,7 @@ def save_fiche_to_pdf(content, lesson_topic, class_level, output_dir, queue, tem
             bottomMargin=margins[3]
         )
         
-        # Create styles and story
+        # Create styles and redesigned fiche story
         styles = create_pdf_styles(template)
         
         # Create enhanced metadata from UI values as fallback
@@ -779,15 +1147,8 @@ def save_fiche_to_pdf(content, lesson_topic, class_level, output_dir, queue, tem
             'classe': class_level.upper(),
             'matière': subject if subject else ''
         }
-        
-        story = parse_markdown_to_story(content, styles, template, ui_metadata)
-        
-        # Add main title if not already present in content
-        if not any(content.strip().startswith(prefix) for prefix in ['# ', '## ']):
-            template_styles = get_template_styles(template)
-            title_style = template_styles['title']
-            story.insert(0, Spacer(1, 12))
-            story.insert(0, Paragraph(f"Fiche Pédagogique - {lesson_topic}", styles[title_style]))
+
+        story = _build_redesigned_fiche_story(content, styles, template, ui_metadata)
         
         # Build PDF
         doc.build(story)
@@ -798,6 +1159,324 @@ def save_fiche_to_pdf(content, lesson_topic, class_level, output_dir, queue, tem
     except Exception as e:
         queue.put(("log", f"❌ PDF Save Error: {e}"))
         return None
+
+
+def _clean_md_inline(text: str) -> str:
+    return (text or "").replace("**", "").replace("*", "").strip()
+
+
+def _extract_markdown_images(content: str) -> List[Dict[str, str]]:
+    images: List[Dict[str, str]] = []
+    for raw_line in (content or "").splitlines():
+        line = raw_line.strip()
+        m = re.match(r'!\[(.*?)\]\((.*?)\)', line)
+        if m:
+            images.append({"alt": m.group(1).strip(), "src": m.group(2).strip()})
+    return images
+
+
+def _parse_reimagined_evaluation(content: str) -> Dict[str, Any]:
+    parsed: Dict[str, Any] = {
+        "school": "Groupe Scolaire",
+        "session": "",
+        "level_subject": "",
+        "duration_total": "",
+        "consignes": [],
+        "exercises": [],
+        "correction": [],
+    }
+
+    lines = (content or "").splitlines()
+    idx = 0
+    current_ex = None
+    current_q = None
+    in_consigne = False
+    in_correction = False
+
+    while idx < len(lines):
+        raw = lines[idx]
+        line = raw.strip()
+        if not line:
+            idx += 1
+            continue
+
+        if line.startswith('> '):
+            text = _clean_md_inline(line[2:])
+            if text.lower().startswith("session"):
+                parsed["session"] = text.split(':', 1)[1].strip() if ':' in text else text
+            elif text.lower().startswith("niveau"):
+                parsed["level_subject"] = text
+            elif text.lower().startswith("durée") or text.lower().startswith("duree"):
+                parsed["duration_total"] = text
+            elif not parsed["school"] or parsed["school"] == "Groupe Scolaire":
+                parsed["school"] = text
+            idx += 1
+            continue
+
+        if line.startswith('## Consignes générales'):
+            in_consigne = True
+            in_correction = False
+            idx += 1
+            continue
+
+        if re.match(r'^##\s+Exercice\s+\d+\s*-\s*', line, flags=re.IGNORECASE):
+            in_consigne = False
+            in_correction = False
+            title = re.sub(r'^##\s+Exercice\s+\d+\s*-\s*', '', line, flags=re.IGNORECASE).strip()
+            current_ex = {"title": title or "Exercice", "points": "", "instruction": "", "questions": []}
+            parsed["exercises"].append(current_ex)
+            current_q = None
+            idx += 1
+            continue
+
+        if line.startswith('## Corrigé') or line.startswith('## Corrige'):
+            in_consigne = False
+            in_correction = True
+            current_ex = None
+            current_q = None
+            idx += 1
+            continue
+
+        if in_consigne and re.match(r'^\d+\.\s+', line):
+            parsed["consignes"].append(_clean_md_inline(re.sub(r'^\d+\.\s+', '', line)))
+            idx += 1
+            continue
+
+        if current_ex is not None:
+            if line.startswith('**Points:**'):
+                current_ex["points"] = _clean_md_inline(line.split(':', 1)[1] if ':' in line else line)
+                idx += 1
+                continue
+            if line.startswith('**Consigne:**'):
+                current_ex["instruction"] = _clean_md_inline(line.split(':', 1)[1] if ':' in line else line)
+                idx += 1
+                continue
+            if line.startswith('### Q'):
+                current_q = {"header": _clean_md_inline(line.lstrip('#').strip()), "prompt": ""}
+                current_ex["questions"].append(current_q)
+                idx += 1
+                continue
+            if current_q is not None and not line.startswith('Réponse:') and not line.startswith('---'):
+                if not current_q["prompt"]:
+                    current_q["prompt"] = _clean_md_inline(line)
+                idx += 1
+                continue
+
+        if in_correction and line.startswith('- '):
+            parsed["correction"].append(_clean_md_inline(line[2:]))
+            idx += 1
+            continue
+
+        idx += 1
+
+    return parsed
+
+
+def _build_reimagined_evaluation_story(content: str, styles, template, ui_metadata=None) -> List[Any]:
+    parsed = _parse_reimagined_evaluation(content)
+    images = _extract_markdown_images(content)
+
+    title_color = safe_color(template.get('title_color', '#0E3A5D'))
+    accent = safe_color(template.get('accent_color', '#0E3A5D'))
+    soft_bg = safe_color(template.get('background_accent', '#EEF4FA'))
+
+    eval_title = ParagraphStyle(
+        name='EvalTitleStyle',
+        parent=styles['TitleStyle'],
+        fontSize=22,
+        leading=26,
+        alignment=TA_CENTER,
+        textColor=colors.white,
+        spaceBefore=0,
+        spaceAfter=0,
+    )
+    eval_meta = ParagraphStyle(
+        name='EvalMetaStyle',
+        parent=styles['BodyStyle'],
+        fontSize=10,
+        leading=13,
+        alignment=TA_LEFT,
+        textColor=colors.HexColor('#1A2A39'),
+    )
+    eval_heading = ParagraphStyle(
+        name='EvalHeadingStyle',
+        parent=styles['HeadingStyle'],
+        fontSize=14,
+        leading=17,
+        textColor=colors.white,
+        spaceBefore=0,
+        spaceAfter=0,
+    )
+    eval_question = ParagraphStyle(
+        name='EvalQuestionStyle',
+        parent=styles['BodyStyle'],
+        fontSize=11,
+        leading=15,
+        leftIndent=0,
+        alignment=TA_LEFT,
+    )
+
+    story: List[Any] = []
+
+    hero = Table([[Paragraph("EPREUVE D'EVALUATION", eval_title)]], colWidths=[16 * cm])
+    hero.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), title_color),
+        ('BOX', (0, 0), (-1, -1), 1, title_color),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(hero)
+    story.append(Spacer(1, 8))
+
+    info_rows = [
+        [Paragraph("<b>Etablissement</b>", eval_meta), Paragraph(escape(parsed.get('school') or ''), eval_meta)],
+        [Paragraph("<b>Session</b>", eval_meta), Paragraph(escape(parsed.get('session') or ''), eval_meta)],
+        [Paragraph("<b>Niveau / Matière</b>", eval_meta), Paragraph(escape(parsed.get('level_subject') or ''), eval_meta)],
+        [Paragraph("<b>Durée / Barème</b>", eval_meta), Paragraph(escape(parsed.get('duration_total') or ''), eval_meta)],
+    ]
+    info_table = Table(info_rows, colWidths=[4.8 * cm, 11.2 * cm])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), soft_bg),
+        ('BOX', (0, 0), (-1, -1), 0.8, accent),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, accent),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 8))
+
+    identity = Table([
+        ["Nom et prénom", "_____________________________________", "Classe", "____________"],
+        ["Date", "__________________", "Note", "________ / ________"],
+    ], colWidths=[3.2 * cm, 6.2 * cm, 2.6 * cm, 4.0 * cm])
+    identity.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.8, accent),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, accent),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(identity)
+    story.append(Spacer(1, 10))
+
+    consignes = parsed.get("consignes") or []
+    if consignes:
+        consigne_header = Table([[Paragraph("Consignes Générales", eval_heading)]], colWidths=[16 * cm])
+        consigne_header.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), accent),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(consigne_header)
+        story.append(Spacer(1, 4))
+        for idx, rule in enumerate(consignes, start=1):
+            story.append(Paragraph(f"{idx}. {escape(rule)}", eval_question))
+        story.append(Spacer(1, 8))
+
+    for ex_idx, ex in enumerate(parsed.get("exercises") or [], start=1):
+        ex_title = ex.get('title') or f"Exercice {ex_idx}"
+        ex_points = ex.get('points') or ""
+        ex_instr = ex.get('instruction') or ""
+
+        ex_header = Table(
+            [[Paragraph(f"Exercice {ex_idx} - {escape(ex_title)}", eval_heading), Paragraph(f"{escape(ex_points)} pts", eval_heading)]],
+            colWidths=[13.2 * cm, 2.8 * cm],
+        )
+        ex_header.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), title_color),
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(ex_header)
+        if ex_instr:
+            story.append(Spacer(1, 3))
+            story.append(Paragraph(f"<i>{escape(ex_instr)}</i>", eval_question))
+        story.append(Spacer(1, 5))
+
+        for q_idx, question in enumerate(ex.get("questions") or [], start=1):
+            q_header = question.get("header") or f"Q{ex_idx}.{q_idx}"
+            q_prompt = question.get("prompt") or ""
+            story.append(Paragraph(f"<b>{escape(q_header)}</b>", eval_question))
+            if q_prompt:
+                story.append(Paragraph(escape(q_prompt), eval_question))
+
+            answer_zone = Table([
+                [""],
+                [""],
+            ], colWidths=[16 * cm], rowHeights=[0.8 * cm, 0.8 * cm])
+            answer_zone.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#8AA0B4')),
+                ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#C5D1DB')),
+            ]))
+            story.append(answer_zone)
+            story.append(Spacer(1, 6))
+
+    if images:
+        img_header = Table([[Paragraph("Illustrations", eval_heading)]], colWidths=[16 * cm])
+        img_header.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), accent),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(Spacer(1, 4))
+        story.append(img_header)
+        story.append(Spacer(1, 6))
+
+        for img in images:
+            src = img.get("src") or ""
+            alt = img.get("alt") or "Illustration"
+            try:
+                if src.startswith('data:image/') and ';base64,' in src:
+                    _, encoded = src.split(';base64,', 1)
+                    img_elem = Image(BytesIO(base64.b64decode(encoded)))
+                elif os.path.exists(src):
+                    img_elem = Image(src)
+                else:
+                    continue
+
+                max_w = 14.5 * cm
+                if img_elem.drawWidth > max_w:
+                    factor = max_w / float(img_elem.drawWidth)
+                    img_elem.drawWidth = max_w
+                    img_elem.drawHeight = img_elem.drawHeight * factor
+
+                story.append(img_elem)
+                story.append(Spacer(1, 3))
+                story.append(Paragraph(escape(alt), eval_meta))
+                story.append(Spacer(1, 8))
+            except Exception:
+                continue
+
+    corrections = parsed.get("correction") or []
+    if corrections:
+        story.append(Spacer(1, 6))
+        corr_header = Table([[Paragraph("Corrigé Enseignant", eval_heading)]], colWidths=[16 * cm])
+        corr_header.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#3B4956')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(corr_header)
+        story.append(Spacer(1, 4))
+        for item in corrections:
+            story.append(Paragraph(f"- {escape(item)}", eval_question))
+
+    return story
 
 def save_evaluation_to_pdf(content, topics_list, class_level, output_dir, queue, template_name: str | None = "Normal", subject: str | None = None):
     """Save evaluation content as PDF using ReportLab"""
@@ -836,7 +1515,7 @@ def save_evaluation_to_pdf(content, topics_list, class_level, output_dir, queue,
             'sujets': ', '.join(topics_list)
         }
         
-        story = parse_markdown_to_story(content, styles, template, ui_metadata)
+        story = _build_reimagined_evaluation_story(content, styles, template, ui_metadata)
         doc.build(story)
         
         queue.put(("log", f"💾 Evaluation PDF saved: {full_path}"))

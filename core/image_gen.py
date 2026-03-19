@@ -79,7 +79,7 @@ Consigne:
     try:
         # Use flash for image planning (faster and cheaper, planning doesn't need Pro)
         response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=[plan_prompt],
+            model="gemini-flash-latest", contents=[plan_prompt],
             config=types.GenerateContentConfig(tools=[plan_tool], temperature=0.2)
         )
     except Exception as exc:

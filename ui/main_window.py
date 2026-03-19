@@ -1,13 +1,12 @@
 import os
 import json
+import re
 from datetime import datetime
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtGui import QAction
 
 from config import (
     PDF_TEMPLATES,
-    DEFAULT_PRO_MODEL,
-    DEFAULT_FLASH_MODEL,
     DEFAULT_INPUT_DIR,
     DEFAULT_OUTPUT_DIR,
     CLASS_LEVELS,
@@ -22,7 +21,7 @@ from config import (
     load_api_keys_from_settings,
     save_rating_record
 )
-from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ModelUpdateWorker
+from core.workers import GenerationWorker, EvaluationWorker, QuizWorker
 from core.toc import find_guide_file, get_cached_toc
 from document.pdf import save_fiche_to_pdf, save_evaluation_to_pdf
 from document.docx import save_fiche_to_docx, save_evaluation_to_docx
@@ -80,6 +79,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
         # Right: Tabs with better styling
         self.right_tabs = QtWidgets.QTabWidget()
+        self.right_tabs.setObjectName("ContentTabs")
         self.right_tabs.setDocumentMode(True)
         self.right_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         self.right_tabs.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
@@ -104,10 +104,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.preview_stack = QtWidgets.QStackedWidget()
         # Editor: raw markdown
         self.preview_editor = QtWidgets.QPlainTextEdit()
+        self.preview_editor.setObjectName("preview_editor")
         self.preview_editor.setPlaceholderText("Edit the Markdown here...")
         self.preview_editor.textChanged.connect(self.on_editor_text_changed)
         # Preview: rendered markdown
         self.preview_edit = QtWidgets.QTextEdit()
+        self.preview_edit.setObjectName("preview_view")
         self.preview_edit.setReadOnly(True)
         self.preview_edit.setPlaceholderText("Your generated fiche will appear here.")
         self.preview_stack.addWidget(self.preview_edit)   # index 0 = view
@@ -119,6 +121,7 @@ class MainWindow(QtWidgets.QMainWindow):
         log_layout = QtWidgets.QVBoxLayout(log_widget)
         log_layout.setContentsMargins(16, 12, 16, 16)
         self.log_edit = QtWidgets.QPlainTextEdit()
+        self.log_edit.setObjectName("log_view")
         self.log_edit.setReadOnly(True)
         self.log_edit.setMaximumBlockCount(5000)
         log_layout.addWidget(self.log_edit)
@@ -164,51 +167,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Ready")
         self.resize(1200, 800)
 
-        # Start background model update check
-        current_pro = self.settings.value("custom_pro_model", DEFAULT_PRO_MODEL)
-        current_flash = self.settings.value("custom_flash_model", DEFAULT_FLASH_MODEL)
-        self.model_updater = ModelUpdateWorker(current_pro, current_flash)
-        self.model_updater.models_found.connect(self.on_models_updated)
-        self.model_updater.start()
-
-    def on_models_updated(self, old_pro, new_pro, old_flash, new_flash):
-        """Called when ModelUpdateWorker finds newer models via Gemma analysis."""
-        try:
-            # Build the message for the dialog
-            changes = []
-            if new_pro:
-                changes.append(f"Pro model:\n   {old_pro}  →  {new_pro}")
-            if new_flash:
-                changes.append(f"Flash model:\n   {old_flash}  →  {new_flash}")
-            
-            if not changes:
-                return
-            
-            message = "🆕 New Gemini model(s) available!\n\n" + "\n\n".join(changes)
-            
-            # Show confirmation dialog
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                "New Gemini Models Available",
-                message,
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
-                QtWidgets.QMessageBox.StandardButton.Yes
-            )
-            
-            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-                # Apply the updates
-                if new_pro:
-                    self.settings.setValue("custom_pro_model", new_pro)
-                if new_flash:
-                    self.settings.setValue("custom_flash_model", new_flash)
-                
-                self.statusBar().showMessage("✨ Models updated!", 5000)
-            else:
-                self.statusBar().showMessage("Model update skipped", 3000)
-                
-        except Exception as e:
-            print(f"Error showing model update dialog: {e}")
-
     def _apply_style(self, mode: str):
         # On macOS we prefer native appearance with optional minimal polish
         self.current_theme = "light" if mode not in ("light", "dark") else mode
@@ -249,6 +207,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Tabbed workflow: fiches vs evaluations
         self.sidebar_tabs = QtWidgets.QTabWidget()
+        self.sidebar_tabs.setObjectName("SidebarTabs")
         self.sidebar_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
         self.sidebar_tabs.setDocumentMode(True)
         self.sidebar_tabs.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
@@ -475,6 +434,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action_layout = QtWidgets.QHBoxLayout()
         action_layout.addStretch()
         self.generate_eval_btn = QtWidgets.QPushButton(tr("generate_eval"))
+        self.generate_eval_btn.setObjectName("generate_eval_btn")
         self.generate_eval_btn.clicked.connect(self.start_evaluation_generation)
         action_layout.addWidget(self.generate_eval_btn)
         layout.addLayout(action_layout)
@@ -596,6 +556,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action_layout = QtWidgets.QHBoxLayout()
         action_layout.addStretch()
         self.generate_quiz_btn = QtWidgets.QPushButton(tr("generate_quiz"))
+        self.generate_quiz_btn.setObjectName("generate_quiz_btn")
         self.generate_quiz_btn.clicked.connect(self.start_quiz_generation)
         action_layout.addWidget(self.generate_quiz_btn)
         layout.addLayout(action_layout)
@@ -726,6 +687,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker.content.connect(self.on_content_ready)
         self.worker.done.connect(self.on_done)
         self.worker.enable_buttons.connect(self.on_enable_buttons)
+        self.worker.finished.connect(self.on_enable_buttons)
         self.worker.start()
 
         self.append_log(f"🎯 Starting quiz generation for: {topic}")
@@ -778,6 +740,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Action button
         self.generate_btn = QtWidgets.QPushButton(tr("generate_fiche"))
+        self.generate_btn.setObjectName("generate_btn")
         self.generate_btn.setDefault(True)
         self.generate_btn.clicked.connect(self.start_generation)
         layout.addRow("", self.generate_btn)
@@ -838,12 +801,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Status text (smaller, secondary)
         self.status_label = QtWidgets.QLabel("Ready to generate")
+        self.status_label.setObjectName("status_label")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
         button_row = QtWidgets.QHBoxLayout()
         button_row.addStretch()
         self.cancel_btn = QtWidgets.QPushButton("Cancel")
+        self.cancel_btn.setObjectName("cancel_btn")
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.clicked.connect(self.cancel_generation)
         button_row.addWidget(self.cancel_btn)
@@ -860,6 +825,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Preferences button at the top
         prefs_layout = QtWidgets.QHBoxLayout()
         self.prefs_btn = QtWidgets.QPushButton("⚙️ Preferences")
+        self.prefs_btn.setObjectName("prefs_btn")
         self.prefs_btn.clicked.connect(self._show_preferences)
         self.prefs_btn.setToolTip("Open application preferences")
         prefs_layout.addWidget(self.prefs_btn)
@@ -942,16 +908,19 @@ class MainWindow(QtWidgets.QMainWindow):
         # Save buttons
         save_layout = QtWidgets.QHBoxLayout()
         self.save_pdf_btn = QtWidgets.QPushButton("PDF")
+        self.save_pdf_btn.setObjectName("save_pdf_btn")
         self.save_pdf_btn.setEnabled(False)
         self.save_pdf_btn.clicked.connect(self.save_current_pdf)
         self.save_pdf_btn.setToolTip("Save as PDF (Cmd+S)")
         
         self.save_docx_btn = QtWidgets.QPushButton("DOCX")
+        self.save_docx_btn.setObjectName("save_docx_btn")
         self.save_docx_btn.setEnabled(False)
         self.save_docx_btn.clicked.connect(self.save_current_docx)
         self.save_docx_btn.setToolTip("Save as DOCX (Shift+Cmd+S)")
         
         self.clear_btn = QtWidgets.QPushButton("Clear")
+        self.clear_btn.setObjectName("clear_btn")
         self.clear_btn.clicked.connect(self.clear_preview)
         self.clear_btn.setToolTip("Clear preview (Cmd+Backspace)")
 
@@ -1126,6 +1095,7 @@ class MainWindow(QtWidgets.QMainWindow):
             except Exception:
                 pass
         act_quit.triggered.connect(self.close)
+        file_menu.addAction(act_quit)
         # Window menu (macOS standard)
         window_menu = mb.addMenu("&Window")
         
@@ -1164,24 +1134,34 @@ class MainWindow(QtWidgets.QMainWindow):
                 pass
         act_about.triggered.connect(self._show_about)
         help_menu.addAction(act_about)
-        # Remove extra English Help menu to avoid duplication with Aide
-        help_menu.addAction(act_about)
-        # Remove extra English Help menu to avoid duplication with Aide
+
     def _install_toolbar(self):
         # Toolbar removed as per design: redundant with main controls
         return
 
+    def _openrouter_ui_enabled(self) -> bool:
+        return self.settings.value("enable_openrouter_ui", "false") == "true"
+
+    def _filter_openrouter_mentions(self, content: str) -> str:
+        if self._openrouter_ui_enabled():
+            return content
+        filtered_lines = []
+        for line in content.splitlines():
+            if "openrouter" in line.lower():
+                continue
+            filtered_lines.append(line)
+        sanitized = "\n".join(filtered_lines)
+        # Tidy obvious leftover blank lines in long HTML strings.
+        return re.sub(r"\n{3,}", "\n\n", sanitized)
+
     def _show_preferences(self):
         """Show the preferences dialog."""
-        print("DEBUG: _show_preferences called - creating preferences dialog")
         try:
             # Create the preferences dialog
             dialog = PreferencesDialog(self)
-            print("DEBUG: PreferencesDialog created successfully")
             
             # Load current settings into the dialog
             dialog.load_from_settings(self.settings)
-            print("DEBUG: Settings loaded into dialog")
             
             # Show the dialog and handle the result
             if PYQT6:
@@ -1190,18 +1170,12 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 result = dialog.exec_()
                 accepted = result == QtWidgets.QDialog.Accepted
-                
-            print(f"DEBUG: Dialog result: {result}, accepted: {accepted}")
             
             if accepted:
-                print("DEBUG: User accepted dialog, saving settings")
                 # Save the settings from the dialog
                 dialog.save_to_settings(self.settings)
                 # Sync the main window with the new settings
                 self._sync_from_preferences()
-                print("DEBUG: Settings saved and synced successfully")
-            else:
-                print("DEBUG: User cancelled dialog")
                 
         except Exception as e:
             print(f"ERROR in _show_preferences: {e}")
@@ -1394,7 +1368,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Scrollable text area
         scroll = QtWidgets.QScrollArea()
         text_widget = QtWidgets.QTextEdit()
-        text_widget.setHtml(content)
+        text_widget.setHtml(self._filter_openrouter_mentions(content))
         text_widget.setReadOnly(True)
         scroll.setWidget(text_widget)
         scroll.setWidgetResizable(True)
@@ -2151,7 +2125,7 @@ Documents/
             reply = QtWidgets.QMessageBox.warning(
                 self,
                 "API Key Missing",
-                "Gemini API key is not configured.\n\nWould you like to open Preferences to configure it?",
+                "No Gemini API key configured for fiche generation.\nConfigure your Gemini key in Preferences.",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.Yes
             )
@@ -2245,6 +2219,7 @@ Documents/
         self.worker.content.connect(self.on_content_ready)
         self.worker.done.connect(self.on_done)
         self.worker.enable_buttons.connect(self.on_enable_buttons)
+        self.worker.finished.connect(self.on_enable_buttons)
         self.worker.request_source_preview.connect(self.show_source_preview_dialog)
         self.worker.start()
 
@@ -2264,7 +2239,7 @@ Documents/
             reply = QtWidgets.QMessageBox.warning(
                 self,
                 "API Key Missing",
-                "Gemini API key is not configured.\n\nWould you like to open Preferences to configure it?",
+                "Gemini API key is required for evaluations and quizzes.\n\nWould you like to open Preferences to configure it?",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.Yes
             )
@@ -2323,8 +2298,7 @@ Documents/
         
         # Use shared model toggle from footer
         use_pro = self.model_toggle.isChecked()
-        model_name = "gemini-2.5-flash" if use_pro else "gemini-2.5-flash"  # Both use same model for now
-        # Note: The actual model selection (Pro vs Flash) will be implemented when we fix the model names
+        model_name = get_configured_pro_model() if use_pro else get_configured_flash_model()
 
         formatting_options = {
             "include_tables": self.eval_include_tables_chk.isChecked(),
@@ -2438,8 +2412,8 @@ Documents/
         self.worker.content.connect(self.on_content_ready)
         self.worker.done.connect(self.on_done)
         self.worker.enable_buttons.connect(self.on_enable_buttons)
+        self.worker.finished.connect(self.on_enable_buttons)
         self.worker.request_source_preview.connect(self.show_source_preview_dialog)
-        self.worker.enable_buttons.connect(self.on_enable_buttons)
         
         # Start evaluation generation
         self.worker.start()
@@ -2736,10 +2710,11 @@ Documents/
 
     def on_done(self, path: str):
         """Handle generation completion."""
+        self.on_enable_buttons()
         QtWidgets.QMessageBox.information(
             self, 
             "Generation Complete", 
-            f"Fiche saved as:\n{path}"
+            f"Generated content:\n{path}"
         )
 
     def on_enable_buttons(self):
@@ -2805,7 +2780,7 @@ Documents/
         
         template_name = self.pdf_template_combo.currentText() or self.settings.value("default_pdf_style", list(PDF_TEMPLATES.keys())[0])
         
-        subject = self.subject_combo.currentText().strip() if getattr(self, 'use_subject_chk', None) and self.use_subject_chk.isChecked() else None
+        subject = self.subject_combo.currentText().strip() or None
             
         class UQ:
             def __init__(uqself, outer): uqself.outer = outer
@@ -2860,6 +2835,7 @@ Documents/
         
         output_dir = (self.settings.value("output_dir", DEFAULT_OUTPUT_DIR) or DEFAULT_OUTPUT_DIR).strip()
         class_level = self.class_combo.currentText()
+        template_name = self.pdf_template_combo.currentText() or self.settings.value("default_pdf_style", list(PDF_TEMPLATES.keys())[0])
 
         class UQ:
             def __init__(uqself, outer): uqself.outer = outer
@@ -2878,7 +2854,7 @@ Documents/
             else:
                 # For fiches, use lesson topic
                 lesson_topic = self.topic_edit.text().strip()
-                path = save_fiche_to_docx(md, lesson_topic, class_level, output_dir, UQ(self))
+                path = save_fiche_to_docx(md, lesson_topic, class_level, output_dir, UQ(self), template_name=template_name)
         except Exception as e:
             self.append_log(f"❌ DOCX Save Error: {e}")
             import traceback
@@ -2965,11 +2941,8 @@ Documents/
         # Cancel and clean up any running worker
         if self.worker is not None and self.worker.isRunning():
             self.worker.cancel()
-            # Give worker a brief moment to exit gracefully
-            if not self.worker.wait(2000):  # Wait up to 2 seconds
-                # Force terminate if still running
-                self.worker.terminate()
-                self.worker.wait()
+            # Give worker a brief moment to exit gracefully. Avoid force-terminating threads.
+            self.worker.wait(3000)
         
         # Close log file
         if self.log_file_handle:

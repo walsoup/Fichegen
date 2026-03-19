@@ -5,6 +5,7 @@ import json
 from PyQt6 import QtCore
 from reportlab.lib.units import cm
 import json
+from utils.secret_store import get_secret, set_secret
 
 # Base directory resolution (Compatible with PyInstaller)
 if getattr(sys, 'frozen', False):
@@ -37,10 +38,10 @@ CLASS_LEVELS = [
 
 # Default model names
 DEFAULT_PRO_MODEL = "gemini-2.5-pro"
-DEFAULT_FLASH_MODEL = "gemini-2.5-flash"
+DEFAULT_FLASH_MODEL = "gemini-flash-latest"
 GEMINI_MODEL = DEFAULT_PRO_MODEL
 GEMINI_TOC_MODEL = DEFAULT_FLASH_MODEL
-GEMINI_OFFSET_MODEL = "gemini-2.5-flash-lite"
+GEMINI_OFFSET_MODEL = "gemini-flash-latest"
 GEMMA_SYNTAX_MODEL = "gemma-3-27b-it"
 
 # Image Generation Constants
@@ -67,55 +68,75 @@ _GENAI_CLIENT = None
 _GENAI_CLIENT_KEY = None
 _GENAI_CLIENT_LOCK = threading.Lock()
 
-def _store_api_key(value: str):
-    """Persist key in memory and refresh the cached client when it changes."""
+def _store_api_key(value: str, key_name: str = "GEMINI_API_KEY"):
+    """Persist key in memory and reset cached client if it changes."""
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY
-    previous = API_KEYS.get("GEMINI_API_KEY")
-    API_KEYS["GEMINI_API_KEY"] = value
-    if value and value != previous:
+    previous = API_KEYS.get(key_name)
+    API_KEYS[key_name] = value
+    if value != previous:
         with _GENAI_CLIENT_LOCK:
             _GENAI_CLIENT = None
             _GENAI_CLIENT_KEY = None
 
 def load_api_keys_from_settings() -> bool:
     """
-    Load Gemini API key from QSettings with fallback chain.
-    Priority: QSettings > Environment > keys.txt
-    Returns: True if key was loaded successfully, False otherwise
+    Load Gemini API key with fallback chain.
+    Priority: Keychain > Environment > legacy QSettings > keys.txt
+    Returns: True if a key was loaded successfully, False otherwise
     """
     settings = QtCore.QSettings("FicheGen", "Pedago")
-    
-    # Try QSettings first
-    gemini_key = settings.value("gemini_api_key", "").strip()
+    loaded = False
+
+    # Primary Gemini key
+    gemini_key = get_secret("gemini_api_key")
+    if not gemini_key:
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not gemini_key:
+        # Backward compatibility: accept old env var and migrate in memory.
+        gemini_key = os.getenv("GEMINI_FICHE_API_KEY", "").strip()
+    if not gemini_key:
+        # Legacy plaintext fallback (migrated to keychain when possible)
+        gemini_key = settings.value("gemini_api_key", "").strip()
+        if gemini_key and len(gemini_key) > 10:
+            if set_secret("gemini_api_key", gemini_key):
+                settings.remove("gemini_api_key")
+    if not gemini_key:
+        # Backward compatibility for old fiche-only setting.
+        legacy_fiche = settings.value("gemini_fiche_api_key", "").strip()
+        if legacy_fiche and len(legacy_fiche) > 10:
+            gemini_key = legacy_fiche
+            if set_secret("gemini_api_key", legacy_fiche):
+                settings.remove("gemini_fiche_api_key")
+
     if gemini_key and len(gemini_key) > 10:
-        _store_api_key(gemini_key)
-        return True
-    
-    # Fallback to environment
-    env_gemini = os.getenv("GEMINI_API_KEY", "").strip()
-    if env_gemini and len(env_gemini) > 10:
-        _store_api_key(env_gemini)
-        return True
-    
+        _store_api_key(gemini_key, "GEMINI_API_KEY")
+        loaded = True
+
+    # Keep memory clean in single-key mode.
+    API_KEYS.pop("GEMINI_FICHE_API_KEY", None)
+
     # Final fallback to keys.txt
     try:
         keys_path = os.path.join(BASE_DIR, "keys.txt")
-        if os.path.exists(keys_path):
+        if os.path.exists(keys_path) and not API_KEYS.get("GEMINI_API_KEY"):
             with open(keys_path, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        key, value = key.strip(), value.strip()
-                        if key == "GEMINI_API_KEY" and value and len(value) > 10:
-                            _store_api_key(value)
-                            return True
+                    if '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    key, value = key.strip(), value.strip()
+                    if key in ("GEMINI_API_KEY", "GEMINI_FICHE_API_KEY") and value and len(value) > 10:
+                        _store_api_key(value, "GEMINI_API_KEY")
+                        set_secret("gemini_api_key", value)
+                        loaded = True
+                        break
     except (FileNotFoundError, IOError, UnicodeDecodeError):
         pass
-    
-    return False
+
+    return loaded
 
 # Translations
 TRANSLATIONS = {
@@ -417,10 +438,11 @@ EXEMPLES DE STYLE À IMITER (pour le ton et la formulation, pas le format):
 1.  **Structure interne:** Utilise la `STRUCTURE À RESPECTER` comme plan pour remplir les champs JSON (objectives → liste, phases → étapes chronologiques, etc.).
 2.  **Métadonnées:** Renseigne précisément les informations clés (titre du chapitre si disponible, durée réaliste, classe, matière et matériel nécessaire).
 3.  **Contenu:** Base-toi sur le MATÉRIEL SOURCE pour alimenter chaque section. Analyse-le rigoureusement et reste fidèle au programme.
-4.  **Ton:** Adopte le style des EXEMPLES (voix de l'enseignant, phrases actionnables, bienveillance professionnelle).
-5.  **Timing:** Calibre chaque phase pour respecter environ {duree} minutes, avec {active} minutes d'activité effective. Commence par une mise en route orale.
-6.  **Clarté:** Les consignes doivent être directes, sans phrases d'introduction inutiles. Prévois une conclusion récapitulative prête à être recopiée.
-7.  **Format JSON:** Réponds exclusivement avec un objet JSON contenant les champs `title`, `metadata`, `objectives`, `phases`, `evaluation`, `reminders` (optionnel) et `conclusion` (optionnel). Chaque liste (`objectives`, `teacher_steps`, `student_steps`, `evaluation.questions`) doit contenir des phrases courtes en Markdown simple.
+4.  **Ton:** Adopte un ton professionnel et concret (consignes courtes, verbes d'action, logique de conduite de classe).
+5.  **Timing:** Calibre chaque phase pour respecter environ {duree} minutes, avec {active} minutes d'activité effective. Chaque phase doit avoir une finalité claire et observable.
+6.  **Scénarisation:** Fournis dans `phases` une progression opérationnelle (mise en route, exploration, structuration, entraînement, clôture) avec distinctions nettes entre actions enseignant et production élèves.
+7.  **Évaluation:** Renseigne une vérification courte mais exploitable immédiatement en classe (questions précises + réponses attendues).
+8.  **Format JSON:** Réponds exclusivement avec un objet JSON contenant les champs `title`, `metadata`, `objectives`, `phases`, `evaluation`, `reminders` (optionnel) et `conclusion` (optionnel). Chaque liste (`objectives`, `teacher_steps`, `student_steps`, `evaluation.questions`) doit contenir des phrases courtes en Markdown simple.
 """
 
 def get_configured_toc_prompt():
@@ -441,46 +463,46 @@ def get_configured_fiche_prompt():
 # PDF Templates
 PDF_TEMPLATES = {
     "Normal": {
-        "title_color": "#2E8B57",
-        "heading_color": "#2F4F4F",
-        "accent_color": "#2E8B57",
+        "title_color": "#1F4B78",
+        "heading_color": "#2F5D7C",
+        "accent_color": "#E07A2D",
+        "font_family": "Helvetica",
+        "title_size": 23,
+        "heading_size": 17,
+        "body_size": 12,
+        "meta_size": 11,
+        "line_height": 17,
+        "margins": (2*cm, 2.5*cm, 2*cm, 2.5*cm),
+        "show_meta_banner": True,
+        "header_style": "studio_band",
+        "bullet_style": "•",
+        "section_spacing": 14,
+        "background_accent": "#F4F8FB"
+    },
+    "Professional": {
+        "title_color": "#213547",
+        "heading_color": "#1F3447",
+        "accent_color": "#C86B2C",
         "font_family": "Helvetica",
         "title_size": 24,
         "heading_size": 18,
         "body_size": 12,
         "meta_size": 11,
-        "line_height": 16,
-        "margins": (2*cm, 2.5*cm, 2*cm, 2.5*cm),
-        "show_meta_banner": True,
-        "header_style": "elegant_line",
-        "bullet_style": "•",
-        "section_spacing": 12,
-        "background_accent": "#F0F8F5"
-    },
-    "Professional": {
-        "title_color": "#1E3A8A",
-        "heading_color": "#1F2937",
-        "accent_color": "#1E3A8A",
-        "font_family": "Helvetica",
-        "title_size": 26,
-        "heading_size": 20,
-        "body_size": 12,
-        "meta_size": 11,
-        "line_height": 18,
+        "line_height": 17,
         "margins": (2.5*cm, 3*cm, 2.5*cm, 2.5*cm),
         "show_meta_banner": True,
-        "header_style": "corporate_box",
+        "header_style": "ledger_box",
         "bullet_style": "▸",
-        "section_spacing": 16,
-        "background_accent": "#F8FAFC",
-        "border_color": "#3B82F6",
+        "section_spacing": 15,
+        "background_accent": "#F1F5F8",
+        "border_color": "#366182",
         "use_borders": True,
         "decorative_elements": True
     },
     "Coral": {
-        "title_color": "#FF6B35",
-        "heading_color": "#8B4513",
-        "accent_color": "#FF6B35",
+        "title_color": "#C5533B",
+        "heading_color": "#7A2E22",
+        "accent_color": "#2F6F62",
         "font_family": "Helvetica",
         "title_size": 22,
         "heading_size": 17,
@@ -489,66 +511,66 @@ PDF_TEMPLATES = {
         "line_height": 15,
         "margins": (2*cm, 2.5*cm, 2*cm, 2*cm),
         "show_meta_banner": True,
-        "header_style": "organic_wave",
+        "header_style": "warm_band",
         "bullet_style": "◦",
         "section_spacing": 10,
-        "background_accent": "#FFF5F0",
+        "background_accent": "#FFF4F1",
         "warm_styling": True
     },
     "Aesthetic": {
-        "title_color": "#FF8C00",
-        "heading_color": "#FF6600",
-        "accent_color": "#FF8C00",
+        "title_color": "#355C7D",
+        "heading_color": "#2A455E",
+        "accent_color": "#F08A4B",
         "font_family": "Helvetica",
-        "title_size": 28,
-        "heading_size": 20,
+        "title_size": 26,
+        "heading_size": 19,
         "body_size": 12,
         "meta_size": 11,
         "line_height": 18,
         "margins": (2.5*cm, 3.5*cm, 2.5*cm, 2.5*cm),
         "show_meta_banner": True,
-        "header_style": "modern_gradient",
+        "header_style": "atelier_gradient",
         "bullet_style": "◆",
         "section_spacing": 18,
-        "background_accent": "#FFF8F0",
-        "gradient_colors": ["#FF8C00", "#FFA500"],
+        "background_accent": "#F7F9FC",
+        "gradient_colors": ["#355C7D", "#F08A4B"],
         "decorative": True,
         "shadow_effects": True
     },
     "Minimal Pro": {
-        "title_color": "#374151",
-        "heading_color": "#4B5563",
-        "accent_color": "#374151",
+        "title_color": "#2E3D45",
+        "heading_color": "#40545D",
+        "accent_color": "#5D7A86",
         "font_family": "Helvetica",
-        "title_size": 20,
-        "heading_size": 16,
+        "title_size": 19,
+        "heading_size": 15,
         "body_size": 11,
         "meta_size": 10,
         "line_height": 14,
         "margins": (3.5*cm, 4*cm, 3.5*cm, 3*cm),
         "show_meta_banner": False,
-        "header_style": "minimal_line",
-        "bullet_style": "—",
+        "header_style": "quiet_line",
+        "bullet_style": "-",
         "section_spacing": 20,
         "minimal": True,
         "extra_whitespace": True
     },
     "Classic Serif": {
-        "title_color": "#0F172A",
-        "heading_color": "#1E293B",
-        "accent_color": "#0F172A",
+        "title_color": "#2B2A28",
+        "heading_color": "#3E3C38",
+        "accent_color": "#7F5C3C",
         "font_family": "Times-Roman",
         "title_size": 24,
-        "heading_size": 19,
+        "heading_size": 18,
         "body_size": 12,
         "meta_size": 11,
         "line_height": 16,
         "margins": (2.5*cm, 3*cm, 2.5*cm, 2.5*cm),
         "show_meta_banner": True,
-        "header_style": "classic_underline",
+        "header_style": "heritage_underline",
         "bullet_style": "•",
         "section_spacing": 14,
-        "background_accent": "#F8FAFC",
+        "background_accent": "#F9F7F3",
         "serif": True,
         "traditional_spacing": True,
         "formal_layout": True

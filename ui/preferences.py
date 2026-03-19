@@ -13,6 +13,7 @@ from config import (
     DEFAULT_INPUT_DIR,
     DEFAULT_OUTPUT_DIR
 )
+from utils.secret_store import get_secret, set_secret, delete_secret
 
 class PreferencesDialog(QtWidgets.QDialog):
     """macOS-style preferences dialog"""
@@ -135,6 +136,11 @@ class PreferencesDialog(QtWidgets.QDialog):
         gemini_layout.addWidget(self.gemini_key_edit, 1)
         gemini_layout.addWidget(show_gemini_btn)
         layout.addRow("Gemini Key:", gemini_widget)
+
+        # Optional provider visibility toggle for OpenRouter references in UI/help
+        self.enable_openrouter_chk = QtWidgets.QCheckBox("Enable OpenRouter references in UI")
+        self.enable_openrouter_chk.setToolTip("When disabled, OpenRouter mentions are hidden from app help and UI copy")
+        layout.addRow("Providers:", self.enable_openrouter_chk)
         
         # Add some spacing
         layout.addRow("", QtWidgets.QLabel(""))
@@ -247,7 +253,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         model_layout.addRow("ToC Extraction Model:", self.gemini_toc_model_edit)
         
         self.gemini_offset_model_edit = QtWidgets.QLineEdit()
-        self.gemini_offset_model_edit.setPlaceholderText("gemini-2.5-flash-lite")
+        self.gemini_offset_model_edit.setPlaceholderText("gemini-flash-latest")
         model_layout.addRow("Offset Detection Model:", self.gemini_offset_model_edit)
         
         self.gemma_syntax_model_edit = QtWidgets.QLineEdit()
@@ -383,7 +389,9 @@ class PreferencesDialog(QtWidgets.QDialog):
     def load_from_settings(self, settings):
         """Load preferences from QSettings"""
         # Load API keys
-        self.gemini_key_edit.setText(settings.value("gemini_api_key", ""))
+        gemini_key = get_secret("gemini_api_key") or settings.value("gemini_api_key", "")
+        self.gemini_key_edit.setText(gemini_key)
+        self.enable_openrouter_chk.setChecked(settings.value("enable_openrouter_ui", "false") == "true")
         
         # Load other settings
         self.input_edit.setText(settings.value("input_dir", DEFAULT_INPUT_DIR))
@@ -447,7 +455,22 @@ class PreferencesDialog(QtWidgets.QDialog):
     def save_to_settings(self, settings):
         """Save preferences to QSettings"""
         # Save API keys
-        settings.setValue("gemini_api_key", self.gemini_key_edit.text())
+        gemini_key = self.gemini_key_edit.text().strip()
+
+        if gemini_key:
+            # Preferred: macOS keychain. Fallback: QSettings if keyring is unavailable.
+            if not set_secret("gemini_api_key", gemini_key):
+                settings.setValue("gemini_api_key", gemini_key)
+            else:
+                settings.remove("gemini_api_key")
+        else:
+            delete_secret("gemini_api_key")
+            settings.remove("gemini_api_key")
+
+        # Single-key mode: remove legacy fiche-only key from all stores.
+        delete_secret("gemini_fiche_api_key")
+        settings.remove("gemini_fiche_api_key")
+        settings.setValue("enable_openrouter_ui", "true" if self.enable_openrouter_chk.isChecked() else "false")
         
         # Save other settings
         settings.setValue("input_dir", self.input_edit.text() or DEFAULT_INPUT_DIR)

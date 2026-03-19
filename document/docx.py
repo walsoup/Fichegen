@@ -1,12 +1,15 @@
 import os
 import re
+from typing import Optional
 from docx import Document
 from docx.shared import Pt, RGBColor, Cm
+from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from document.pdf import generate_smart_filename
+from config import PDF_TEMPLATES
 
 HAS_DOCX = True
 
@@ -223,7 +226,7 @@ def convert_markdown_to_docx(md_text, output_path):
 
 # --- Export Functions ---
 
-def save_fiche_to_docx(content, lesson_topic, class_level, output_dir, queue):
+def save_fiche_to_docx(content, lesson_topic, class_level, output_dir, queue, template_name: Optional[str] = "Normal"):
     if not HAS_DOCX:
         queue.put(("log", "❌ DOCX export requires python-docx. Run: pip install python-docx"))
         return None
@@ -236,108 +239,172 @@ def save_fiche_to_docx(content, lesson_topic, class_level, output_dir, queue):
 
     try:
         doc = Document()
-        # Set font properties on the document's default style
-        style = doc.styles['Normal']
-        style.font.name = 'Calibri'
-        style.font.size = Pt(11)
-        
-        lines = content.splitlines()
-        i = 0
-        while i < len(lines):
-            line = lines[i].rstrip()
-            i += 1
-            
+        template_key = template_name if template_name is not None else "Normal"
+        template = PDF_TEMPLATES.get(template_key, PDF_TEMPLATES.get("Normal", {}))
+
+        # Build a Word-safe palette from the selected template
+        def _hex_to_rgb(hex_color, fallback):
+            try:
+                value = (hex_color or "").strip().lstrip('#')
+                if len(value) == 6:
+                    return RGBColor(int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16))
+            except Exception:
+                pass
+            return fallback
+
+        def _hex_six(hex_color, fallback_hex):
+            value = (hex_color or "").strip().lstrip('#')
+            if len(value) == 6:
+                return value.upper()
+            return fallback_hex
+
+        title_rgb = _hex_to_rgb(template.get("title_color", "#244A6E"), RGBColor(36, 74, 110))
+        heading_rgb = _hex_to_rgb(template.get("heading_color", "#3B627D"), RGBColor(59, 98, 125))
+        accent_rgb = _hex_to_rgb(template.get("accent_color", "#1F4B78"), RGBColor(31, 75, 120))
+        title_fill = _hex_six(template.get("title_color", "#244A6E"), "244A6E")
+        heading_fill = _hex_six(template.get("heading_color", "#3B627D"), "3B627D")
+
+        section = doc.sections[0]
+        section.top_margin = Cm(2.2)
+        section.bottom_margin = Cm(2.2)
+        section.left_margin = Cm(2.2)
+        section.right_margin = Cm(2.2)
+
+        base_style = doc.styles['Normal']
+        base_style.font.name = 'Calibri'
+        base_style.font.size = Pt(11)
+
+        def ensure_paragraph_style(name, base='Normal', size=11, bold=False, color=None, alignment=None, space_before=0, space_after=0):
+            if name in doc.styles:
+                st = doc.styles[name]
+            else:
+                st = doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+            st.base_style = doc.styles[base]
+            st.font.name = 'Calibri'
+            st.font.size = Pt(size)
+            st.font.bold = bold
+            if color is not None:
+                st.font.color.rgb = color
+            st.paragraph_format.space_before = Pt(space_before)
+            st.paragraph_format.space_after = Pt(space_after)
+            if alignment is not None:
+                st.paragraph_format.alignment = alignment
+            return st
+
+        ensure_paragraph_style('FicheTitle', size=20, bold=True, alignment=WD_PARAGRAPH_ALIGNMENT.CENTER, space_before=0, space_after=0)
+        ensure_paragraph_style('FicheSummary', size=10, bold=True, color=accent_rgb, alignment=WD_PARAGRAPH_ALIGNMENT.CENTER, space_before=4, space_after=6)
+        ensure_paragraph_style('FicheSection', size=13, bold=True, color=RGBColor(255, 255, 255), space_before=0, space_after=0)
+        ensure_paragraph_style('FicheSubSection', size=12, bold=True, color=heading_rgb, space_before=6, space_after=3)
+        ensure_paragraph_style('FicheBody', size=11, space_before=0, space_after=4)
+
+        lines = [line.rstrip() for line in content.splitlines()]
+        metadata_re = re.compile(r'^###\s+\*\*([^*]+)\*\*\s*:\s*(.+)$')
+        metadata_bullet_re = re.compile(r'^-\s+\*\*([^*]+)\*\*\s*:\s*(.+)$')
+
+        title = f"Fiche pédagogique - {lesson_topic}"
+        summary = ""
+        metadata = []
+        content_lines = []
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                content_lines.append("")
+                continue
+            if stripped.startswith('# '):
+                title = stripped[2:].strip() or title
+                continue
+            if stripped.startswith('> ') and not summary:
+                summary = stripped[2:].strip()
+                continue
+            meta_match = metadata_re.match(stripped)
+            if meta_match:
+                metadata.append((meta_match.group(1).strip(), meta_match.group(2).strip()))
+                continue
+            bullet_meta_match = metadata_bullet_re.match(stripped)
+            if bullet_meta_match:
+                metadata.append((bullet_meta_match.group(1).strip(), bullet_meta_match.group(2).strip()))
+                continue
+            content_lines.append(stripped)
+
+        header_table = doc.add_table(rows=1, cols=1)
+        header_table.autofit = True
+        header_cell = header_table.cell(0, 0)
+        header_para = header_cell.paragraphs[0]
+        header_para.style = 'FicheTitle'
+        process_markdown_formatting(header_para, title)
+        header_shading = OxmlElement('w:shd')
+        header_shading.set(qn('w:fill'), title_fill)
+        header_cell._tc.get_or_add_tcPr().append(header_shading)
+        header_cell.width = Cm(16)
+
+        if summary:
+            p = doc.add_paragraph(style='FicheSummary')
+            process_markdown_formatting(p, summary)
+
+        if not metadata:
+            metadata = [
+                ("Titre de la leçon", lesson_topic),
+                ("Classe", class_level.upper()),
+            ]
+
+        meta_table = doc.add_table(rows=len(metadata), cols=2)
+        meta_table.style = 'Light Grid Accent 1'
+        for idx, (label, value) in enumerate(metadata):
+            left = meta_table.cell(idx, 0)
+            right = meta_table.cell(idx, 1)
+            lp = left.paragraphs[0]
+            rp = right.paragraphs[0]
+            lp.style = 'FicheBody'
+            rp.style = 'FicheBody'
+            left_run = lp.add_run(f"{label}:")
+            left_run.bold = True
+            left_run.font.color.rgb = accent_rgb
+            process_markdown_formatting(rp, value)
+
+        doc.add_paragraph()
+
+        for line in content_lines:
             if not line:
+                doc.add_paragraph()
                 continue
-                
-            # Main title
-            if line.startswith('# '):
-                doc.add_heading(line[2:].strip(), level=0)
-                continue
-                
-            # Section heading
+
             if line.startswith('## '):
-                doc.add_heading(line[3:].strip(), level=1)
+                banner = doc.add_table(rows=1, cols=1)
+                banner.style = 'Table Grid'
+                cell = banner.cell(0, 0)
+                p = cell.paragraphs[0]
+                p.style = 'FicheSection'
+                process_markdown_formatting(p, line[3:].strip())
+                shading = OxmlElement('w:shd')
+                shading.set(qn('w:fill'), heading_fill)
+                cell._tc.get_or_add_tcPr().append(shading)
                 continue
-                
-            # Subheading or metadata
+
             if line.startswith('### '):
-                heading_text = line[4:].strip()
-                # Check if it's metadata format: ### **Key**: Value
-                m_meta = re.match(r'\*\*([^*]+)\*\*\s*:\s*(.*)$', heading_text)
-                if m_meta:
-                    p = doc.add_paragraph()
-                    run_b = p.add_run(m_meta.group(1) + ": ")
-                    run_b.bold = True
-                    run_b.font.color.rgb = RGBColor(0, 102, 204)
-                    p.add_run(m_meta.group(2))
-                else:
-                    doc.add_heading(heading_text, level=2)
+                p = doc.add_paragraph(style='FicheSubSection')
+                process_markdown_formatting(p, line[4:].strip())
                 continue
-                
-            # Bullet points
+
             if line.startswith('- ') or line.startswith('* '):
-                bullet_text = line[2:].strip()
-                # Handle inline markdown
-                bullet_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', bullet_text)  # Bold (can't do in list easily)
-                doc.add_paragraph(bullet_text, style='List Bullet')
+                p = doc.add_paragraph(style='List Bullet')
+                process_markdown_formatting(p, line[2:].strip())
                 continue
-            
-            # Numbered lists
-            if re.match(r'^\d+\.\s', line):
-                number_text = re.sub(r'^\d+\.\s', '', line)
-                number_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', number_text)
-                doc.add_paragraph(number_text, style='List Number')
+
+            if re.match(r'^\d+\.\s+', line):
+                text = re.sub(r'^\d+\.\s+', '', line)
+                p = doc.add_paragraph(style='List Number')
+                process_markdown_formatting(p, text)
                 continue
-            
-            # Tables (check if line contains |)
-            if '|' in line and line.strip().startswith('|'):
-                # Collect table lines
-                table_lines = [line]
-                while i < len(lines) and '|' in lines[i]:
-                    table_lines.append(lines[i].rstrip())
-                    i += 1
-                
-                # Parse table
-                table_data = []
-                for tline in table_lines:
-                    # Skip separator rows (| --- | --- |)
-                    if re.match(r'\|\s*[-:]+\s*\|', tline):
-                        continue
-                    cells = [cell.strip() for cell in tline.strip('|').split('|')]
-                    if cells:
-                        table_data.append(cells)
-                
-                if table_data:
-                    # Create table
-                    table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
-                    table.style = 'Light Grid Accent 1'
-                    
-                    for row_idx, row_data in enumerate(table_data):
-                        for col_idx, cell_text in enumerate(row_data):
-                            if col_idx < len(table.rows[row_idx].cells):
-                                table.rows[row_idx].cells[col_idx].text = cell_text
-                                # Bold first row (header)
-                                if row_idx == 0:
-                                    for paragraph in table.rows[row_idx].cells[col_idx].paragraphs:
-                                        for run in paragraph.runs:
-                                            run.bold = True
+
+            if line.startswith('> '):
+                p = doc.add_paragraph(style='FicheBody')
+                run = p.add_run(line[2:].strip())
+                run.italic = True
                 continue
-            
-            # Regular paragraph with inline markdown
-            if line.strip():
-                p = doc.add_paragraph()
-                # Process inline bold and italic
-                parts = re.split(r'(\*\*[^*]+\*\*|\*[^*]+\*)', line)
-                for part in parts:
-                    if part.startswith('**') and part.endswith('**'):
-                        run = p.add_run(part[2:-2])
-                        run.bold = True
-                    elif part.startswith('*') and part.endswith('*'):
-                        run = p.add_run(part[1:-1])
-                        run.italic = True
-                    else:
-                        p.add_run(part)
+
+            p = doc.add_paragraph(style='FicheBody')
+            process_markdown_formatting(p, line)
 
         doc.save(full_path)
         queue.put(("log", f"💾 DOCX saved: {full_path}"))

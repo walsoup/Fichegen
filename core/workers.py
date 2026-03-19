@@ -1,7 +1,9 @@
 import os
 import json
+import re
 import threading
 import time
+import random
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -16,19 +18,227 @@ from config import (
 from core.ai import (
     generate_with_fallback, _fiche_response_schema, _parse_structured_response,
     _render_fiche_markdown, _evaluation_response_schema, _render_evaluation_markdown,
-    _generate_with_model
+    _quiz_response_schema, _render_quiz_markdown, _generate_with_model
 )
 from core.toc import (
     find_guide_file, find_textbook_file, extract_table_of_contents,
     get_cached_toc, parse_full_toc_with_ai, save_toc_to_cache,
     detect_page_offset, correct_lesson_topic_syntax, parse_page_numbers,
-    find_pages_from_cached_toc, get_pages_from_toc, extract_lesson_text
+    find_pages_from_cached_toc, get_pages_from_toc, extract_lesson_text,
+    PdfExtractionSession
 )
 from core.image_gen import (
-    generate_fiche_illustration, generate_evaluation_illustrations, image_to_base64
+    generate_illustration, image_to_base64
 )
 from utils.helpers import get_top_rated_examples
-from core.model_fetcher import fetch_available_models, find_best_models_with_ai
+
+
+def _resolve_image_api_key() -> str:
+    """Resolve API key for image generation with backward-compatible fallbacks."""
+    key = API_KEYS.get("GEMINI_API_KEY")
+
+    if key:
+        return key.strip()
+
+    # Legacy fallback for users who still keep plaintext settings/env keys.
+    settings_obj = QtCore.QSettings("FicheGen", "Pedago")
+    legacy_key = (
+        settings_obj.value("gemini_api_key", "")
+        or settings_obj.value("gemini_fiche_api_key", "")
+        or os.getenv("GEMINI_API_KEY", "")
+        or os.getenv("GEMINI_FICHE_API_KEY", "")
+    )
+    return (legacy_key or "").strip()
+
+
+_IMG_TAG_RE = re.compile(r'<generateimage\s*:\s*(["\'])(.*?)\1\s*>', re.IGNORECASE | re.DOTALL)
+_EXERCISE_HEADER_RE = re.compile(r'^##\s+Exercice\s+(\d+)\s+-', re.IGNORECASE)
+
+
+def _collect_image_prompts_from_markdown(markdown_text: str, max_prompts: int = 5) -> List[str]:
+    """Extract inline image directives from markdown: <generateimage:"prompt">."""
+    prompts: List[str] = []
+    if not markdown_text:
+        return prompts
+    for match in _IMG_TAG_RE.finditer(markdown_text):
+        prompt = (match.group(2) or "").strip()
+        if prompt:
+            prompts.append(prompt)
+        if len(prompts) >= max_prompts:
+            break
+    return prompts
+
+
+def _replace_image_tags_with_images(markdown_text: str, class_level: str, api_key: str, queue, max_images: int = 5) -> tuple[str, int]:
+    """Generate and replace inline image directives with embedded markdown images."""
+    if not markdown_text or not api_key:
+        return markdown_text, 0
+
+    is_young = (class_level or "").lower() in ["cp", "ce1"]
+    style = "coloring" if is_young else "diagram"
+    aspect_ratio = "1:1" if is_young else "16:9"
+    generated_count = 0
+
+    def _repl(match):
+        nonlocal generated_count
+        prompt = (match.group(2) or "").strip()
+        if not prompt or generated_count >= max_images:
+            return match.group(0)
+        try:
+            image_data = generate_illustration(
+                prompt=prompt,
+                class_level=class_level,
+                style=style,
+                aspect_ratio=aspect_ratio,
+                api_key=api_key,
+            )
+            if not image_data:
+                queue.put(("log", f"⚠️ No image generated for directive: {prompt[:80]}"))
+                return f"\n\n*⚠️ Image not generated for prompt:* {prompt}\n\n"
+
+            generated_count += 1
+            base64_img = image_to_base64(image_data)
+            return (
+                "\n\n"
+                f"![Illustration {generated_count}](data:image/png;base64,{base64_img})\n"
+                f"*Prompt image: {prompt}*\n\n"
+            )
+        except Exception as exc:
+            queue.put(("log", f"⚠️ Image directive error: {exc}"))
+            return f"\n\n*⚠️ Image generation error for prompt:* {prompt}\n\n"
+
+    updated = _IMG_TAG_RE.sub(_repl, markdown_text)
+    return updated, generated_count
+
+
+def _clean_eval_text(value: Any) -> str:
+    text = str(value or "").strip()
+    return " ".join(text.split())
+
+
+def _extract_exercise_image_jobs(parsed_evaluation: Dict[str, Any], num_images: int) -> List[Dict[str, Any]]:
+    """Build deterministic image jobs tied to concrete exercises from structured eval JSON."""
+    if not isinstance(parsed_evaluation, dict) or num_images <= 0:
+        return []
+
+    jobs: List[Dict[str, Any]] = []
+    exercises = parsed_evaluation.get("exercises") or []
+    visual_keywords = (
+        "observe", "dessine", "schéma", "schema", "figure", "image",
+        "illustre", "associe", "relie", "complète", "complete", "diagramme",
+        "label", "étiquette", "etiquette"
+    )
+
+    for idx, exercise in enumerate(exercises, start=1):
+        if not isinstance(exercise, dict):
+            continue
+
+        title = _clean_eval_text(exercise.get("title") or f"Exercice {idx}")
+        instructions = _clean_eval_text(exercise.get("instructions"))
+        questions = exercise.get("questions") or []
+        question_prompts: List[str] = []
+        for question in questions:
+            if not isinstance(question, dict):
+                continue
+            q_prompt = _clean_eval_text(question.get("prompt"))
+            if q_prompt:
+                question_prompts.append(q_prompt)
+
+        # Rank exercises with a simple deterministic heuristic favoring visual wording.
+        joined = f"{title} {instructions} {' '.join(question_prompts)}".lower()
+        keyword_score = sum(1 for kw in visual_keywords if kw in joined)
+        richness_score = min(len(question_prompts), 4)
+        total_score = (keyword_score * 2) + richness_score
+
+        if not instructions and not question_prompts:
+            continue
+
+        jobs.append({
+            "exercise_index": idx,
+            "title": title,
+            "instructions": instructions,
+            "question_prompts": question_prompts,
+            "score": total_score,
+        })
+
+    if not jobs:
+        return []
+
+    # Select highest-signal exercises, then restore exercise order for predictable output.
+    ranked = sorted(jobs, key=lambda job: (-job["score"], job["exercise_index"]))
+    selected = ranked[:max(1, num_images)]
+    selected.sort(key=lambda job: job["exercise_index"])
+    return selected
+
+
+def _build_exercise_prompt(job: Dict[str, Any], class_level: str, subject: str) -> str:
+    """Compose a specific image prompt from one exercise payload."""
+    exercise_idx = job.get("exercise_index")
+    title = job.get("title") or f"Exercice {exercise_idx}"
+    instructions = job.get("instructions") or ""
+    question_prompts = job.get("question_prompts") or []
+
+    lines = [
+        f"Illustration pédagogique pour l'exercice {exercise_idx} ({title}).",
+        f"Niveau: {(class_level or '').upper() or 'PRIMAIRE'}.",
+        f"Matière: {subject or 'Général'}.",
+        "Objectif: créer un visuel directement exploitable pour résoudre l'exercice.",
+        "Style: simple, clair, scolaire, fond blanc, lisibilité maximale.",
+        "N'ajoute aucune marque, logo ou texte décoratif inutile.",
+    ]
+
+    if instructions:
+        lines.append(f"Consigne de l'exercice: {instructions}")
+
+    if question_prompts:
+        lines.append("Questions à soutenir visuellement:")
+        for q in question_prompts[:4]:
+            lines.append(f"- {q}")
+
+    lines.append("Le visuel doit correspondre explicitement à cet exercice et à aucune autre activité.")
+    return "\n".join(lines)
+
+
+def _embed_images_under_exercises(markdown_text: str, image_blocks: Dict[int, str]) -> str:
+    """Insert generated image markdown inside each matching exercise section."""
+    if not markdown_text or not image_blocks:
+        return markdown_text
+
+    lines = markdown_text.splitlines()
+    exercise_headers: List[tuple[int, int]] = []
+    for line_idx, line in enumerate(lines):
+        match = _EXERCISE_HEADER_RE.match(line.strip())
+        if match:
+            exercise_headers.append((line_idx, int(match.group(1))))
+
+    if not exercise_headers:
+        return markdown_text
+
+    insertions: List[tuple[int, List[str]]] = []
+    for header_idx, (line_idx, exercise_number) in enumerate(exercise_headers):
+        block = image_blocks.get(exercise_number)
+        if not block:
+            continue
+
+        next_header_idx = exercise_headers[header_idx + 1][0] if header_idx + 1 < len(exercise_headers) else len(lines)
+        insert_at = next_header_idx
+
+        for probe_idx in range(line_idx + 1, next_header_idx):
+            if lines[probe_idx].strip().startswith("### Q"):
+                insert_at = probe_idx
+                break
+
+        block_lines = ["", block.rstrip(), ""]
+        insertions.append((insert_at, block_lines))
+
+    if not insertions:
+        return markdown_text
+
+    # Apply from bottom to top to keep insertion indexes stable.
+    for insert_at, block_lines in sorted(insertions, key=lambda item: item[0], reverse=True):
+        lines[insert_at:insert_at] = block_lines
+
+    return "\n".join(lines)
 
 # --- QThread worker that bridges queue events to Qt signals ---
 class QueueProxy:
@@ -52,7 +262,7 @@ class QueueProxy:
             self.worker.done.emit(str(payload))
         elif msg_type == "content":
             self.worker.content.emit(str(payload))
-        elif msg_type == "enable_button":
+        elif msg_type in {"enable_button", "enable_buttons"}:
             self.worker.enable_buttons.emit()
         elif msg_type == "request_source_preview":
             try:
@@ -240,6 +450,8 @@ Rappeler aux élèves l’idée principale de la leçon.
         "- metadata doit contenir lesson_title, duration_minutes, class_level et, si possible, chapter_title, subject, materials.\n"
         "- Chaque élément dans phases doit préciser teacher_steps (liste), student_steps (liste) et duration_minutes.\n"
         "- evaluation.strategy décrit la consigne générale; questions et answer_key listent des formulations concises.\n"
+        "- Si une question/activité nécessite un visuel, ajoute un tag inline exact: <generateimage:\"prompt précis de l'image\">.\n"
+        "- N'ajoute ce tag que quand il apporte une vraie valeur pédagogique (max 3 tags).\n"
     )
 
     prompt = f"{prompt}\n\n{schema_guidance}"
@@ -356,7 +568,14 @@ def pipeline_run(class_level, lesson_topic, queue, pages_override: str, temperat
                 return
 
         queue.put(("progress", 75))
-        lesson_text = extract_lesson_text(guide_path, pages, queue, cancel_event=worker_ref.cancel_event)
+        with PdfExtractionSession(guide_path, queue) as guide_session:
+            lesson_text = extract_lesson_text(
+                guide_path,
+                pages,
+                queue,
+                cancel_event=worker_ref.cancel_event,
+                session=guide_session,
+            )
         if not lesson_text:
             return
         if worker_ref.cancel_event.is_set():
@@ -370,7 +589,14 @@ def pipeline_run(class_level, lesson_topic, queue, pages_override: str, temperat
             textbook_path = find_textbook_file(class_level, textbook_dir, queue)
             if textbook_path:
                 queue.put(("log", "📖 Extracting context from student textbook..."))
-                textbook_text = extract_lesson_text(textbook_path, pages, queue, cancel_event=worker_ref.cancel_event)
+                with PdfExtractionSession(textbook_path, queue) as textbook_session:
+                    textbook_text = extract_lesson_text(
+                        textbook_path,
+                        pages,
+                        queue,
+                        cancel_event=worker_ref.cancel_event,
+                        session=textbook_session,
+                    )
                 if textbook_text:
                     combined_text += f"\n\n=== CONTEXTE SUPPLÉMENTAIRE DU MANUEL ÉLÈVE ===\n\n{textbook_text}"
                     queue.put(("log", "🔗 Combined teacher guide and student textbook content."))
@@ -462,7 +688,9 @@ Rappeler aux élèves l'idée principale de la leçon.
             )
             
             queue.put(("request_source_preview", combined_text, full_prompt))
-            worker_ref.source_preview_confirmed.wait()
+            while not worker_ref.cancel_event.is_set():
+                if worker_ref.source_preview_confirmed.wait(timeout=0.2):
+                    break
             if worker_ref.cancel_event.is_set():
                 queue.put(("log", "⏹️ Cancelled by user during source preview."))
                 return
@@ -487,33 +715,28 @@ Rappeler aux élèves l'idée principale de la leçon.
             queue.put(("progress", 95))
             
             try:
-                settings_obj = QtCore.QSettings("FicheGen", "Pedago")
-                api_key = settings_obj.value("gemini_api_key", "")
+                api_key = _resolve_image_api_key()
                 
                 if not api_key:
-                    queue.put(("log", "⚠️ No API key found - skipping image generation"))
+                    queue.put(("log", "⚠️ No API key found in keychain/settings/env - skipping image generation"))
                 else:
-                    # Generate a single illustration for the fiche
-                    image_data = generate_fiche_illustration(
-                        lesson_topic=lesson_topic,
-                        class_level=class_level,
-                        context=combined_text[:1500],  # Pass some context
-                        api_key=api_key
-                    )
-                    
-                    if image_data:
-                        queue.put(("log", "✅ Illustration generated"))
-                        
-                        # Embed image in the fiche content
-                        try:
-                            base64_img = image_to_base64(image_data)
-                            image_markdown = f"\n\n---\n\n## 📸 Illustration\n\n![Illustration](data:image/png;base64,{base64_img})\n\n"
-                            final_fiche_content += image_markdown
-                            queue.put(("log", "✅ Image embedded in fiche"))
-                        except Exception as e:
-                            queue.put(("log", f"⚠️ Failed to embed image: {e}"))
+                    # First pass: execute inline model directives like <generateimage:"...">
+                    directive_prompts = _collect_image_prompts_from_markdown(final_fiche_content, max_prompts=5)
+                    if directive_prompts:
+                        queue.put(("log", f"🧩 Found {len(directive_prompts)} image directive(s) in fiche."))
+                        final_fiche_content, generated_count = _replace_image_tags_with_images(
+                            final_fiche_content,
+                            class_level=class_level,
+                            api_key=api_key,
+                            queue=queue,
+                            max_images=5,
+                        )
+                        if generated_count > 0:
+                            queue.put(("log", f"✅ Generated and embedded {generated_count} directive image(s)."))
+                        else:
+                            queue.put(("log", "⚠️ Directive images requested but none were generated."))
                     else:
-                        queue.put(("log", "⚠️ No image was generated"))
+                        queue.put(("log", "ℹ️ No <generateimage:...> directive found; no illustration generated (model-controlled mode)."))
                         
             except Exception as e:
                 queue.put(("log", f"⚠️ Image generation error: {e}"))
@@ -614,39 +837,45 @@ class EvaluationWorker(QtCore.QThread):
                     page_offset = detect_page_offset(guide_path, queue)
             
             # Second pass: Extract content for each topic
-            for topic in self.topics_list:
-                if self.cancel_event.is_set():
-                    return
-                    
-                queue.put(("log", f"📖 Processing topic: {topic}"))
-                
-                # Use the same extraction logic as fiche generation
-                try:
-                    if not guide_path or not cached_toc:
-                        queue.put(("log", f"⚠️ Skipping text extraction for '{topic}' (no guide or ToC available)"))
-                        continue
-                    
-                    # Find pages for this topic
-                    page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
-                    if page_range:
-                        # Parse page numbers and extract text
-                        page_numbers = parse_page_numbers(page_range, queue)
-                        if page_numbers:
-                            lesson_text = extract_lesson_text(guide_path, page_numbers, queue, self.cancel_event)
-                            if lesson_text and lesson_text.strip():
-                                extracted_texts.append(f"=== {topic} ===\n{lesson_text}")
-                                queue.put(("log", f"✅ Extracted {len(lesson_text)} characters for '{topic}'"))
+            if guide_path and cached_toc:
+                with PdfExtractionSession(guide_path, queue) as guide_session:
+                    for topic in self.topics_list:
+                        if self.cancel_event.is_set():
+                            return
+
+                        queue.put(("log", f"📖 Processing topic: {topic}"))
+
+                        try:
+                            # Find pages for this topic
+                            page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
+                            if page_range:
+                                # Parse page numbers and extract text
+                                page_numbers = parse_page_numbers(page_range, queue)
+                                if page_numbers:
+                                    lesson_text = extract_lesson_text(
+                                        guide_path,
+                                        page_numbers,
+                                        queue,
+                                        self.cancel_event,
+                                        session=guide_session,
+                                    )
+                                    if lesson_text and lesson_text.strip():
+                                        extracted_texts.append(f"=== {topic} ===\n{lesson_text}")
+                                        queue.put(("log", f"✅ Extracted {len(lesson_text)} characters for '{topic}'"))
+                                    else:
+                                        queue.put(("log", f"⚠️ No text found on pages {page_range} for '{topic}'"))
+                                else:
+                                    queue.put(("log", f"⚠️ Could not parse page numbers: {page_range}"))
                             else:
-                                queue.put(("log", f"⚠️ No text found on pages {page_range} for '{topic}'"))
-                        else:
-                            queue.put(("log", f"⚠️ Could not parse page numbers: {page_range}"))
-                    else:
-                        queue.put(("log", f"⚠️ Could not find pages for '{topic}' in ToC"))
-                        
-                except Exception as e:
-                    queue.put(("log", f"❌ Error extracting content for '{topic}': {e}"))
-                    import traceback
-                    queue.put(("log", f"Traceback: {traceback.format_exc()[:200]}"))  # Log first 200 chars of traceback
+                                queue.put(("log", f"⚠️ Could not find pages for '{topic}' in ToC"))
+
+                        except Exception as e:
+                            queue.put(("log", f"❌ Error extracting content for '{topic}': {e}"))
+                            import traceback
+                            queue.put(("log", f"Traceback: {traceback.format_exc()[:200]}"))  # Log first 200 chars of traceback
+            else:
+                for topic in self.topics_list:
+                    queue.put(("log", f"⚠️ Skipping text extraction for '{topic}' (no guide or ToC available)"))
             
             # Combine all extracted texts
             if extracted_texts:
@@ -662,22 +891,29 @@ class EvaluationWorker(QtCore.QThread):
                 if textbook_path:
                     queue.put(("log", "📖 Extracting context from student textbook..."))
                     textbook_texts = []
-                    
+
                     # Extract same topics from textbook
-                    for topic in self.topics_list:
-                        if self.cancel_event.is_set():
-                            return
-                        
-                        try:
-                            page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
-                            if page_range:
-                                page_numbers = parse_page_numbers(page_range, queue)
-                                if page_numbers:
-                                    textbook_text = extract_lesson_text(textbook_path, page_numbers, queue, self.cancel_event)
-                                    if textbook_text and textbook_text.strip():
-                                        textbook_texts.append(f"=== {topic} (Student Book) ===\n{textbook_text}")
-                        except Exception as e:
-                            queue.put(("log", f"⚠️ Could not extract '{topic}' from textbook: {e}"))
+                    with PdfExtractionSession(textbook_path, queue) as textbook_session:
+                        for topic in self.topics_list:
+                            if self.cancel_event.is_set():
+                                return
+
+                            try:
+                                page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
+                                if page_range:
+                                    page_numbers = parse_page_numbers(page_range, queue)
+                                    if page_numbers:
+                                        textbook_text = extract_lesson_text(
+                                            textbook_path,
+                                            page_numbers,
+                                            queue,
+                                            self.cancel_event,
+                                            session=textbook_session,
+                                        )
+                                        if textbook_text and textbook_text.strip():
+                                            textbook_texts.append(f"=== {topic} (Student Book) ===\n{textbook_text}")
+                            except Exception as e:
+                                queue.put(("log", f"⚠️ Could not extract '{topic}' from textbook: {e}"))
                     
                     if textbook_texts:
                         combined_text += f"\n\n=== CONTEXTE SUPPLÉMENTAIRE DU MANUEL ÉLÈVE ===\n\n" + "\n\n".join(textbook_texts)
@@ -742,9 +978,11 @@ class EvaluationWorker(QtCore.QThread):
                 queue.put(("log", "⏹️ Cancelled after AI generation."))
                 return
                 
+            parsed_evaluation: Optional[Dict[str, Any]] = None
             if response:
                 parsed = _parse_structured_response(response)
-                if parsed:
+                if isinstance(parsed, dict):
+                    parsed_evaluation = parsed
                     evaluation_content = _render_evaluation_markdown(parsed)
                 else:
                     evaluation_content = (response.text or "").strip()
@@ -758,45 +996,65 @@ class EvaluationWorker(QtCore.QThread):
                 
                 # Generate images if requested and available
                 if self.generate_images and HAS_IMAGE_GENERATION:
-                    queue.put(("log", f"🎨 Generating {self.num_images} illustration(s)..."))
+                    queue.put(("log", f"🎨 Generating up to {self.num_images} exercise-linked illustration(s)..."))
                     queue.put(("progress", 92))
                     
                     try:
-                        settings = QtCore.QSettings("FicheGen", "Pedago")
-                        api_key = settings.value("gemini_api_key", "")
+                        api_key = _resolve_image_api_key()
                         
                         if not api_key:
-                            queue.put(("log", "⚠️ No API key found - skipping image generation"))
+                            queue.put(("log", "⚠️ No API key found in keychain/settings/env - skipping image generation"))
                         else:
-                            # Generate images appropriate for the grade level
-                            generated_images = generate_evaluation_illustrations(
-                                topics=self.topics_list,
-                                class_level=self.class_level,
-                                num_images=self.num_images,
-                                api_key=api_key
-                            )
+                            if not parsed_evaluation:
+                                queue.put(("log", "⚠️ Structured evaluation missing, cannot reliably link images to exercises."))
+                            else:
+                                image_jobs = _extract_exercise_image_jobs(parsed_evaluation, self.num_images)
+                                if not image_jobs:
+                                    queue.put(("log", "⚠️ No eligible exercise content found for image generation."))
+                                else:
+                                    queue.put(("log", f"🧩 Prepared {len(image_jobs)} image job(s) from specific exercises."))
+
+                                    is_young = (self.class_level or "").lower() in ["cp", "ce1"]
+                                    style = "coloring" if is_young else "diagram"
+                                    aspect_ratio = "1:1" if is_young else "16:9"
+
+                                    image_blocks: Dict[int, str] = {}
+                                    for ordinal, job in enumerate(image_jobs, start=1):
+                                        if self.cancel_event.is_set():
+                                            queue.put(("log", "⏹️ Cancelled during image generation."))
+                                            return
+
+                                        ex_idx = int(job.get("exercise_index", ordinal))
+                                        queue.put(("log", f"🖼️ Generating illustration {ordinal}/{len(image_jobs)} for Exercice {ex_idx}..."))
+
+                                        prompt = _build_exercise_prompt(job, self.class_level, self.subject)
+                                        image_bytes = generate_illustration(
+                                            prompt=prompt,
+                                            class_level=self.class_level,
+                                            style=style,
+                                            aspect_ratio=aspect_ratio,
+                                            api_key=api_key,
+                                        )
+                                        if not image_bytes:
+                                            queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}."))
+                                            continue
+
+                                        base64_img = image_to_base64(image_bytes)
+                                        caption = f"Illustration ciblée pour Exercice {ex_idx}: {job.get('title') or ''}".strip()
+                                        image_blocks[ex_idx] = (
+                                            f"![Illustration Exercice {ex_idx}](data:image/png;base64,{base64_img})\n"
+                                            f"*{caption}*"
+                                        )
+
+                                    if image_blocks:
+                                        evaluation_content = _embed_images_under_exercises(evaluation_content, image_blocks)
+                                        queue.put(("log", f"✅ Embedded {len(image_blocks)} exercise-linked image(s)."))
+                                    else:
+                                        queue.put(("log", "⚠️ No images were generated for the selected exercises."))
                             
                             if self.cancel_event.is_set():
                                 queue.put(("log", "⏹️ Cancelled during image generation."))
                                 return
-                            
-                            if generated_images:
-                                queue.put(("log", f"✅ Generated {len(generated_images)} image(s)"))
-                                
-                                # Embed images in the evaluation content
-                                images_markdown = "\n\n---\n\n## 📸 Illustrations\n\n"
-                                for idx, img_data in enumerate(generated_images, 1):
-                                    try:
-                                        base64_img = image_to_base64(img_data)
-                                        images_markdown += f"![Illustration {idx}](data:image/png;base64,{base64_img})\n\n"
-                                    except Exception as e:
-                                        queue.put(("log", f"⚠️ Failed to embed image {idx}: {e}"))
-                                
-                                # Append images to the evaluation content
-                                evaluation_content += images_markdown
-                                queue.put(("log", "✅ Images embedded in evaluation"))
-                            else:
-                                queue.put(("log", "⚠️ No images were generated"))
                                 
                     except Exception as e:
                         queue.put(("log", f"⚠️ Image generation error: {e}"))
@@ -826,613 +1084,80 @@ class EvaluationWorker(QtCore.QThread):
             queue.put(("enable_buttons", None))
 
     def _build_evaluation_prompt(self, extracted_content: str = "") -> str:
-        """
-        Build a pedagogically sound evaluation prompt with comprehensive guidance.
-        """
-        settings = QtCore.QSettings("FicheGen", "Pedago")
-        use_top_examples = settings.value("use_top_examples", "true") == "true"
-
+        """Build a high-structure, exam-first prompt for evaluation generation."""
         topics_text = ", ".join(self.topics_list)
-
-        # Build examples block (tone/style), reused from fiche generation
-        try:
-            examples_block = build_examples_block(use_top_examples)
-        except Exception:
-            examples_block = ""  # Fallback silently if anything goes wrong
-
-        # ============================================================================
-        # PEDAGOGICAL FOUNDATIONS & COGNITIVE LEVELS
-        # ============================================================================
-        
-        # Map class level to cognitive expectations (Bloom's Taxonomy adapted for primary)
-        cognitive_map = {
-            "cp": "Se rappeler (nommer, identifier, reconnaître)",
-            "ce1": "Comprendre (expliquer, décrire, donner des exemples)",
-            "ce2": "Appliquer (utiliser, résoudre, calculer)",
-            "cm1": "Analyser (comparer, catégoriser, distinguer)",
-            "cm2": "Évaluer et créer (argumenter, proposer, synthétiser)",
-            "6e": "Analyser et évaluer (justifier, critiquer, défendre)"
-        }
-        cognitive_level = cognitive_map.get(self.class_level.lower(), "Comprendre et appliquer")
-        
-        # Special considerations for early grades (limited writing skills)
-        is_early_grade = self.class_level.lower() in ["cp", "ce1"]
-        if is_early_grade:
-            early_grade_note = """
-
-⚠️ ADAPTATION CP/CE1 - ÉCRITURE LIMITÉE
-Les élèves de CP et CE1 ont des capacités d'écriture limitées. PRIVILÉGIE:
-- Exercices visuels: relier, entourer, colorier, cocher
-- Questions à réponse unique (un mot, un nombre)
-- Exercices de mise en relation (colonne A → colonne B)
-- "Relie" (connect-the-dots) avec symboles ou images
-- QCM avec cases à cocher
-- Compléter avec une banque de mots donnée
-- Coller/dessiner (si pertinent)
-
-ÉVITE:
-- Phrases complètes à rédiger
-- Justifications longues
-- Questions ouvertes nécessitant plusieurs lignes
-- Production écrite extensive
-
-ASTUCE: Maximum 1-2 mots par réponse attendue, sauf exception justifiée."""
-        else:
-            early_grade_note = ""
-        
-        # ============================================================================
-        # SOURCE MATERIAL INTEGRATION
-        # ============================================================================
-        
-        if extracted_content.strip():
-            content_section = f"""
-
-📚 MATÉRIEL SOURCE (extraits des guides pédagogiques) :
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{extracted_content[:3000]}{"..." if len(extracted_content) > 3000 else ""}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CONSIGNE : Utilise ce matériel pour créer des questions PRÉCISES et CONTEXTUALISÉES.
-- Extrais les concepts clés, vocabulaire spécifique, et exemples concrets
-- Assure-toi que chaque question est vérifiable dans le contenu ci-dessus
-- Évite les questions trop génériques ou hors-sujet"""
-        else:
-            content_section = f"""
-
-⚠️ AUCUN MATÉRIEL SOURCE DISPONIBLE
-Tu dois créer l'évaluation en te basant sur :
-- Les programmes officiels français pour le niveau {self.class_level}
-- Ta connaissance des compétences attendues à ce niveau
-- Le référentiel de {self.subject or "cette matière"}"""
-        
-        # ============================================================================
-        # PDF FORMATTING CONTROLS (AI has full control over presentation)
-        # ============================================================================
-        
-        wants_tables = bool(self.formatting_options.get("include_tables"))
-        wants_boxes = bool(self.formatting_options.get("include_boxes"))
-        wants_matching = bool(self.formatting_options.get("include_matching"))
-        wants_answers = bool(self.formatting_options.get("include_answer_key"))
-        
-        # Comprehensive formatting guide with examples
-        formatting_guide = """
-
-═══════════════════════════════════════════════════════════════════════════════
-📐 CONTRÔLES DE FORMATAGE PDF - Tu as le contrôle total sur la présentation
-═══════════════════════════════════════════════════════════════════════════════
-
-TITRES & HIÉRARCHIE:
-  # Titre principal (niveau 1) : Titre de l'évaluation
-  ## Section principale (niveau 2) : Parties, Corrigé
-  ### Sous-section (niveau 3) : Exercices individuels, sous-parties
-
-EMPHASE & MISE EN ÉVIDENCE:
-  **Texte en gras** : Mots-clés, consignes importantes, titres d'exercices
-  *Texte en italique* : Exemples, notes, indications optionnelles
-  
-LISTES & ÉNUMÉRATIONS:
-  - Liste simple avec tirets (pour options, étapes)
-  1. Liste numérotée (pour questions séquentielles)
-  
-ESPACEMENT & CLARTÉ:
-  - Ligne vide entre chaque exercice pour aérer
-  - Deux lignes vides entre grandes parties
-  - Espaces de réponse: _______________ (13+ underscores)
-  - Petits espaces: _____ (5 underscores)"""
-
-        if wants_tables:
-            formatting_guide += """
-
-TABLEAUX MARKDOWN (structure rigoureuse):
-  | Entête 1 | Entête 2 | Entête 3 |
-  | -------- | -------- | -------- |
-  | Cellule  | Cellule  | Cellule  |
-  
-  RÈGLES IMPÉRATIVES:
-  ✓ Ligne séparatrice obligatoire (| --- | --- |)
-  ✓ Espaces de réponse dans cellules: ________
-  ✓ Alignement uniforme des pipes |
-  ✗ PAS de backticks autour du tableau
-  ✗ PAS de légende ou titre au-dessus
-  
-  EXEMPLE COMPLET:
-  | N° | Question | Réponse |
-  | -- | -------- | ------- |
-  | 1  | 5 + 3 =  | _____   |
-  | 2  | 9 - 4 =  | _____   |"""
-
-        if wants_boxes:
-            formatting_guide += """
-
-ENCADRÉS & CALLOUTS (pour instructions critiques):
-  > **📌 Consigne importante**
-  > Lis attentivement avant de commencer.
-  > Vérifie tes réponses à la fin.
-  
-  > **💡 Astuce**
-  > Commence par les questions les plus faciles.
-  
-  > **⚠️ Attention**
-  > N'oublie pas d'indiquer les unités (cm, g, etc.)"""
-
-        if wants_matching:
-            formatting_guide += """
-
-EXERCICES DE MISE EN RELATION / "RELIE":
-  Option 1 - Structure en deux colonnes:
-  
-  **Colonne A** (Définitions)        **Colonne B** (Termes)
-  1. Organe de la respiration        a) Cœur
-  2. Organe de la circulation        b) Poumon
-  3. Organe de la digestion          c) Estomac
-  
-  Réponses: 1-___ | 2-___ | 3-___
-  
-  Option 2 - Format visuel avec points:
-  
-  Relie chaque animal à son habitat:
-  
-  1. Poisson  •              • a) Forêt
-  2. Oiseau   •              • b) Océan  
-  3. Écureuil •              • c) Ciel
-  
-  
-  RÈGLES:
-  ✓ Équilibre des colonnes (même nombre d'items)
-  ✓ Ordre mélangé (ne pas mettre 1-a, 2-b, 3-c)
-  ✓ Espaces de réponse clairs"""
-
-        formatting_guide += """
-
-ESPACES DE RÉPONSE (adapter selon le type):
-  - Réponse courte (1 mot): _____
-  - Réponse moyenne (phrase): _______________
-  - Calcul/nombre: _____ (avec unité si nécessaire)
-  - Cases à cocher: ☐ Option A  ☐ Option B
-  - Ligne complète: _________________________________________________
-
-BARÈME & NOTATION:
-  Indique les points APRÈS chaque question/exercice:
-  **Exercice 1** (3 pts)
-  Question a) (1 pt)
-  Question b) (2 pts)
-  
-═══════════════════════════════════════════════════════════════════════════════
-"""
-
-        # ============================================================================
-        # QUALITY CRITERIA & COMMON PITFALLS
-        # ============================================================================
-        
-        quality_criteria = f"""
-
-═══════════════════════════════════════════════════════════════════════════════
-✨ CRITÈRES DE QUALITÉ PÉDAGOGIQUE
-═══════════════════════════════════════════════════════════════════════════════
-
-PROGRESSION COGNITIVE (Bloom):
-  Niveau ciblé pour {self.class_level}: {cognitive_level}
-  
-  Partie 1 (30-40% des points): Connaissances de base
-    → Se rappeler: définitions, faits, vocabulaire
-    → Questions: QCM, vrai/faux, compléter les blancs
-    → Exemple: "Quel est le nom de l'organe qui pompe le sang?"
-  
-  Partie 2 (40-50% des points): Application & Compréhension
-    → Appliquer: résoudre, calculer, utiliser
-    → Questions: problèmes, exercices pratiques, schémas à compléter
-    → Exemple: "Calcule le périmètre d'un rectangle de 5cm × 3cm"
-  
-  Partie 3 (15-20% des points): Analyse & Réflexion
-    → Analyser: comparer, expliquer, justifier
-    → Questions: pourquoi, comment, quelle différence
-    → Exemple: "Explique pourquoi les plantes ont besoin de lumière"
-
-ADAPTATION AU NIVEAU {self.class_level.upper()}:
-  ✓ Vocabulaire simple et précis (évite jargon technique excessif)
-  ✓ Phrases courtes (max 15-20 mots par consigne)
-  ✓ Consignes à l'impératif (Calcule, Écris, Complète, Relie)
-  ✓ Un seul verbe d'action par question
-  ✓ Contextes familiers et concrets (vie quotidienne, école, famille)
-
-ÉQUILIBRE & VARIÉTÉ:
-  ✓ Minimum 3 types de questions différents
-  ✓ Mélange de questions fermées (QCM) et ouvertes (justifications)
-  ✓ Alternance entre rappel et réflexion
-  ✓ Au moins une question visuelle/schéma si pertinent
-  ✓ Progression du plus simple au plus complexe
-
-CLARTÉ DES CONSIGNES:
-  ✓ "Réponds" → "Écris ta réponse" (plus explicite)
-  ✓ "Donne un exemple" → "Donne UN exemple tiré de la leçon"
-  ✓ Indique le format attendu: (en 2-3 lignes), (un seul mot), (un nombre)
-  ✓ Précise les unités: (en cm), (en grammes), (en minutes)
-
-BARÈME COHÉRENT:
-  ✓ Total exactement 20 points
-  ✓ Points proportionnels à la difficulté
-  ✓ Questions simples: 0.5-1 pt
-  ✓ Questions moyennes: 1.5-2 pts
-  ✓ Questions complexes: 3-4 pts
-  ✓ Barème partiel pour questions à étapes
-
-═══════════════════════════════════════════════════════════════════════════════
-⚠️  PIÈGES À ÉVITER ABSOLUMENT
-═══════════════════════════════════════════════════════════════════════════════
-
-❌ Questions ambiguës: "Parle de la photosynthèse" 
-   ✓ Précis: "Explique en 2 phrases comment les plantes fabriquent leur nourriture"
-
-❌ Plusieurs questions en une: "Nomme et explique les trois états de l'eau"
-   ✓ Séparé: Question 1: Nomme... | Question 2: Explique...
-
-❌ Négations doubles: "Laquelle n'est pas incorrecte?"
-   ✓ Simple: "Laquelle est correcte?"
-
-❌ Indices dans les questions suivantes:
-   Q1: "Combien font 5+3?" Q2: "Si 5+3=8, alors..."
-   ✓ Questions indépendantes
-
-❌ QCM avec une seule option correcte évidente
-   ✓ Distracteurs plausibles basés sur erreurs communes
-
-❌ Vocabulaire trop complexe pour le niveau
-   ✓ Adapter: "habitat" plutôt que "niche écologique" en CE1
-
-❌ Questions nécessitant connaissances extérieures non enseignées
-   ✓ Rester dans le périmètre des sujets: {topics_text}
-
-❌ Barème incohérent (question difficile = 1pt, facile = 4pts)
-   ✓ Proportionnel à l'effort cognitif requis
-
-═══════════════════════════════════════════════════════════════════════════════
-"""
-
-        # ============================================================================
-        # STRUCTURE TEMPLATE WITH EXAMPLES
-        # ============================================================================
-        
-        structure_template = f"""
-
-═══════════════════════════════════════════════════════════════════════════════
-📋 STRUCTURE DE L'ÉVALUATION (à respecter strictement)
-═══════════════════════════════════════════════════════════════════════════════
-
-# Évaluation – {self.subject or "Matière"} – {self.class_level.upper()}
-
-### 📊 Informations
-**Nom**: ____________________________  **Prénom**: ____________________________  
-**Classe**: {self.class_level.upper()}  **Date**: _______________
-
-**Sujets évalués**: {topics_text}  
-**Durée**: {self.duration} minutes  
-**Total**: _____ / 20 points
-
-### 📝 Consignes générales
-{">" if wants_boxes else ""} Lis chaque question attentivement avant de répondre  
-{">" if wants_boxes else ""} Écris lisiblement avec un stylo bleu ou noir  
-{">" if wants_boxes else ""} Gère bien ton temps: {self.duration} minutes pour toute l'évaluation  
-{">" if wants_boxes else ""} N'oublie pas de vérifier tes réponses à la fin
-
----
-
-## Partie 1 : Connaissances (≈ 6-8 points)
-
-*Cette partie évalue ta maîtrise des notions de base.*
-
-**Exercice 1 – [Nom de l'exercice]** (X pts)
-
-[Questions de rappel: QCM, vrai/faux, vocabulaire, définitions]
-
----
-
-## Partie 2 : Application (≈ 8-10 points)
-
-*Cette partie évalue ta capacité à utiliser tes connaissances.*
-
-**Exercice 2 – [Nom de l'exercice]** (X pts)
-
-[Exercices pratiques: calculs, problèmes, schémas, situations concrètes]
-
----
-
-## Partie 3 : Analyse et Réflexion (≈ 2-4 points)
-
-*Cette partie évalue ta compréhension approfondie.*
-
-**Exercice 3 – [Nom de l'exercice]** (X pts)
-
-[Questions ouvertes: explications, comparaisons, justifications]
-
----
-
-## 📊 Barème récapitulatif
-
-| Partie | Points | Note obtenue |
-| ------ | ------ | ------------ |
-| Partie 1: Connaissances | ___ / X | ___ |
-| Partie 2: Application | ___ / X | ___ |
-| Partie 3: Réflexion | ___ / X | ___ |
-| **TOTAL** | **___ / 20** | **___** |
-
-{"---\n\n## ✅ Corrigé\n\n[Réponses détaillées avec barème pour chaque question]" if wants_answers else ""}
-
-═══════════════════════════════════════════════════════════════════════════════
-"""
-
-        # ============================================================================
-        # CONCRETE EXAMPLES BY QUESTION TYPE
-        # ============================================================================
-        
-        examples_section = """
-
-═══════════════════════════════════════════════════════════════════════════════
-💡 EXEMPLES CONCRETS PAR TYPE DE QUESTION
-═══════════════════════════════════════════════════════════════════════════════
-
-**QCM (Choix Multiple)**
-Question: Le cœur est un organe du système:
-☐ a) Digestif  
-☐ b) Respiratoire  
-☐ c) Circulatoire ✓  
-☐ d) Nerveux
-
-*Astuce: 3-4 options, une seule correcte, distracteurs plausibles*
-
----
-
-**Vrai / Faux avec justification**
-1. Les plantes respirent uniquement la nuit. ☐ Vrai  ☐ Faux
-   Justifie ta réponse: _________________________________________________
-
-*Astuce: Ajoute justification pour éviter le hasard*
-
----
-
-**Compléter les blancs**
-Complete la phrase avec les mots suivants: [poumons • oxygène • respiration]
-
-La _____________ permet d'apporter de l'_____________ à notre corps grâce aux _____________.
-
-*Astuce: Donne la banque de mots, évite ambiguïté*
-
----
-
-**Question ouverte courte**
-Explique en 2-3 phrases pourquoi nous devons boire de l'eau chaque jour.
-
-__________________________________________________________________
-__________________________________________________________________
-__________________________________________________________________
-
-*Astuce: Indique longueur attendue et nombre de lignes*
-
----
-
-**Problème avec étapes**
-Un rectangle a une longueur de 8 cm et une largeur de 5 cm.
-
-a) Calcule son périmètre. (1.5 pt)
-   Calcul: _________________________________
-   Réponse: ____________ cm
-
-b) Calcule son aire. (1.5 pt)
-   Calcul: _________________________________
-   Réponse: ____________ cm²
-
-*Astuce: Divise en sous-questions, demande calculs + réponse*
-
----
-
-**Schéma à compléter/légender**
-[Indiquer: dessiner ou fournir schéma à compléter]
-
-Légende le schéma du système solaire en plaçant: Soleil, Terre, Lune
-
-[Si tu génères un schéma textuel simple:]
-```
-    ( Soleil )
-         |
-    ( _____ )  ← Terre
-         |
-    ( _____ )  ← Lune
-```
-
-*Astuce: Schémas simples en texte ASCII ou description claire*
-
-═══════════════════════════════════════════════════════════════════════════════
-"""
-
-        # ============================================================================
-        # TONE BLOCK FROM FICHE EXAMPLES
-        # ============================================================================
-        
-        tone_block = f"""
-
-═══════════════════════════════════════════════════════════════════════════════
-🎨 EXEMPLES DE STYLE À IMITER (ton direct et pratique)
-═══════════════════════════════════════════════════════════════════════════════
-
-{examples_block if examples_block else "Adopte un ton clair, direct, bienveillant et professionnel."}
-
-═══════════════════════════════════════════════════════════════════════════════
-"""
-
-        # ============================================================================
-        # FINAL PROMPT ASSEMBLY
-        # ============================================================================
-        
-        extra_guidance = (self.extra_instructions or "").strip()
-        extra_block = f"\n\n🎯 INSTRUCTIONS SPÉCIALES DE L'ENSEIGNANT:\n{extra_guidance}\n" if extra_guidance else ""
-        
-        # Extract metadata
         school_name = self.eval_metadata.get("school_name", "Groupe Scolaire")
         academic_year = self.eval_metadata.get("academic_year", "2025/2026")
-        eval_number = self.eval_metadata.get("eval_number", 1)
-        semester = self.eval_metadata.get("semester", "1")
-        max_score = self.eval_metadata.get("max_score", 10)
-        
-        # Generate session label
+        eval_number = int(self.eval_metadata.get("eval_number", 1) or 1)
+        semester = str(self.eval_metadata.get("semester", "1"))
+        max_score = int(self.eval_metadata.get("max_score", 10) or 10)
+
         num_word = "1er" if eval_number == 1 else f"{eval_number}e"
         sem_word = "1er" if semester == "1" else f"{semester}e"
         session_label = f"{num_word} contrôle du {sem_word} semestre"
-        
-        prompt = f"""Tu es un expert en pédagogie française spécialisé dans l'évaluation scolaire au primaire.
 
-Tu dois créer une ÉVALUATION au format EXACT des écoles marocaines françaises pour:
-- **Niveau**: {self.class_level.upper()}
-- **Matière**: {self.subject or "Sciences"}
-- **Sujets**: {topics_text}
-- **Durée**: {self.duration} minutes
-- **Barème total**: {max_score} points
+        force_types = []
+        if self.formatting_options.get("include_tables"):
+            force_types.append("table")
+        if self.formatting_options.get("include_matching"):
+            force_types.append("matching")
+        if self.question_types:
+            force_types.append(self.question_types)
+        forced_types_text = ", ".join(force_types) if force_types else "aucun type forcé"
 
-═══════════════════════════════════════════════════════════════════════════════
-📋 FORMAT REQUIS (ABSOLUMENT RESPECTER)
-═══════════════════════════════════════════════════════════════════════════════
+        source_text = (extracted_content or "").strip()
+        source_block = (
+            f"EXTRAIT DE RÉFÉRENCE (prioritaire):\n---\n{source_text[:5000]}\n---"
+            if source_text
+            else "Aucun extrait source fourni. Génère une évaluation fidèle au programme attendu du niveau."
+        )
 
-**ENTÊTE** (fournis exactement ces informations dans le JSON):
-- Nom de l'école: "{school_name}"
-- Année scolaire: "{academic_year}"
-- Session: "{session_label}"
-- Durée: {self.duration} min
-- Note: ___ / {max_score}
+        answer_key_rule = (
+            "Inclure un corrigé final synthétique mais complet."
+            if self.formatting_options.get("include_answer_key")
+            else "Ne pas inclure de corrigé détaillé; expected_answer doit rester bref."
+        )
 
-**EXERCICES** (format numéroté strict):
+        extra_block = (self.extra_instructions or "").strip()
+        if extra_block:
+            extra_block = f"\nCONSIGNES SUPPLÉMENTAIRES ENSEIGNANT:\n{extra_block}\n"
 
-Exercice 1 — [Consigne complète de l'exercice] : (Xpts)
+        prompt = f"""Tu es un concepteur d'épreuves scolaires francophones. Ta mission: produire une évaluation exploitable immédiatement, rigoureuse, claire, et variée.
 
-[Questions ou contenu de l'exercice avec espaces de réponse clairs]
+CONTEXTE FIXE:
+- Établissement: {school_name}
+- Niveau: {self.class_level.upper()}
+- Matière: {self.subject or "Sciences"}
+- Sujets à couvrir: {topics_text}
+- Durée totale: {int(self.duration)} minutes
+- Barème total imposé: {max_score} points
+- Session: {session_label}
 
----
-
-Exercice 2 — [Consigne] : (Xpts)
-
-[Contenu...]
-
----
-
-═══════════════════════════════════════════════════════════════════════════════
-🎯 TYPES D'EXERCICES RECOMMANDÉS (varier obligatoirement)
-═══════════════════════════════════════════════════════════════════════════════
-
-1. **Tableaux à compléter** (ex: classer des maladies contagieuses/non contagieuses)
-   Format markdown:
-   | Catégorie A | Catégorie B |
-   | ----------- | ----------- |
-   | __________ | __________ |
-   
-2. **Relier/Matching** (ex: relier mots et définitions)
-   Format:
-   - **Mot 1** — __________
-   - **Mot 2** — __________
-   
-3. **Compléter un texte** avec banque de mots
-   Format:
-   Mots à utiliser: **mot1, mot2, mot3**
-   
-   Texte: "Pour rester en bonne santé, il faut avoir une bonne __________ (hygiène)..."
-   
-4. **Questions courtes / production**
-   Format:
-   Imagine un menu pour une journée:
-   - Petit-déjeuner: __________
-   - Déjeuner: __________
-
-═══════════════════════════════════════════════════════════════════════════════
-🎓 DIRECTIVES PÉDAGOGIQUES
-═══════════════════════════════════════════════════════════════════════════════
-
-{early_grade_note}
-{content_section}
-{quality_criteria}
-
-**BARÈME**: Répartis les points équitablement entre 3-5 exercices pour un total de 10 pts (ou 20 si demandé).
-
-**CLARTÉ**: Chaque exercice doit avoir:
-- Un numéro (Exercice 1, 2, 3...)
-- Une consigne complète et claire
-- Le nombre de points entre parenthèses: (2pts), (3pts), etc.
-
-**PROGRESSION**: Du plus simple (connaissances) au plus complexe (application/réflexion).
-
+{source_block}
 {extra_block}
+CONTRAINTES PÉDAGOGIQUES OBLIGATOIRES:
+1. Générer 4 à 6 exercices, progressifs (facile -> moyen -> transfert).
+2. Varier explicitement les modalités: compréhension, application, raisonnement, production.
+3. Formulations courtes, consignes nettes, adaptées à {self.class_level.upper()}.
+4. Aucun exercice redondant; chaque exercice doit tester une compétence distincte.
+5. Si QCM, distracteurs plausibles (pas absurdes).
+6. Types à forcer si possible: {forced_types_text}.
+7. {answer_key_rule}
 
-═══════════════════════════════════════════════════════════════════════════════
-📤 SORTIE JSON REQUISE
-═══════════════════════════════════════════════════════════════════════════════
+CONTRAINTES DE STRUCTURE JSON:
+- Retourner uniquement un objet JSON valide (aucun texte hors JSON).
+- Utiliser exactement les champs du schéma: school_name, header, exercises, answer_key.
+- header doit inclure:
+  class_level="{self.class_level.upper()}", academic_year="{academic_year}", evaluation_number={eval_number}, semester="{semester}", session_label="{session_label}", duration_minutes={int(self.duration)}, max_score={max_score}, subject="{self.subject or 'Sciences'}".
+- exercises: liste d'objets avec title, instructions, points, questions.
+- questions: objets avec prompt, answer_type, expected_answer.
+- La somme des points des exercices doit être EXACTEMENT {max_score}.
 
-Réponds UNIQUEMENT avec du JSON valide (AUCUN texte avant/après, AUCUN bloc de code):
-
-{{
-  "school_name": "{school_name}",
-  "header": {{
-    "class_level": "{self.class_level.upper()}",
-    "academic_year": "{academic_year}",
-    "evaluation_number": {eval_number},
-    "semester": "{semester}",
-    "session_label": "{session_label}",
-    "duration_minutes": {self.duration},
-    "max_score": {max_score},
-    "subject": "{self.subject or 'Sciences'}"
-  }},
-  "exercises": [
-    {{
-      "title": "Exercice 1",
-      "instructions": "Classe les maladies suivantes dans le tableau :",
-      "points": 3,
-      "questions": [
-        {{
-          "prompt": "| Maladies contagieuses | Maladies non contagieuses |\\n| --------------------- | ------------------------- |\\n| __________ | __________ |",
-          "answer_type": "tableau",
-          "expected_answer": "Contagieuses: rougeole, rhume, covid-19. Non contagieuses: asthme, diabète, cancer"
-        }}
-      ]
-    }},
-    {{
-      "title": "Exercice 2",
-      "instructions": "Relie chaque mot à sa définition :",
-      "points": 2,
-      "questions": [
-        {{
-          "prompt": "- **Vaccin** — __________\\n- **Maladie** — __________",
-          "answer_type": "matching",
-          "expected_answer": "Vaccin: produit qui protège. Maladie: dysfonctionnement du corps"
-        }}
-      ]
-    }}
-  ],
-  "answer_key": [
-    "Exercice 1: Contagieuses: rougeole, rhume, covid-19. Non contagieuses: asthme, diabète, cancer",
-    "Exercice 2: Vaccin = produit protecteur, Maladie = dysfonctionnement"
-  ]
-}}
-
-IMPORTANT: 
-- Génère 3-5 exercices variés et adaptés au niveau {self.class_level.upper()} sur les sujets: {topics_text}
-- Le total des points DOIT être exactement {max_score} points
-- Utilise EXACTEMENT les valeurs d'entête fournies ci-dessus
+QUALITÉ ATTENDUE:
+- Exigences réalistes de copie d'élève.
+- Énoncés auto-suffisants (sans devoir lire le manuel).
+- Cohérence interne entre consignes, barème et corrigé.
 """
-
         return prompt
 
 class QuizWorker(QtCore.QThread):
@@ -1482,6 +1207,7 @@ class QuizWorker(QtCore.QThread):
             # Try to extract content from guide
             extracted_text = ""
             guide_path = find_guide_file(self.class_level, self.guides_dir, queue)
+            page_numbers = []
             
             if guide_path:
                 cached_toc = get_cached_toc(guide_path, self.guides_dir)
@@ -1492,7 +1218,14 @@ class QuizWorker(QtCore.QThread):
                     if page_range:
                         page_numbers = parse_page_numbers(page_range, queue)
                         if page_numbers:
-                            extracted_text = extract_lesson_text(guide_path, page_numbers, queue, self.cancel_event)
+                            with PdfExtractionSession(guide_path, queue) as guide_session:
+                                extracted_text = extract_lesson_text(
+                                    guide_path,
+                                    page_numbers,
+                                    queue,
+                                    self.cancel_event,
+                                    session=guide_session,
+                                )
                             if extracted_text:
                                 queue.put(("log", f"✅ Extracted {len(extracted_text)} characters from guide"))
             
@@ -1508,7 +1241,14 @@ class QuizWorker(QtCore.QThread):
                     queue.put(("log", "📖 Extracting from student textbook..."))
                     # Use same pages as guide
                     if page_numbers:
-                        textbook_text = extract_lesson_text(textbook_path, page_numbers, queue, self.cancel_event)
+                        with PdfExtractionSession(textbook_path, queue) as textbook_session:
+                            textbook_text = extract_lesson_text(
+                                textbook_path,
+                                page_numbers,
+                                queue,
+                                self.cancel_event,
+                                session=textbook_session,
+                            )
                         if textbook_text:
                             extracted_text += f"\n\n=== MANUEL ÉLÈVE ===\n{textbook_text}"
                             queue.put(("log", "🔗 Added textbook content"))
@@ -1529,7 +1269,9 @@ class QuizWorker(QtCore.QThread):
                 prompt,
                 self.temperature,
                 queue,
-                "quiz-generation"
+                "quiz-generation",
+                response_schema=_quiz_response_schema(),
+                response_mime_type="application/json",
             )
             
             queue.put(("progress", 90))
@@ -1538,7 +1280,11 @@ class QuizWorker(QtCore.QThread):
                 return
             
             if response:
-                quiz_content = (response.text or "").strip()
+                parsed = _parse_structured_response(response)
+                if parsed:
+                    quiz_content = _render_quiz_markdown(parsed)
+                else:
+                    quiz_content = (response.text or "").strip()
                 if quiz_content:
                     queue.put(("log", "✅ Quiz generated successfully!"))
                     queue.put(("content", quiz_content))
@@ -1561,74 +1307,78 @@ class QuizWorker(QtCore.QThread):
             queue.put(("enable_buttons", None))
 
     def _build_quiz_prompt(self, extracted_content: str = "") -> str:
-        """Build the prompt for quiz generation."""
-        
-        # Determine question format instructions
-        format_instructions = {
-            "Mixed (MCQ + Short Answer)": "Mélange de QCM (avec 4 options) et de questions à réponse courte",
-            "Multiple Choice Only": "Uniquement des QCM avec 4 options (A, B, C, D)",
-            "Short Answer Only": "Uniquement des questions à réponse courte (1-2 phrases)",
-            "True/False + MCQ": "Questions Vrai/Faux et QCM",
-            "Fill in the Blanks": "Texte à trous avec espaces à compléter"
-        }.get(self.quiz_format, "Questions variées")
-        
-        difficulty_map = {
-            "Adapted to class level": f"Adapté au niveau {self.class_level}",
-            "Easy": "Facile - questions de compréhension basique",
-            "Medium": "Moyen - questions de compréhension et application",
-            "Hard": "Difficile - questions d'analyse et réflexion"
+        """Build a deeply varied quiz prompt and request structured JSON output."""
+        seed = int(time.time() * 1000) % 100000
+        rng = random.Random(seed)
+
+        format_map = {
+            "Mixed (MCQ + Short Answer)": ["mcq", "short-answer", "true-false", "fill-blank"],
+            "Multiple Choice Only": ["mcq"],
+            "Short Answer Only": ["short-answer", "scenario"],
+            "True/False + MCQ": ["true-false", "mcq"],
+            "Fill in the Blanks": ["fill-blank", "word-bank"],
         }
-        difficulty_text = difficulty_map.get(self.difficulty, self.difficulty)
-        
-        content_section = ""
-        if extracted_content:
-            content_section = f"""
-## Contenu source du manuel:
-{extracted_content[:4000]}  
-"""
-        
-        answer_section = ""
-        if self.include_answers:
-            answer_section = """
-## Corrigé
-À la fin, fournis un corrigé clair avec toutes les réponses correctes.
-"""
-        
-        extra = ""
-        if self.extra_instructions:
-            extra = f"\n\nInstructions supplémentaires: {self.extra_instructions}"
-        
-        prompt = f"""Tu es un enseignant expérimenté. Crée un quiz pédagogique pour une classe de {self.class_level}.
+        allowed_types = format_map.get(self.quiz_format, ["mcq", "short-answer"])
 
-# Informations du quiz
-- **Sujet**: {self.topic}
-- **Matière**: {self.subject or "Non spécifiée"}
-- **Nombre de questions**: {self.num_questions}
-- **Format**: {format_instructions}
-- **Difficulté**: {difficulty_text}
-- **Durée**: {self.duration} minutes
+        challenge_modes = [
+            "Rapid-fire quiz avec questions brèves et variées",
+            "Mini enquête avec indices contextuels",
+            "Quiz à paliers (facile -> moyen -> défi)",
+            "Quiz situationnel basé sur des mini-cas concrets",
+        ]
+        mode = rng.choice(challenge_modes)
 
-{content_section}
+        source_block = (
+            f"SOURCE:\n---\n{extracted_content[:3200]}\n---"
+            if extracted_content
+            else "Pas d'extrait source: s'appuyer sur les acquis attendus du niveau."
+        )
 
-# Format de sortie (Markdown)
+        correction_rule = "Inclure un answer_key exploitable." if self.include_answers else "answer_key très bref (peut être vide)."
+        extra = (self.extra_instructions or "").strip()
+        extra_block = f"\nCONTRAINTE PROF: {extra}\n" if extra else ""
 
-## Quiz: {self.topic}
-**Classe**: {self.class_level} | **Durée**: {self.duration} min
+        prompt = f"""Tu es un concepteur de quiz innovants pour enseignants du primaire/collège.
 
-### Questions
+PARAMÈTRES:
+- Classe: {self.class_level}
+- Sujet principal: {self.topic}
+- Matière: {self.subject or 'Générale'}
+- Durée: {self.duration} min
+- Nombre de questions: {self.num_questions}
+- Niveau de difficulté: {self.difficulty}
+- Mode de quiz: {mode}
+- Graine de variation: {seed}
+- Types autorisés: {', '.join(allowed_types)}
 
-(Numérote chaque question de 1 à {self.num_questions})
-(Pour les QCM, utilise A, B, C, D)
-(Pour Vrai/Faux, indique clairement les options)
+{source_block}
 
-{answer_section}
+OBJECTIF ANTI-RÉPÉTITION:
+1. Générer des questions avec débuts de phrase différents.
+2. Éviter les formulations scolaires stéréotypées répétées.
+3. Alterner les mécanismes cognitifs (repérer, comparer, appliquer, justifier).
+4. Créer des distracteurs plausibles pour QCM.
+5. Introduire au moins 2 contextes concrets de vie quotidienne.
 
-# Consignes importantes
-1. Les questions doivent être claires et adaptées au niveau {self.class_level}
-2. Varie les types de questions si le format le permet
-3. Assure-toi que les questions testent la compréhension du sujet
-4. Les QCM doivent avoir une seule bonne réponse évidente
-5. Utilise un langage simple et des exemples concrets{extra}
+SORTIE JSON STRICTE:
+- title (str)
+- class_level (str)
+- topic (str)
+- subject (str)
+- duration_minutes (int)
+- instructions (list[str])
+- questions (list[object])
+  - chaque question: number (int), type (str), prompt (str), options (list[str], optional), expected_answer (str, optional)
+- answer_key (list[str], optional)
+
+RÈGLES SUPPLÉMENTAIRES:
+- Respecter exactement {self.num_questions} questions.
+- Utiliser seulement les types autorisés.
+- Numéroter proprement de 1 à {self.num_questions}.
+- {correction_rule}
+{extra_block}
+
+Réponds uniquement avec un JSON valide.
 """
         return prompt
 
@@ -1684,50 +1434,4 @@ class GenerationWorker(QtCore.QThread):
             self.generate_image,
             self.use_student_textbook
         )
-
-class ModelUpdateWorker(QtCore.QThread):
-    """
-    Background worker to check for newer Gemini models using Gemma-3-27b analysis.
-    Emits signals with old and new model names for user confirmation.
-    """
-    # Signal: (old_pro, new_pro, old_flash, new_flash)
-    models_found = QtCore.pyqtSignal(str, str, str, str)
-    
-    def __init__(self, current_pro: str = "", current_flash: str = ""):
-        super().__init__()
-        self.current_pro = current_pro
-        self.current_flash = current_flash
-    
-    def run(self):
-        try:
-            # Short delay to let the app start up fully before querying network
-            time.sleep(3)
-            
-            # Check if API key is available
-            if not API_KEYS.get("GEMINI_API_KEY"):
-                return
-
-            model_names = fetch_available_models()
-            if not model_names:
-                return
-                
-            # Use Gemma to intelligently determine the best models
-            new_pro, new_flash = find_best_models_with_ai(
-                model_names, 
-                self.current_pro, 
-                self.current_flash
-            )
-            
-            # Only emit if at least one model has an update
-            if new_pro or new_flash:
-                self.models_found.emit(
-                    self.current_pro,
-                    new_pro or "",
-                    self.current_flash,
-                    new_flash or ""
-                )
-        except Exception as e:
-            print(f"Model update check failed: {e}")
-
-
 

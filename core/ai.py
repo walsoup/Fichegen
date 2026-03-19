@@ -11,9 +11,15 @@ from config import (
     _clamp_temperature
 )
 
-def get_genai_client() -> Optional[genai.Client]:
-    """Return a cached google-genai client configured with the current API key."""
-    api_key = API_KEYS.get("GEMINI_API_KEY")
+def _api_key_route_label(api_key_name: str) -> str:
+    if api_key_name == "GEMINI_API_KEY":
+        return "Gemini key"
+    return api_key_name
+
+
+def get_genai_client(api_key_name: str = "GEMINI_API_KEY") -> Optional[genai.Client]:
+    """Return a cached google-genai client configured with the selected API key."""
+    api_key = API_KEYS.get(api_key_name)
     if not api_key:
         return None
 
@@ -27,7 +33,7 @@ def get_genai_client() -> Optional[genai.Client]:
 def get_ai_client(api_provider):
     """Get Gemini client - OpenRouter has been removed."""
     try:
-        client = get_genai_client()
+        client = get_genai_client("GEMINI_API_KEY")
     except Exception as exc:
         return None, f"Failed to initialise Gemini client: {exc}"
 
@@ -48,15 +54,16 @@ def _call_model(
     thinking_level: Optional[str] = None,
     enable_google_search: bool = False,
     enable_url_context: bool = False,
+    api_key_name: str = "GEMINI_API_KEY",
     ):
     """
     Shared helper to invoke Gemini models with consistent config handling.
     
     """
 
-    client = get_genai_client()
+    client = get_genai_client(api_key_name)
     if client is None:
-        raise RuntimeError("Missing Gemini API key")
+        raise RuntimeError(f"Missing Gemini API key: {api_key_name}")
 
     config_kwargs: Dict[str, Any] = {"temperature": _clamp_temperature(temperature)}
     
@@ -133,6 +140,7 @@ def _generate_with_model(
     thinking_level: Optional[str] = None,
     enable_google_search: bool = False,
     enable_url_context: bool = False,
+    api_key_name: str = "GEMINI_API_KEY",
 ):
     return _call_model(
         model_name,
@@ -145,6 +153,7 @@ def _generate_with_model(
         thinking_level=thinking_level,
         enable_google_search=enable_google_search,
         enable_url_context=enable_url_context,
+        api_key_name=api_key_name,
     )
 
 def _generate_with_gemini(
@@ -158,6 +167,7 @@ def _generate_with_gemini(
     thinking_level: Optional[str] = "HIGH",  # Default to HIGH for main content gen
     enable_google_search: bool = False,       # Default to True for main content gen
     enable_url_context: bool = False,         # Default to True for main content gen
+    api_key_name: str = "GEMINI_API_KEY",
 ):
     return _generate_with_model(
         get_configured_gemini_model(),
@@ -170,6 +180,7 @@ def _generate_with_gemini(
         thinking_level=thinking_level,
         enable_google_search=enable_google_search,
         enable_url_context=enable_url_context,
+        api_key_name=api_key_name,
     )
 
 def generate_with_fallback(
@@ -198,9 +209,11 @@ def generate_with_fallback(
     settings = QtCore.QSettings("FicheGen", "Pedago")
     enable_fallback = settings.value("enable_model_fallback", "true") == "true"
     use_pro = settings.value("gemini_use_pro", "true") == "true"
-    
-    if not API_KEYS.get("GEMINI_API_KEY"):
-        queue.put(("log", "❌ No Gemini API key configured"))
+
+    api_key_name = "GEMINI_API_KEY"
+    queue.put(("log", f"🔑 API route: {_api_key_route_label(api_key_name)}"))
+    if not API_KEYS.get(api_key_name):
+        queue.put(("log", f"❌ No Gemini API key configured for {purpose}"))
         return None
     
     # Try primary model first
@@ -216,6 +229,7 @@ def generate_with_fallback(
             response_mime_type=response_mime_type,
             tools=tools,
             tool_config=tool_config,
+            api_key_name=api_key_name,
         )
 
         response_text = (response.text or "") if response else ""
@@ -242,6 +256,7 @@ def generate_with_fallback(
                     response_mime_type=response_mime_type,
                     tools=tools,
                     tool_config=tool_config,
+                    api_key_name=api_key_name,
                 )
                 
                 response_text = (response.text or "") if response else ""
@@ -409,132 +424,210 @@ def _evaluation_response_schema() -> types.Schema:
         required=["header", "exercises"],
     )
 
+@lru_cache(maxsize=1)
+def _quiz_response_schema() -> types.Schema:
+    """Schema guiding Gemini to emit consistent quiz JSON."""
+    return types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "title": types.Schema(type=types.Type.STRING),
+            "class_level": types.Schema(type=types.Type.STRING),
+            "topic": types.Schema(type=types.Type.STRING),
+            "subject": types.Schema(type=types.Type.STRING, nullable=True),
+            "duration_minutes": types.Schema(type=types.Type.INTEGER),
+            "instructions": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(type=types.Type.STRING),
+                nullable=True,
+            ),
+            "questions": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "number": types.Schema(type=types.Type.INTEGER),
+                        "type": types.Schema(type=types.Type.STRING),
+                        "prompt": types.Schema(type=types.Type.STRING),
+                        "options": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.STRING),
+                            nullable=True,
+                        ),
+                        "expected_answer": types.Schema(type=types.Type.STRING, nullable=True),
+                    },
+                    required=["number", "type", "prompt"],
+                ),
+            ),
+            "answer_key": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(type=types.Type.STRING),
+                nullable=True,
+            ),
+        },
+        required=["title", "class_level", "topic", "duration_minutes", "questions"],
+    )
+
 def _render_fiche_markdown(data: Dict[str, Any]) -> str:
-    """Convert fiche JSON into the Markdown format expected by the UI."""
+    """Render fiche JSON into a production-style teaching orchestration format."""
     if not isinstance(data, dict):
         return ""
 
-    lines: List[str] = []
+    def _clean_list(values: Any) -> List[str]:
+        if not values:
+            return []
+        if isinstance(values, str):
+            text = values.strip()
+            return [text] if text else []
+        cleaned: List[str] = []
+        for value in values:
+            if isinstance(value, str) and value.strip():
+                cleaned.append(value.strip())
+        return cleaned
+
     metadata = data.get("metadata", {}) or {}
-
-    title = data.get("title") or metadata.get("lesson_title") or "Fiche pédagogique"
-    lines.append(f"# {title.strip()}")
-
-    def _meta(label: str, key: str):
-        value = metadata.get(key)
-        if value:
-            lines.append(f"### **{label}**: {value}")
-
-    _meta("Titre du chapitre", "chapter_title")
-    _meta("Titre de la leçon", "lesson_title")
+    title = (data.get("title") or metadata.get("lesson_title") or "Fiche pédagogique").strip()
+    class_level = metadata.get("class_level")
+    subject = metadata.get("subject")
     duration = metadata.get("duration_minutes")
-    if duration:
-        lines.append(f"### **Durée**: {duration} min")
-    _meta("Classe", "class_level")
-    _meta("Matière", "subject")
+    chapter_title = metadata.get("chapter_title")
+    lesson_title = metadata.get("lesson_title")
+    materials = _clean_list(metadata.get("materials"))
+    objectives = _clean_list(data.get("objectives"))
+    phases = data.get("phases") or []
 
-    objectives = data.get("objectives") or []
+    lines: List[str] = [f"# {title}"]
+
+    summary_parts: List[str] = []
+    if class_level:
+        summary_parts.append(f"Classe {class_level}")
+    if subject:
+        summary_parts.append(subject)
+    if duration:
+        summary_parts.append(f"{duration} min")
+    if summary_parts:
+        lines.append("")
+        lines.append(f"> **Fiche pédagogique** · {' · '.join(summary_parts)}")
+
     if objectives:
         lines.append("")
         lines.append("## Objectifs")
-        for obj in objectives:
-            lines.append(f"- {obj}")
+        for idx, obj in enumerate(objectives, start=1):
+            lines.append(f"{idx}. {obj}")
 
-    phases = data.get("phases") or []
     if phases:
         lines.append("")
-        lines.append("## Déroulement de la séance")
-        for phase in phases:
+        lines.append("## Plan de seance")
+        for idx, phase in enumerate(phases, start=1):
             if not isinstance(phase, dict):
                 continue
-            name = phase.get("name") or "Phase"
-            duration_minutes = phase.get("duration_minutes")
-            header = f"### {name}" + (f" ({duration_minutes} min)" if duration_minutes else "")
+            phase_name = phase.get("name") or f"Phase {idx}"
+            phase_goal = (phase.get("goal") or "").strip()
+            phase_duration = phase.get("duration_minutes")
+            duration_text = f"{phase_duration} min" if phase_duration else "à adapter"
+            if phase_goal:
+                lines.append(f"- **Bloc {idx} ({duration_text})**: {phase_name} - {phase_goal}")
+            else:
+                lines.append(f"- **Bloc {idx} ({duration_text})**: {phase_name}")
+
+        lines.append("")
+        lines.append("## Deroulement detaille")
+        for idx, phase in enumerate(phases, start=1):
+            if not isinstance(phase, dict):
+                continue
+            name = phase.get("name") or f"Phase {idx}"
+            phase_duration = phase.get("duration_minutes")
+            header = f"### Bloc {idx} - {name}"
+            if phase_duration:
+                header += f" ({phase_duration} min)"
             lines.append(header)
 
-            goal = phase.get("goal")
+            goal = (phase.get("goal") or "").strip()
             if goal:
-                lines.append(f"*Objectif :* {goal}")
+                lines.append(f"**Objectif de la phase**: {goal}")
 
-            teacher_steps = phase.get("teacher_steps") or []
+            teacher_steps = _clean_list(phase.get("teacher_steps"))
             if teacher_steps:
-                lines.append("**Actions de l'enseignant :**")
+                lines.append("**Actions de l'enseignant**")
                 for step in teacher_steps:
                     lines.append(f"- {step}")
 
-            student_steps = phase.get("student_steps") or []
+            student_steps = _clean_list(phase.get("student_steps"))
             if student_steps:
-                lines.append("**Actions des élèves :**")
+                lines.append("**Actions des eleves**")
                 for step in student_steps:
                     lines.append(f"- {step}")
 
-            diff = phase.get("differentiation")
-            if diff:
-                lines.append(f"*Différenciation :* {diff}")
+            phase_materials = _clean_list(phase.get("materials"))
+            if phase_materials:
+                lines.append(f"**Supports**: {', '.join(phase_materials)}")
 
+            diff = (phase.get("differentiation") or "").strip()
+            if diff:
+                lines.append(f"**Differenciation**: {diff}")
+
+            lines.append("")
 
     evaluation = data.get("evaluation") or {}
     if evaluation:
-        lines.append("")
-        lines.append("## Évaluation")
-        strategy = evaluation.get("strategy")
+        lines.append("## Evaluation")
+        strategy = (evaluation.get("strategy") or "").strip()
         if strategy:
-            lines.append(strategy)
-        questions = evaluation.get("questions") or []
-        for question in questions:
-            lines.append(f"- {question}")
+            lines.append(f"**Modalite**: {strategy}")
 
-        answer_key = evaluation.get("answer_key") or []
+        questions = _clean_list(evaluation.get("questions"))
+        if questions:
+            lines.append("### Questions")
+            for idx, question in enumerate(questions, start=1):
+                lines.append(f"{idx}. {question}")
+
+        answer_key = _clean_list(evaluation.get("answer_key"))
         if answer_key:
-            lines.append("")
-            lines.append("### Corrigé")
-            for answer in answer_key:
-                lines.append(f"- {answer}")
+            lines.append("### Elements de correction")
+            for idx, answer in enumerate(answer_key, start=1):
+                lines.append(f"{idx}. {answer}")
+        lines.append("")
 
-    reminders = data.get("reminders")
+    reminders = (data.get("reminders") or "").strip()
     if reminders:
+        lines.append("## Remarques")
+        lines.append(f"- {reminders}")
         lines.append("")
-        lines.append("## Remarques et rappels")
-        lines.append(reminders)
 
-    conclusion = data.get("conclusion")
+    conclusion = (data.get("conclusion") or "").strip()
     if conclusion:
-        lines.append("")
         lines.append("## Conclusion")
         lines.append(conclusion)
 
-    return "\n".join(lines).strip()
+    return "\n".join(line for line in lines if line is not None).strip()
 
 def _render_evaluation_markdown(data: Dict[str, Any]) -> str:
-    """Convert evaluation JSON into Markdown matching French school format."""
+    """Convert evaluation JSON into a dedicated exam-sheet markdown format."""
     if not isinstance(data, dict):
         return ""
 
     lines: List[str] = []
     header = data.get("header", {}) or {}
-    
-    # School name as main title
+
+    def _clean_text(value: Any, fallback: str = "") -> str:
+        text = str(value or "").strip()
+        return text if text else fallback
+
+    def _score_text(value: Any) -> str:
+        try:
+            number = float(value)
+            if number.is_integer():
+                return str(int(number))
+            return f"{number:.1f}".rstrip("0").rstrip(".")
+        except Exception:
+            return str(value if value is not None else "")
+
     school_name = data.get("school_name") or "Groupe Scolaire"
-    lines.append(f"# {school_name}")
-    lines.append("")
-    
-    # Student information fields
-    lines.append("**Nom et prénom :** _________________________________________________")
-    lines.append("")
-    
-    class_level = header.get("class_level", "CM1")
-    lines.append(f"**Niveau :** {class_level}")
-    lines.append("")
-    
-    academic_year = header.get("academic_year")
-    if academic_year:
-        lines.append(f"**Année scolaire :** {academic_year}")
-    else:
-        lines.append("**Année scolaire :** _________________________")
-    lines.append("")
-    lines.append("")
-    
-    # Session label (e.g., "1er contrôle du 1er semestre")
+    class_level = _clean_text(header.get("class_level"), "CM1")
+    academic_year = _clean_text(header.get("academic_year"), "2025/2026")
+    subject = _clean_text(header.get("subject"), "Matière")
+    duration = _clean_text(header.get("duration_minutes"), "45")
+    max_score = _score_text(header.get("max_score", 20))
+
     session_label = header.get("session_label")
     if not session_label:
         eval_num = header.get("evaluation_number", 1)
@@ -542,67 +635,150 @@ def _render_evaluation_markdown(data: Dict[str, Any]) -> str:
         num_word = "1er" if eval_num == 1 else f"{eval_num}e"
         sem_word = "1er" if semester == "1" else f"{semester}e"
         session_label = f"{num_word} contrôle du {sem_word} semestre"
-    
-    lines.append(f"**{session_label}**")
+
+    lines.append("# EPREUVE D'EVALUATION")
     lines.append("")
-    
-    # Duration and score
-    duration = header.get("duration_minutes", 45)
-    max_score = header.get("max_score", 20)
-    lines.append(f"**Durée :** {duration} min")
+    lines.append(f"> **{school_name}**")
+    lines.append(f"> **Session**: {session_label}")
+    lines.append(f"> **Niveau**: {class_level}  |  **Matière**: {subject}")
+    lines.append(f"> **Durée**: {duration} min  |  **Total**: {max_score} points")
     lines.append("")
-    lines.append(f"**Note :** _________ / {int(max_score)}")
+
+    lines.append("## Cadre élève")
+    lines.append("- Nom et prénom: ________________________________________________")
+    lines.append("- Date: ____________________")
+    lines.append("- Classe: __________________")
+    lines.append("- Note finale: ________ / " + max_score)
     lines.append("")
+
+    lines.append("## Consignes générales")
+    lines.append(f"1. Lis chaque consigne avec attention et respecte la durée ({duration} min).")
+    lines.append("2. Soigne la présentation et justifie quand la consigne l'exige.")
+    lines.append("3. Réponds directement dans les espaces prévus.")
     lines.append("")
+
+    exercises = data.get("exercises") or []
+    if exercises:
+        lines.append("## Barème de l'épreuve")
+        lines.append("| Exercice | Points |")
+        lines.append("|:---------|------:|")
+        for idx, exercise in enumerate(exercises, start=1):
+            if not isinstance(exercise, dict):
+                continue
+            points = _score_text(exercise.get("points"))
+            label = _clean_text(exercise.get("title"), f"Exercice {idx}")
+            lines.append(f"| {label} | {points} |")
+        lines.append(f"| **Total** | **{max_score}** |")
+        lines.append("")
+
     lines.append("---")
     lines.append("")
-    
-    # Exercises
-    exercises = data.get("exercises") or []
+
+    # Exercises block: fully rebuilt layout
     for idx, exercise in enumerate(exercises, start=1):
         if not isinstance(exercise, dict):
             continue
-            
-        title = exercise.get("title") or f"Exercice {idx}"
-        instructions = exercise.get("instructions") or ""
-        points = exercise.get("points")
-        
-        # Exercise header with points
-        if points is not None:
-            if points == int(points):
-                lines.append(f"## Exercice {idx} — {instructions} ({int(points)}pts)")
-            else:
-                lines.append(f"## Exercice {idx} — {instructions} ({points}pts)")
-        else:
-            lines.append(f"## Exercice {idx} — {instructions}")
+
+        title = _clean_text(exercise.get("title"), f"Exercice {idx}")
+        instructions = _clean_text(exercise.get("instructions"))
+        points = _score_text(exercise.get("points"))
+
+        lines.append(f"## Exercice {idx} - {title}")
+        lines.append(f"**Points:** {points}")
+        if instructions:
+            lines.append(f"**Consigne:** {instructions}")
         lines.append("")
-        
-        # Questions for this exercise
+
         questions = exercise.get("questions") or []
-        for question in questions:
+        for question_index, question in enumerate(questions, start=1):
             if not isinstance(question, dict):
                 continue
-            prompt = question.get("prompt")
+            prompt = _clean_text(question.get("prompt"))
             if prompt:
+                answer_type = _clean_text(question.get("answer_type"), "réponse ouverte")
+                lines.append(f"### Q{idx}.{question_index} [{answer_type}]")
                 lines.append(prompt)
                 lines.append("")
-        
+                lines.append("Réponse: __________________________________________________________")
+                lines.append("____________________________________________________________")
+                lines.append("")
+
         lines.append("")
         lines.append("---")
         lines.append("")
-    
+
     # Answer key (optional)
     answer_key = data.get("answer_key")
     if answer_key:
-        lines.append("## Corrigé")
+        lines.append("## Corrigé enseignant")
         lines.append("")
         for answer in answer_key:
             if isinstance(answer, dict):
-                ref = answer.get("reference") or "Question"
-                value = answer.get("answer") or ""
+                ref = _clean_text(answer.get("reference"), "Question")
+                value = _clean_text(answer.get("answer"))
                 lines.append(f"- **{ref}** : {value}")
             else:
                 lines.append(f"- {answer}")
         lines.append("")
-    
+
+    return "\n".join(lines).strip()
+
+def _render_quiz_markdown(data: Dict[str, Any]) -> str:
+    """Convert quiz JSON into Markdown for preview/export."""
+    if not isinstance(data, dict):
+        return ""
+
+    lines: List[str] = []
+    title = data.get("title") or f"Quiz: {data.get('topic', 'Sujet')}"
+    class_level = data.get("class_level", "")
+    duration = data.get("duration_minutes", "")
+    subject = data.get("subject") or ""
+    topic = data.get("topic") or ""
+
+    lines.append(f"# {title}")
+    lines.append("")
+    meta = []
+    if class_level:
+        meta.append(f"**Classe**: {class_level}")
+    if subject:
+        meta.append(f"**Matière**: {subject}")
+    if topic:
+        meta.append(f"**Sujet**: {topic}")
+    if duration:
+        meta.append(f"**Durée**: {duration} min")
+    if meta:
+        lines.append(" | ".join(meta))
+        lines.append("")
+
+    instructions = data.get("instructions") or []
+    if instructions:
+        lines.append("## Consignes")
+        for item in instructions:
+            lines.append(f"- {item}")
+        lines.append("")
+
+    lines.append("## Questions")
+    lines.append("")
+    for q in data.get("questions", []):
+        if not isinstance(q, dict):
+            continue
+        number = q.get("number", "?")
+        q_type = q.get("type", "question")
+        prompt = q.get("prompt", "")
+        lines.append(f"### Question {number} ({q_type})")
+        lines.append(prompt)
+        options = q.get("options") or []
+        if options:
+            for idx, opt in enumerate(options):
+                letter = chr(ord('A') + idx)
+                lines.append(f"- {letter}. {opt}")
+        lines.append("")
+
+    answer_key = data.get("answer_key") or []
+    if answer_key:
+        lines.append("## Corrigé")
+        lines.append("")
+        for answer in answer_key:
+            lines.append(f"- {answer}")
+
     return "\n".join(lines).strip()

@@ -1,6 +1,7 @@
-PyQt6
+PyQt6>=6.7,<6.8
 google-genai
 pdfplumber
 python-docx
 reportlab
 Pillow
+keyring

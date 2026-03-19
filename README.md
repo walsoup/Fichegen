@@ -9,11 +9,13 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
 *   **Multiple Formats**: Exports to PDF and DOCX.
 *   **Customizable**: Supports various PDF templates and formatting options.
 *   **Multi-language Support**: Interface available in English and French.
+*   **Provider Visibility Toggle**: OpenRouter references can be shown/hidden from the UI in Preferences.
 
 ## Prerequisites
 
 *   Python 3.9+
 *   Google Gemini API Key (get one from [Google AI Studio](https://ai.google.dev/))
+*   macOS 12 users: install the pinned dependencies from `requirements.txt` so Qt stays on a compatible release line
 
 ## Installation
 
@@ -28,6 +30,11 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
     pip install -r requirements.txt
     ```
 
+    If you already installed a newer `PyQt6`, reinstall the pinned version:
+    ```bash
+    pip install --upgrade --force-reinstall "PyQt6>=6.7,<6.8"
+    ```
+
 ## Usage
 
 1.  Run the application:
@@ -38,8 +45,14 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
 2.  **Configuration**:
     *   Go to **Preferences** (Cmd+, or File > Preferences).
     *   Enter your **Gemini API Key** in the "AI & Models" tab.
+    *   Optionally enable OpenRouter UI references from the same tab if you want provider-related guidance visible.
     *   Set the **Input Guides** folder (where your PDF guides are stored).
     *   Set the **Output Folder** (where generated files will be saved).
+
+## Security Notes
+
+*   On macOS, API keys are stored in Keychain via the Python `keyring` backend.
+*   Legacy plaintext settings and `keys.txt` values are still read for compatibility and migrated when possible.
 
 3.  **Generating Content**:
     *   Select the **Class Level** and **Subject**.
