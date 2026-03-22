@@ -5,11 +5,16 @@ import os
 import re
 import shlex
 import shutil
+import ssl
 import subprocess
 import sys
 import urllib.request
 from typing import Callable, Optional, Tuple
 
+import certifi
+
+
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 REPO_URL = "https://github.com/walsoup/Fichegen"
 REPO_BRANCH = "main"
@@ -69,7 +74,8 @@ def _github_latest_commit(repo_url: str, branch: str, timeout: int = 12) -> str:
             "User-Agent": "FicheGen-Updater",
         },
     )
-    with urllib.request.urlopen(req, timeout=timeout) as response:
+    ctx = _SSL_CONTEXT
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
         payload = json.loads(response.read().decode("utf-8"))
     sha = payload.get("sha", "") if isinstance(payload, dict) else ""
     return (sha or "").strip()
