@@ -44,7 +44,8 @@ GEMINI_OFFSET_MODEL = "gemini-flash-latest"
 GEMMA_SYNTAX_MODEL = "gemma-3-27b-it"
 
 # Image Generation Constants
-IMAGE_MODEL = "gemini-2.5-flash-image"
+DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image"
+IMAGE_MODEL = DEFAULT_IMAGE_MODEL
 STYLE_TEMPLATES = {
     "coloring": "Simple black and white line drawing suitable for coloring, clean outlines, no shading, minimal details, children's coloring book style",
     "diagram": "Clean educational diagram with simple lines, minimal colors, textbook illustration style, hand-drawn aesthetic",
@@ -337,6 +338,11 @@ def get_configured_gemini_offset_model():
 def get_configured_gemma_syntax_model():
     settings = QtCore.QSettings("FicheGen", "Pedago")
     return settings.value("advanced_gemma_syntax_model", GEMMA_SYNTAX_MODEL)
+
+
+def get_configured_image_model():
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+    return settings.value("advanced_image_model", DEFAULT_IMAGE_MODEL)
 
 def save_rating_record(record):
     """Save a rating record to the ratings file"""

@@ -7,6 +7,7 @@ from config import (
     GEMINI_TOC_MODEL,
     GEMINI_OFFSET_MODEL,
     GEMMA_SYNTAX_MODEL,
+    DEFAULT_IMAGE_MODEL,
     DEFAULT_TOC_PROMPT,
     DEFAULT_PAGE_FINDING_PROMPT,
     DEFAULT_FICHE_PROMPT,
@@ -271,6 +272,11 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.gemma_syntax_model_edit = QtWidgets.QLineEdit()
         self.gemma_syntax_model_edit.setPlaceholderText("gemma-3-27b-it")
         model_layout.addRow("Syntax Correction Model:", self.gemma_syntax_model_edit)
+
+        self.image_model_edit = QtWidgets.QLineEdit()
+        self.image_model_edit.setPlaceholderText(DEFAULT_IMAGE_MODEL)
+        self.image_model_edit.setToolTip("Model used for image generation in fiches and evaluations")
+        model_layout.addRow("Image Generation Model:", self.image_model_edit)
         
         layout.addWidget(model_group)
         
@@ -441,6 +447,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.gemini_toc_model_edit.setText(settings.value("advanced_gemini_toc_model", GEMINI_TOC_MODEL))
         self.gemini_offset_model_edit.setText(settings.value("advanced_gemini_offset_model", GEMINI_OFFSET_MODEL))
         self.gemma_syntax_model_edit.setText(settings.value("advanced_gemma_syntax_model", GEMMA_SYNTAX_MODEL))
+        self.image_model_edit.setText(settings.value("advanced_image_model", DEFAULT_IMAGE_MODEL))
         
         # OpenRouter removed - no longer used
         
@@ -516,6 +523,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         settings.setValue("advanced_gemini_toc_model", self.gemini_toc_model_edit.text())
         settings.setValue("advanced_gemini_offset_model", self.gemini_offset_model_edit.text())
         settings.setValue("advanced_gemma_syntax_model", self.gemma_syntax_model_edit.text())
+        settings.setValue("advanced_image_model", self.image_model_edit.text().strip() or DEFAULT_IMAGE_MODEL)
         
         # Save prompt editing settings
         settings.setValue("advanced_enable_prompt_editing", "true" if self.enable_prompt_editing_chk.isChecked() else "false")

@@ -1,11 +1,13 @@
 import os
 import threading
+import base64
 from typing import Optional, Dict, List, Any
 from google import genai
 from google.genai import types
 
 from config import (
-    API_KEYS, IMAGE_MODEL, STYLE_TEMPLATES, COMPLEXITY_LEVELS
+    API_KEYS, IMAGE_MODEL, STYLE_TEMPLATES, COMPLEXITY_LEVELS,
+    get_configured_image_model
 )
 
 # Image generation using Google Imagen 4
@@ -144,11 +146,64 @@ def _compose_image_prompt(original_prompt: str, plan: Dict[str, Any], class_leve
     lines.append("Teacher request summary: " + original_prompt.strip())
     return "\n".join(lines)
 
-def generate_illustration(prompt: str, class_level: str = "ce2", style: str = "diagram", aspect_ratio: str = "16:9", api_key: Optional[str] = None) -> Optional[bytes]:
+
+def _image_model_candidates() -> List[str]:
+    configured = (get_configured_image_model() or "").strip()
+    candidates = [
+        configured,
+        IMAGE_MODEL,
+        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-exp-image-generation",
+    ]
+
+    deduped: List[str] = []
+    seen = set()
+    for model in candidates:
+        if not model or model in seen:
+            continue
+        seen.add(model)
+        deduped.append(model)
+    return deduped
+
+
+def _extract_image_bytes_from_response(response) -> Optional[bytes]:
+    if not response:
+        return None
+
+    for candidate in getattr(response, "candidates", []) or []:
+        content = getattr(candidate, "content", None)
+        if not content:
+            continue
+        for part in getattr(content, "parts", []) or []:
+            inline = getattr(part, "inline_data", None)
+            if not inline:
+                continue
+            data = getattr(inline, "data", None)
+            if not data:
+                continue
+            if isinstance(data, bytes):
+                return data
+            if isinstance(data, str):
+                try:
+                    return base64.b64decode(data)
+                except Exception:
+                    continue
+
+    return None
+
+def generate_illustration(
+    prompt: str,
+    class_level: str = "ce2",
+    style: str = "diagram",
+    aspect_ratio: str = "16:9",
+    api_key: Optional[str] = None,
+    logger=None,
+) -> Optional[bytes]:
     """Generate a simple educational illustration using Imagen API."""
+    log = logger if callable(logger) else (lambda _msg: None)
     client = _get_image_client(api_key)
     if client is None:
-        print("⚠️ Missing Gemini API key for image generation")
+        log("⚠️ Missing Gemini API key for image generation")
         return None
     style_key = style if style in STYLE_TEMPLATES else "diagram"
     base_prompt = prompt.strip()
@@ -159,32 +214,31 @@ def generate_illustration(prompt: str, class_level: str = "ce2", style: str = "d
         image_config = types.ImageConfig(aspect_ratio=aspect_ratio)
     except Exception:
         pass
-    try:
-        response = client.models.generate_content(
-            model=IMAGE_MODEL, contents=[final_prompt],
-            config=types.GenerateContentConfig(temperature=0.2, response_modalities=["IMAGE"], image_config=image_config)
-        )
-    except Exception as exc:
-        print(f"⚠️ Image generation error: {exc}")
-        return None
-    if not response or not getattr(response, "candidates", None):
-        return None
-    for candidate in response.candidates:
-        content = getattr(candidate, "content", None)
-        if not content:
+
+    for model_name in _image_model_candidates():
+        try:
+            log(f"🎨 Trying image model: {model_name}")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=[final_prompt],
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                    response_modalities=["IMAGE"],
+                    image_config=image_config,
+                ),
+            )
+        except Exception as exc:
+            log(f"⚠️ Image model {model_name} failed: {exc}")
             continue
-        for part in getattr(content, "parts", []) or []:
-            inline = getattr(part, "inline_data", None)
-            if not inline or inline.data is None:
-                continue
-            data = inline.data
-            if isinstance(data, bytes):
-                return data
-            try:
-                import base64
-                return base64.b64decode(data)
-            except Exception:
-                continue
+
+        image_bytes = _extract_image_bytes_from_response(response)
+        if image_bytes:
+            log(f"✅ Image generated with model: {model_name}")
+            return image_bytes
+
+        log(f"⚠️ Model {model_name} returned no image bytes")
+
+    log("❌ All configured image models failed to return an image")
     return None
 
 def generate_fiche_illustration(lesson_topic: str, class_level: str, context: Optional[str] = None, api_key: Optional[str] = None) -> Optional[bytes]:

@@ -113,6 +113,7 @@ def _replace_image_tags_with_images(markdown_text: str, class_level: str, api_ke
                 style=style,
                 aspect_ratio=aspect_ratio,
                 api_key=api_key,
+                logger=lambda msg: queue.put(("log", str(msg))),
             )
             if not image_data:
                 queue.put(("log", f"⚠️ No image generated for directive: {prompt[:80]}"))
@@ -269,6 +270,30 @@ def _embed_images_under_exercises(markdown_text: str, image_blocks: Dict[int, st
         lines[insert_at:insert_at] = block_lines
 
     return "\n".join(lines)
+
+
+def _append_failed_image_directives(markdown_text: str, failed_jobs: List[Dict[str, Any]]) -> str:
+    """Append a visible section listing directives that failed to generate."""
+    if not markdown_text or not failed_jobs:
+        return markdown_text
+
+    lines = [
+        markdown_text.rstrip(),
+        "",
+        "## Directives d'image non générées",
+        "",
+        "Les directives suivantes ont été produites mais aucune image n'a pu être générée :",
+        "",
+    ]
+
+    for job in failed_jobs:
+        ex_idx = job.get("exercise_index")
+        prompt = (job.get("prompt") or "").strip()
+        if not prompt:
+            continue
+        lines.append(f"- Exercice {ex_idx}: `{prompt}`")
+
+    return "\n".join(lines).rstrip() + "\n"
 
 # --- QThread worker that bridges queue events to Qt signals ---
 class QueueProxy:
@@ -1210,6 +1235,7 @@ class EvaluationWorker(QtCore.QThread):
                                     aspect_ratio = "1:1" if is_young else "16:9"
 
                                     image_blocks: Dict[int, str] = {}
+                                    failed_jobs: List[Dict[str, Any]] = []
                                     for ordinal, job in enumerate(image_jobs, start=1):
                                         if self.cancel_event.is_set():
                                             queue.put(("log", "⏹️ Cancelled during image generation."))
@@ -1225,9 +1251,11 @@ class EvaluationWorker(QtCore.QThread):
                                             style=style,
                                             aspect_ratio=aspect_ratio,
                                             api_key=api_key,
+                                            logger=lambda msg: queue.put(("log", str(msg))),
                                         )
                                         if not image_bytes:
                                             queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}."))
+                                            failed_jobs.append({"exercise_index": ex_idx, "prompt": prompt})
                                             continue
 
                                         saved_image_path = _persist_generated_image(
@@ -1252,6 +1280,10 @@ class EvaluationWorker(QtCore.QThread):
                                         queue.put(("log", f"✅ Embedded {len(image_blocks)} exercise-linked image(s)."))
                                     else:
                                         queue.put(("log", "⚠️ No images were generated for the selected exercises."))
+
+                                    if failed_jobs:
+                                        evaluation_content = _append_failed_image_directives(evaluation_content, failed_jobs)
+                                        queue.put(("log", f"ℹ️ Added {len(failed_jobs)} failed image directive(s) to output."))
                             
                             if self.cancel_event.is_set():
                                 queue.put(("log", "⏹️ Cancelled during image generation."))
@@ -1323,6 +1355,17 @@ class EvaluationWorker(QtCore.QThread):
         if extra_block:
             extra_block = f"\nCONSIGNES SUPPLÉMENTAIRES ENSEIGNANT:\n{extra_block}\n"
 
+        image_block = ""
+        if self.generate_images and HAS_IMAGE_GENERATION and int(self.num_images or 0) > 0:
+            image_block = f"""
+
+CONSIGNES ILLUSTRATIONS (OBLIGATOIRES):
+- Prévois exactement {int(self.num_images)} exercice(s) dont la résolution dépend d'une observation visuelle.
+- Pour ces exercices, intégrer une phrase explicite de lecture d'image, schéma ou tableau.
+- Ne pas mentionner d'outil numérique; l'illustration est fournie sur la feuille.
+- Varier les usages visuels (repérage, comparaison, légendage, association).
+"""
+
         prompt = f"""Tu es un concepteur d'épreuves scolaires francophones. Ta mission: produire une évaluation exploitable immédiatement, rigoureuse, claire, et variée.
 
 CONTEXTE FIXE:
@@ -1344,6 +1387,7 @@ CONTRAINTES PÉDAGOGIQUES OBLIGATOIRES:
 5. Si QCM, distracteurs plausibles (pas absurdes).
 6. Types à forcer si possible: {forced_types_text}.
 7. {answer_key_rule}
+{image_block}
 
 CONTRAINTES DE STRUCTURE JSON:
 - Retourner uniquement un objet JSON valide (aucun texte hors JSON).
