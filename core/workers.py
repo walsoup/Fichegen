@@ -30,7 +30,7 @@ from core.toc import (
     PdfExtractionSession
 )
 from core.image_gen import (
-    generate_illustration, save_image_to_file
+    generate_illustration, save_image_to_file, get_last_image_generation_error
 )
 from core.updater import check_update_status, update_and_build, REPO_URL, REPO_BRANCH
 from utils.helpers import get_top_rated_examples
@@ -116,6 +116,10 @@ def _replace_image_tags_with_images(markdown_text: str, class_level: str, api_ke
                 logger=lambda msg: queue.put(("log", str(msg))),
             )
             if not image_data:
+                reason = get_last_image_generation_error()
+                if reason:
+                    queue.put(("log", f"⚠️ No image generated for directive: {prompt[:80]} | Reason: {reason}"))
+                    return f"\n\n*⚠️ Image not generated for prompt:* {prompt}\n\n*Reason:* {reason}\n\n"
                 queue.put(("log", f"⚠️ No image generated for directive: {prompt[:80]}"))
                 return f"\n\n*⚠️ Image not generated for prompt:* {prompt}\n\n"
 
@@ -136,7 +140,7 @@ def _replace_image_tags_with_images(markdown_text: str, class_level: str, api_ke
             )
         except Exception as exc:
             queue.put(("log", f"⚠️ Image directive error: {exc}"))
-            return f"\n\n*⚠️ Image generation error for prompt:* {prompt}\n\n"
+            return f"\n\n*⚠️ Image generation error for prompt:* {prompt}\n\n*Reason:* {exc}\n\n"
 
     updated = _IMG_TAG_RE.sub(_repl, markdown_text)
     return updated, generated_count
@@ -289,9 +293,12 @@ def _append_failed_image_directives(markdown_text: str, failed_jobs: List[Dict[s
     for job in failed_jobs:
         ex_idx = job.get("exercise_index")
         prompt = (job.get("prompt") or "").strip()
+        reason = (job.get("reason") or "").strip()
         if not prompt:
             continue
         lines.append(f"- Exercice {ex_idx}: `{prompt}`")
+        if reason:
+            lines.append(f"  Raison: {reason}")
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -1254,8 +1261,16 @@ class EvaluationWorker(QtCore.QThread):
                                             logger=lambda msg: queue.put(("log", str(msg))),
                                         )
                                         if not image_bytes:
-                                            queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}."))
-                                            failed_jobs.append({"exercise_index": ex_idx, "prompt": prompt})
+                                            reason = get_last_image_generation_error()
+                                            if reason:
+                                                queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}. Reason: {reason}"))
+                                            else:
+                                                queue.put(("log", f"⚠️ No image generated for Exercice {ex_idx}."))
+                                            failed_jobs.append({
+                                                "exercise_index": ex_idx,
+                                                "prompt": prompt,
+                                                "reason": reason,
+                                            })
                                             continue
 
                                         saved_image_path = _persist_generated_image(

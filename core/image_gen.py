@@ -14,6 +14,19 @@ from config import (
 _IMAGE_CLIENT = None
 _IMAGE_CLIENT_KEY = None
 _IMAGE_CLIENT_LOCK = threading.Lock()
+_IMAGE_ERROR_STATE = threading.local()
+
+
+def _set_last_image_generation_error(message: str) -> None:
+    _IMAGE_ERROR_STATE.last_error = (message or "").strip()
+
+
+def get_last_image_generation_error() -> str:
+    return getattr(_IMAGE_ERROR_STATE, "last_error", "") or ""
+
+
+def _clear_last_image_generation_error() -> None:
+    _IMAGE_ERROR_STATE.last_error = ""
 
 def _get_image_client(api_key: Optional[str] = None) -> Optional[genai.Client]:
     """Return a cached google-genai client for image-related calls."""
@@ -42,8 +55,9 @@ def _extract_function_args(response) -> Optional[Dict[str, Any]]:
                 return fn_call.args
     return None
 
-def _draft_image_plan(client: genai.Client, original_prompt: str, class_level: str, style: str) -> Dict[str, Any]:
+def _draft_image_plan(client: genai.Client, original_prompt: str, class_level: str, style: str, logger=None) -> Dict[str, Any]:
     """Use a reasoning model with function calling to plan the illustration."""
+    log = logger if callable(logger) else (lambda _msg: None)
     plan_function = types.FunctionDeclaration(
         name="propose_image_plan",
         description="Prépare un plan détaillé pour une illustration pédagogique.",
@@ -85,7 +99,7 @@ Consigne:
             config=types.GenerateContentConfig(tools=[plan_tool], temperature=0.2)
         )
     except Exception as exc:
-        print(f"Error generating image plan: {exc}")
+        log(f"⚠️ Image plan generation failed, continuing without plan: {exc}")
         return {}
     plan_args = _extract_function_args(response)
     if isinstance(plan_args, dict):
@@ -201,13 +215,16 @@ def generate_illustration(
 ) -> Optional[bytes]:
     """Generate a simple educational illustration using Imagen API."""
     log = logger if callable(logger) else (lambda _msg: None)
+    _clear_last_image_generation_error()
     client = _get_image_client(api_key)
     if client is None:
-        log("⚠️ Missing Gemini API key for image generation")
+        msg = "Missing Gemini API key for image generation"
+        _set_last_image_generation_error(msg)
+        log(f"⚠️ {msg}")
         return None
     style_key = style if style in STYLE_TEMPLATES else "diagram"
     base_prompt = prompt.strip()
-    plan = _draft_image_plan(client, base_prompt, class_level or "primaire", style_key)
+    plan = _draft_image_plan(client, base_prompt, class_level or "primaire", style_key, logger=log)
     final_prompt = _compose_image_prompt(base_prompt, plan, class_level or "primaire", style_key, aspect_ratio)
     image_config = None
     try:
@@ -215,6 +232,7 @@ def generate_illustration(
     except Exception:
         pass
 
+    failure_details: List[str] = []
     for model_name in _image_model_candidates():
         try:
             log(f"🎨 Trying image model: {model_name}")
@@ -228,6 +246,8 @@ def generate_illustration(
                 ),
             )
         except Exception as exc:
+            detail = f"{model_name}: {exc}"
+            failure_details.append(detail)
             log(f"⚠️ Image model {model_name} failed: {exc}")
             continue
 
@@ -236,8 +256,14 @@ def generate_illustration(
             log(f"✅ Image generated with model: {model_name}")
             return image_bytes
 
+        detail = f"{model_name}: response did not contain image bytes"
+        failure_details.append(detail)
         log(f"⚠️ Model {model_name} returned no image bytes")
 
+    if failure_details:
+        _set_last_image_generation_error("; ".join(failure_details[:4]))
+    else:
+        _set_last_image_generation_error("All configured image models failed to return an image")
     log("❌ All configured image models failed to return an image")
     return None
 
