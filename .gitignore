@@ -20,4 +20,6 @@ icon.png
 .gitignore
 .DS_Store
 tests/test_updater_core.py
-tests
+tests/*
+oldcore
+oldcore/*

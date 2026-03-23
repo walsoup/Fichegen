@@ -276,6 +276,101 @@ def _embed_images_under_exercises(markdown_text: str, image_blocks: Dict[int, st
     return "\n".join(lines)
 
 
+def _build_evaluation_prompt_payload(worker, extracted_content: str = "") -> str:
+        """Build evaluation prompt text from worker state without relying on class method scope."""
+        topics_text = ", ".join(worker.topics_list)
+
+        school_name = worker.eval_metadata.get("school_name", "Groupe Scolaire")
+        academic_year = worker.eval_metadata.get("academic_year", "2025/2026")
+        eval_number = worker.eval_metadata.get("eval_number", 1)
+        semester = worker.eval_metadata.get("semester", "1")
+        max_score = worker.eval_metadata.get("max_score", 10)
+
+        num_word = "1er" if eval_number == 1 else f"{eval_number}e"
+        sem_word = "1er" if semester == "1" else f"{semester}e"
+        session_label = f"{num_word} contrôle du {sem_word} semestre"
+
+        is_early_grade = worker.class_level.lower() in ["cp", "ce1"]
+        early_grade_note = """
+Pour CP/CE1: privilégie relier, cocher, tableau simple, texte à trous avec banque de mots, réponses courtes.
+Évite les longues productions écrites.
+""" if is_early_grade else ""
+
+        if (extracted_content or "").strip():
+                content_section = f"""
+SOURCE PÉDAGOGIQUE À EXPLOITER PRIORITAIREMENT:
+---
+{extracted_content[:3500]}{"..." if len(extracted_content) > 3500 else ""}
+---
+"""
+        else:
+                content_section = "Aucune source extraite. Génère selon le programme du niveau et les sujets fournis."
+
+        extra_block = (worker.extra_instructions or "").strip()
+        extra_block = f"\nINSTRUCTIONS ENSEIGNANT:\n{extra_block}\n" if extra_block else ""
+
+        return f"""Tu es un expert en évaluation scolaire francophone (primaire/collège). Crée une évaluation exploitable immédiatement.
+
+CONTEXTE:
+- Niveau: {worker.class_level.upper()}
+- Matière: {worker.subject or "Sciences"}
+- Sujets: {topics_text}
+- Durée: {worker.duration} minutes
+- Total: {max_score} points
+
+{content_section}
+{early_grade_note}
+{extra_block}
+
+EXIGENCES PÉDAGOGIQUES (OBLIGATOIRES):
+1. Génère 3 à 5 exercices variés et non redondants.
+2. Inclus obligatoirement:
+     - au moins un exercice en tableau,
+     - au moins un exercice de type relier / matching,
+     - au moins un exercice de type texte à trous ou production courte.
+3. Progression du plus simple au plus complexe.
+4. Consignes claires et adaptées au niveau.
+5. Le total des points doit être EXACTEMENT {max_score}.
+
+FORMAT D'ENTÊTE (à conserver dans le JSON):
+- École: {school_name}
+- Année scolaire: {academic_year}
+- Session: {session_label}
+- Durée: {worker.duration} min
+- Note: ___ / {max_score}
+
+RÉPONDS UNIQUEMENT AVEC UN JSON VALIDE (aucun texte autour), avec cette structure:
+{{
+    "school_name": "{school_name}",
+    "header": {{
+        "class_level": "{worker.class_level.upper()}",
+        "academic_year": "{academic_year}",
+        "evaluation_number": {eval_number},
+        "semester": "{semester}",
+        "session_label": "{session_label}",
+        "duration_minutes": {worker.duration},
+        "max_score": {max_score},
+        "subject": "{worker.subject or 'Sciences'}"
+    }},
+    "exercises": [
+        {{
+            "title": "Exercice 1",
+            "instructions": "...",
+            "points": 0,
+            "questions": [
+                {{
+                    "prompt": "...",
+                    "answer_type": "tableau|matching|fill_blanks|short_answer|qcm|vf",
+                    "expected_answer": "..."
+                }}
+            ]
+        }}
+    ],
+    "answer_key": ["..."]
+}}
+"""
+
+
 def _append_failed_image_directives(markdown_text: str, failed_jobs: List[Dict[str, Any]]) -> str:
     """Append a visible section listing directives that failed to generate."""
     if not markdown_text or not failed_jobs:
@@ -735,7 +830,7 @@ def pipeline_run(class_level, lesson_topic, queue, pages_override: str, temperat
         # Try to get a structured ToC (cache or AI) to help with syntax correction
         cached_toc = get_cached_toc(guide_path, guides_dir)
         if not cached_toc:
-            queue.put(("log", "⏳ No ToC cache, parsing with AI..."))
+            queue.put(("log", "🧠 No ToC cache, parsing ToC with AI..."))
             cached_toc = parse_full_toc_with_ai(raw_toc_text, queue)
             if isinstance(cached_toc, list) and cached_toc:
                 save_toc_to_cache(guide_path, cached_toc, guides_dir)
@@ -984,7 +1079,7 @@ class EvaluationWorker(QtCore.QThread):
     enable_buttons = QtCore.pyqtSignal()
     request_source_preview = QtCore.pyqtSignal(str, str)  # topics_summary, prompt
 
-    def __init__(self, class_level, topics_list, subject, duration, question_types, difficulty, model_name, temperature, formatting_options=None, extra_instructions="", generate_images=False, num_images=2, guides_dir=None, eval_metadata=None, textbook_dir=None, use_student_textbook=False):
+    def __init__(self, class_level, topics_list, subject, duration, question_types, difficulty, model_name, temperature, formatting_options=None, extra_instructions="", generate_images=False, num_images=2, guides_dir=None, eval_metadata=None, textbook_dir=None, use_student_textbook=False, source_mode="guide_only"):
         super().__init__()
         self.class_level = class_level
         self.topics_list = topics_list
@@ -1004,6 +1099,7 @@ class EvaluationWorker(QtCore.QThread):
         self.eval_metadata = eval_metadata or {}
         self.textbook_dir = textbook_dir
         self.use_student_textbook = use_student_textbook
+        self.source_mode = (source_mode or "guide_only").strip()
 
     def cancel(self):
         self.cancel_event.set()
@@ -1012,10 +1108,174 @@ class EvaluationWorker(QtCore.QThread):
         """Called when user confirms the evaluation prompt preview."""
         self.confirmed = True
 
+        def _build_evaluation_prompt(self, extracted_content: str = "") -> str:
+                """Build a robust prompt that enforces varied exercise formats and school-style output."""
+                topics_text = ", ".join(self.topics_list)
+
+                school_name = self.eval_metadata.get("school_name", "Groupe Scolaire")
+                academic_year = self.eval_metadata.get("academic_year", "2025/2026")
+                eval_number = self.eval_metadata.get("eval_number", 1)
+                semester = self.eval_metadata.get("semester", "1")
+                max_score = self.eval_metadata.get("max_score", 10)
+
+                num_word = "1er" if eval_number == 1 else f"{eval_number}e"
+                sem_word = "1er" if semester == "1" else f"{semester}e"
+                session_label = f"{num_word} contrôle du {sem_word} semestre"
+
+                is_early_grade = self.class_level.lower() in ["cp", "ce1"]
+                early_grade_note = """
+Pour CP/CE1: privilégie relier, cocher, tableau simple, texte à trous avec banque de mots, réponses courtes.
+Évite les longues productions écrites.
+""" if is_early_grade else ""
+
+                if (extracted_content or "").strip():
+                        content_section = f"""
+SOURCE PÉDAGOGIQUE À EXPLOITER PRIORITAIREMENT:
+---
+{extracted_content[:3500]}{"..." if len(extracted_content) > 3500 else ""}
+---
+"""
+                else:
+                        content_section = "Aucune source extraite. Génère selon le programme du niveau et les sujets fournis."
+
+                extra_block = (self.extra_instructions or "").strip()
+                extra_block = f"\nINSTRUCTIONS ENSEIGNANT:\n{extra_block}\n" if extra_block else ""
+
+                prompt = f"""Tu es un expert en évaluation scolaire francophone (primaire/collège). Crée une évaluation exploitable immédiatement.
+
+CONTEXTE:
+- Niveau: {self.class_level.upper()}
+- Matière: {self.subject or "Sciences"}
+- Sujets: {topics_text}
+- Durée: {self.duration} minutes
+- Total: {max_score} points
+
+{content_section}
+{early_grade_note}
+{extra_block}
+
+EXIGENCES PÉDAGOGIQUES (OBLIGATOIRES):
+1. Génère 3 à 5 exercices variés et non redondants.
+2. Inclus obligatoirement:
+     - au moins un exercice en tableau,
+     - au moins un exercice de type relier / matching,
+     - au moins un exercice de type texte à trous ou production courte.
+3. Progression du plus simple au plus complexe.
+4. Consignes claires et adaptées au niveau.
+5. Le total des points doit être EXACTEMENT {max_score}.
+
+FORMAT D'ENTÊTE (à conserver dans le JSON):
+- École: {school_name}
+- Année scolaire: {academic_year}
+- Session: {session_label}
+- Durée: {self.duration} min
+- Note: ___ / {max_score}
+
+RÉPONDS UNIQUEMENT AVEC UN JSON VALIDE (aucun texte autour), avec cette structure:
+{{
+    "school_name": "{school_name}",
+    "header": {{
+        "class_level": "{self.class_level.upper()}",
+        "academic_year": "{academic_year}",
+        "evaluation_number": {eval_number},
+        "semester": "{semester}",
+        "session_label": "{session_label}",
+        "duration_minutes": {self.duration},
+        "max_score": {max_score},
+        "subject": "{self.subject or 'Sciences'}"
+    }},
+    "exercises": [
+        {{
+            "title": "Exercice 1",
+            "instructions": "...",
+            "points": 0,
+            "questions": [
+                {{
+                    "prompt": "...",
+                    "answer_type": "tableau|matching|fill_blanks|short_answer|qcm|vf",
+                    "expected_answer": "..."
+                }}
+            ]
+        }}
+    ],
+    "answer_key": ["..."]
+}}
+"""
+                return prompt
+
     def run(self):
         """Generate evaluation based on lesson topics."""
         try:
             queue = QueueProxy(self)
+
+            def _extract_topic_chunks_from_pdf(pdf_path: str, cache_dir: str, source_label: str) -> List[str]:
+                """Extract topic chunks from one PDF source using its own ToC cache and page offset."""
+                chunks: List[str] = []
+                if not pdf_path:
+                    return chunks
+
+                source_name = os.path.basename(pdf_path)
+                queue.put(("log", f"📚 Preparing {source_label} source: {source_name}"))
+
+                toc_text = ""
+
+                source_toc = get_cached_toc(pdf_path, cache_dir)
+                if not source_toc:
+                    queue.put(("log", f"🧠 Parsing table of contents from {source_name}..."))
+                    toc_text = extract_table_of_contents(pdf_path, queue)
+                    if toc_text:
+                        source_toc = parse_full_toc_with_ai(toc_text, queue)
+                        if source_toc:
+                            save_toc_to_cache(pdf_path, source_toc, cache_dir)
+                            queue.put(("log", f"✅ Cached {len(source_toc)} topics for {source_label}"))
+                    else:
+                        queue.put(("log", f"⚠️ Could not extract ToC text from {source_name}"))
+                else:
+                    # Keep toc_text available for AI page-finding fallback when topic lookup fails.
+                    toc_text = extract_table_of_contents(pdf_path, queue) or ""
+
+                if not source_toc:
+                    queue.put(("log", f"⚠️ No usable ToC for {source_label}, skipping detailed extraction."))
+                    return chunks
+
+                source_offset = detect_page_offset(pdf_path, queue)
+
+                with PdfExtractionSession(pdf_path, queue) as source_session:
+                    for topic in self.topics_list:
+                        if self.cancel_event.is_set():
+                            return chunks
+
+                        try:
+                            page_range = find_pages_from_cached_toc(source_toc, topic, queue, source_offset)
+                            if not page_range:
+                                queue.put(("log", f"⚠️ Could not find pages for '{topic}' in {source_label} ToC; trying AI page-finding..."))
+                                if toc_text:
+                                    page_range = get_pages_from_toc(toc_text, topic, queue)
+                                if not page_range:
+                                    queue.put(("log", f"⚠️ AI page-finding also failed for '{topic}' in {source_label}"))
+                                    continue
+
+                            page_numbers = parse_page_numbers(page_range, queue)
+                            if not page_numbers:
+                                queue.put(("log", f"⚠️ Could not parse pages '{page_range}' for '{topic}' ({source_label})"))
+                                continue
+
+                            topic_text = extract_lesson_text(
+                                pdf_path,
+                                page_numbers,
+                                queue,
+                                self.cancel_event,
+                                session=source_session,
+                            )
+                            if topic_text and topic_text.strip():
+                                chunks.append(f"=== {topic} ({source_label}) ===\n{topic_text}")
+                                queue.put(("log", f"✅ Extracted {len(topic_text)} chars for '{topic}' from {source_label}"))
+                            else:
+                                queue.put(("log", f"⚠️ No extractable text for '{topic}' in {source_label}"))
+                        except Exception as exc:
+                            queue.put(("log", f"⚠️ Extraction error for '{topic}' in {source_label}: {exc}"))
+
+                return chunks
             
             # Log start
             queue.put(("log", f"📝 Starting evaluation generation..."))
@@ -1027,129 +1287,56 @@ class EvaluationWorker(QtCore.QThread):
             if self.cancel_event.is_set():
                 return
             
-            # Extract guide text for the selected topics (like fiche generation does)
-            extracted_texts = []
+            extracted_texts: List[str] = []
+
+            source_mode = self.source_mode
+            if source_mode not in {"guide_only", "guide_plus_textbook", "textbook_only"}:
+                source_mode = "guide_only"
+
+            # Backward compatibility with older checkbox behavior.
+            if source_mode == "guide_only" and self.use_student_textbook:
+                source_mode = "guide_plus_textbook"
+
+            # Keep the resolved mode for downstream prompt rendering.
+            self.source_mode = source_mode
+
+            queue.put(("log", f"🧭 Evaluation source mode: {source_mode}"))
+
+            include_guide = source_mode in {"guide_only", "guide_plus_textbook"}
+            include_textbook = source_mode in {"guide_plus_textbook", "textbook_only"}
+
             guide_path = None
-            cached_toc = None
-            page_offset = 0
-            
-            # First pass: Find guide and ToC once (same for all topics in a class)
-            queue.put(("log", f"📚 Searching for guide for class {self.class_level}..."))
-            guide_path = find_guide_file(self.class_level, self.guides_dir, queue)
-            if not guide_path:
-                queue.put(("log", f"❌ No guide found for {self.class_level}. Cannot extract content."))
-                queue.put(("log", f"⚠️ Will generate evaluation based on topic names only."))
-            else:
-                # Get cached ToC or extract it
-                cached_toc = get_cached_toc(guide_path, self.guides_dir)
-                if not cached_toc:
-                    queue.put(("log", f"🧠 Parsing table of contents from {os.path.basename(guide_path)}..."))
-                    toc_text = extract_table_of_contents(guide_path, queue)
-                    if toc_text:
-                        cached_toc = parse_full_toc_with_ai(toc_text, queue)
-                        if cached_toc:
-                            save_toc_to_cache(guide_path, cached_toc, self.guides_dir)
-                            queue.put(("log", f"✅ Cached {len(cached_toc)} topics from ToC"))
-                    else:
-                        queue.put(("log", f"❌ Could not extract ToC text from PDF"))
+            textbook_path = None
+
+            if include_guide:
+                queue.put(("log", f"📚 Searching for teacher guide for class {self.class_level}..."))
+                guide_path = find_guide_file(self.class_level, self.guides_dir, queue)
+                if not guide_path:
+                    queue.put(("log", f"⚠️ No teacher guide found for {self.class_level}."))
+
+            if include_textbook:
+                if self.textbook_dir:
+                    queue.put(("log", f"📘 Searching for student textbook for class {self.class_level}..."))
+                    textbook_path = find_textbook_file(self.class_level, self.textbook_dir, queue)
+                    if not textbook_path:
+                        queue.put(("log", f"⚠️ No student textbook found for {self.class_level}."))
                 else:
-                    queue.put(("log", f"✅ Using cached ToC with {len(cached_toc)} topics"))
-                
-                # Detect page offset if we have a guide and ToC
-                if cached_toc:
-                    page_offset = detect_page_offset(guide_path, queue)
-            
-            # Second pass: Extract content for each topic
-            if guide_path and cached_toc:
-                with PdfExtractionSession(guide_path, queue) as guide_session:
-                    for topic in self.topics_list:
-                        if self.cancel_event.is_set():
-                            return
+                    queue.put(("log", "⚠️ Student textbook folder is not configured."))
 
-                        queue.put(("log", f"📖 Processing topic: {topic}"))
+            if guide_path and include_guide:
+                guide_chunks = _extract_topic_chunks_from_pdf(guide_path, self.guides_dir, "Guide enseignant")
+                extracted_texts.extend(guide_chunks)
 
-                        try:
-                            # Find pages for this topic
-                            page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
-                            if page_range:
-                                # Parse page numbers and extract text
-                                page_numbers = parse_page_numbers(page_range, queue)
-                                if page_numbers:
-                                    lesson_text = extract_lesson_text(
-                                        guide_path,
-                                        page_numbers,
-                                        queue,
-                                        self.cancel_event,
-                                        session=guide_session,
-                                    )
-                                    if lesson_text and lesson_text.strip():
-                                        extracted_texts.append(f"=== {topic} ===\n{lesson_text}")
-                                        queue.put(("log", f"✅ Extracted {len(lesson_text)} characters for '{topic}'"))
-                                    else:
-                                        queue.put(("log", f"⚠️ No text found on pages {page_range} for '{topic}'"))
-                                else:
-                                    queue.put(("log", f"⚠️ Could not parse page numbers: {page_range}"))
-                            else:
-                                queue.put(("log", f"⚠️ Could not find pages for '{topic}' in ToC"))
+            if textbook_path and include_textbook:
+                textbook_chunks = _extract_topic_chunks_from_pdf(textbook_path, self.textbook_dir, "Manuel élève")
+                extracted_texts.extend(textbook_chunks)
 
-                        except Exception as e:
-                            queue.put(("log", f"❌ Error extracting content for '{topic}': {e}"))
-                            import traceback
-                            queue.put(("log", f"Traceback: {traceback.format_exc()[:200]}"))  # Log first 200 chars of traceback
-            else:
-                for topic in self.topics_list:
-                    queue.put(("log", f"⚠️ Skipping text extraction for '{topic}' (no guide or ToC available)"))
-            
-            # Combine all extracted texts
             if extracted_texts:
                 combined_text = "\n\n".join(extracted_texts)
-                queue.put(("log", f"📚 Successfully extracted content for {len(extracted_texts)} topics"))
+                queue.put(("log", f"📚 Successfully extracted {len(extracted_texts)} topic block(s) across selected sources."))
             else:
-                combined_text = "No content could be extracted from the guides for the selected topics."
-                queue.put(("log", "⚠️ No content extracted from guides, will generate based on topic names only"))
-            
-            # Optional: student textbook extraction
-            if self.use_student_textbook and self.textbook_dir and guide_path and cached_toc:
-                textbook_path = find_textbook_file(self.class_level, self.textbook_dir, queue)
-                if textbook_path:
-                    queue.put(("log", "📖 Extracting context from student textbook..."))
-                    textbook_texts = []
-
-                    # Extract same topics from textbook
-                    with PdfExtractionSession(textbook_path, queue) as textbook_session:
-                        for topic in self.topics_list:
-                            if self.cancel_event.is_set():
-                                return
-
-                            try:
-                                page_range = find_pages_from_cached_toc(cached_toc, topic, queue, page_offset)
-                                if page_range:
-                                    page_numbers = parse_page_numbers(page_range, queue)
-                                    if page_numbers:
-                                        textbook_text = extract_lesson_text(
-                                            textbook_path,
-                                            page_numbers,
-                                            queue,
-                                            self.cancel_event,
-                                            session=textbook_session,
-                                        )
-                                        if textbook_text and textbook_text.strip():
-                                            textbook_texts.append(f"=== {topic} (Student Book) ===\n{textbook_text}")
-                            except Exception as e:
-                                queue.put(("log", f"⚠️ Could not extract '{topic}' from textbook: {e}"))
-                    
-                    if textbook_texts:
-                        combined_text += f"\n\n=== CONTEXTE SUPPLÉMENTAIRE DU MANUEL ÉLÈVE ===\n\n" + "\n\n".join(textbook_texts)
-                        queue.put(("log", f"🔗 Combined teacher guide and student textbook content ({len(textbook_texts)} topics from textbook)."))
-                    else:
-                        queue.put(("log", "⚠️ Could not extract textbook content."))
-                        
-                if self.cancel_event.is_set():
-                    queue.put(("log", "⏹️ Cancelled after textbook extraction."))
-                    return
-                    
-            elif not self.use_student_textbook:
-                queue.put(("log", "ℹ️ Using guide only (student textbook extraction disabled)."))
+                combined_text = "No content could be extracted from selected sources for the chosen topics."
+                queue.put(("log", "⚠️ No source content extracted, will generate based on topics and constraints only."))
             
             queue.put(("progress", 20))
             
@@ -1157,7 +1344,7 @@ class EvaluationWorker(QtCore.QThread):
                 return
                 
             # Build evaluation prompt with extracted content
-            evaluation_prompt = self._build_evaluation_prompt(combined_text)
+            evaluation_prompt = _build_evaluation_prompt_payload(self, combined_text)
             queue.put(("progress", 30))
             
             if self.cancel_event.is_set():
@@ -1330,95 +1517,6 @@ class EvaluationWorker(QtCore.QThread):
                 queue.put(("log", f"Stack trace: {traceback.format_exc()}"))
         finally:
             queue.put(("enable_buttons", None))
-
-    def _build_evaluation_prompt(self, extracted_content: str = "") -> str:
-        """Build a high-structure, exam-first prompt for evaluation generation."""
-        topics_text = ", ".join(self.topics_list)
-        school_name = self.eval_metadata.get("school_name", "Groupe Scolaire")
-        academic_year = self.eval_metadata.get("academic_year", "2025/2026")
-        eval_number = int(self.eval_metadata.get("eval_number", 1) or 1)
-        semester = str(self.eval_metadata.get("semester", "1"))
-        max_score = int(self.eval_metadata.get("max_score", 10) or 10)
-
-        num_word = "1er" if eval_number == 1 else f"{eval_number}e"
-        sem_word = "1er" if semester == "1" else f"{semester}e"
-        session_label = f"{num_word} contrôle du {sem_word} semestre"
-
-        force_types = []
-        if self.formatting_options.get("include_tables"):
-            force_types.append("table")
-        if self.formatting_options.get("include_matching"):
-            force_types.append("matching")
-        if self.question_types:
-            force_types.append(self.question_types)
-        forced_types_text = ", ".join(force_types) if force_types else "aucun type forcé"
-
-        source_text = (extracted_content or "").strip()
-        source_block = (
-            f"EXTRAIT DE RÉFÉRENCE (prioritaire):\n---\n{source_text[:5000]}\n---"
-            if source_text
-            else "Aucun extrait source fourni. Génère une évaluation fidèle au programme attendu du niveau."
-        )
-
-        answer_key_rule = (
-            "Inclure un corrigé final synthétique mais complet."
-            if self.formatting_options.get("include_answer_key")
-            else "Ne pas inclure de corrigé détaillé; expected_answer doit rester bref."
-        )
-
-        extra_block = (self.extra_instructions or "").strip()
-        if extra_block:
-            extra_block = f"\nCONSIGNES SUPPLÉMENTAIRES ENSEIGNANT:\n{extra_block}\n"
-
-        image_block = ""
-        if self.generate_images and HAS_IMAGE_GENERATION and int(self.num_images or 0) > 0:
-            image_block = f"""
-
-CONSIGNES ILLUSTRATIONS (OBLIGATOIRES):
-- Prévois exactement {int(self.num_images)} exercice(s) dont la résolution dépend d'une observation visuelle.
-- Pour ces exercices, intégrer une phrase explicite de lecture d'image, schéma ou tableau.
-- Ne pas mentionner d'outil numérique; l'illustration est fournie sur la feuille.
-- Varier les usages visuels (repérage, comparaison, légendage, association).
-"""
-
-        prompt = f"""Tu es un concepteur d'épreuves scolaires francophones. Ta mission: produire une évaluation exploitable immédiatement, rigoureuse, claire, et variée.
-
-CONTEXTE FIXE:
-- Établissement: {school_name}
-- Niveau: {self.class_level.upper()}
-- Matière: {self.subject or "Sciences"}
-- Sujets à couvrir: {topics_text}
-- Durée totale: {int(self.duration)} minutes
-- Barème total imposé: {max_score} points
-- Session: {session_label}
-
-{source_block}
-{extra_block}
-CONTRAINTES PÉDAGOGIQUES OBLIGATOIRES:
-1. Générer 4 à 6 exercices, progressifs (facile -> moyen -> transfert).
-2. Varier explicitement les modalités: compréhension, application, raisonnement, production.
-3. Formulations courtes, consignes nettes, adaptées à {self.class_level.upper()}.
-4. Aucun exercice redondant; chaque exercice doit tester une compétence distincte.
-5. Si QCM, distracteurs plausibles (pas absurdes).
-6. Types à forcer si possible: {forced_types_text}.
-7. {answer_key_rule}
-{image_block}
-
-CONTRAINTES DE STRUCTURE JSON:
-- Retourner uniquement un objet JSON valide (aucun texte hors JSON).
-- Utiliser exactement les champs du schéma: school_name, header, exercises, answer_key.
-- header doit inclure:
-  class_level="{self.class_level.upper()}", academic_year="{academic_year}", evaluation_number={eval_number}, semester="{semester}", session_label="{session_label}", duration_minutes={int(self.duration)}, max_score={max_score}, subject="{self.subject or 'Sciences'}".
-- exercises: liste d'objets avec title, instructions, points, questions.
-- questions: objets avec prompt, answer_type, expected_answer.
-- La somme des points des exercices doit être EXACTEMENT {max_score}.
-
-QUALITÉ ATTENDUE:
-- Exigences réalistes de copie d'élève.
-- Énoncés auto-suffisants (sans devoir lire le manuel).
-- Cohérence interne entre consignes, barème et corrigé.
-"""
-        return prompt
 
 class QuizWorker(QtCore.QThread):
     """Worker thread for generating quick quizzes based on a single topic."""

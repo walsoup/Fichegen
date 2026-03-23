@@ -89,23 +89,23 @@ class MainWindow(QtWidgets.QMainWindow):
         left_sidebar_scroll.setMinimumWidth(400)
         left_sidebar_scroll.setMaximumWidth(520)
             
-        # Right: Tabs with better styling
+        # Right panel: native tabs for Preview and Activity.
         self.right_tabs = QtWidgets.QTabWidget()
         self.right_tabs.setObjectName("ContentTabs")
         self.right_tabs.setDocumentMode(True)
         self.right_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         self.right_tabs.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
 
-        # Preview tab (with edit toggle + stacked editor/view)
+        # Preview tab (stacked editor/view)
         self.preview_tab = QtWidgets.QWidget()
         pv_lay = QtWidgets.QVBoxLayout(self.preview_tab)
         pv_lay.setContentsMargins(16, 12, 16, 16)
         pv_lay.setSpacing(8)
 
-        # Edit toggle bar with better styling
+        # Edit toggle bar
         bar = QtWidgets.QHBoxLayout()
         bar.setContentsMargins(0, 0, 0, 0)
-        self.preview_edit_toggle = QtWidgets.QCheckBox("✏️ Edit Markdown")
+        self.preview_edit_toggle = QtWidgets.QCheckBox("Edit Markdown")
         self.preview_edit_toggle.setToolTip("Toggle to edit the Markdown directly here.")
         self.preview_edit_toggle.toggled.connect(self.on_preview_edit_toggled)
         bar.addWidget(self.preview_edit_toggle)
@@ -129,9 +129,17 @@ class MainWindow(QtWidgets.QMainWindow):
         pv_lay.addWidget(self.preview_stack, 1)
 
         # Log tab with better styling
-        log_widget = QtWidgets.QWidget()
-        log_layout = QtWidgets.QVBoxLayout(log_widget)
+        self.log_tab = QtWidgets.QWidget()
+        log_layout = QtWidgets.QVBoxLayout(self.log_tab)
         log_layout.setContentsMargins(16, 12, 16, 16)
+        log_top_bar = QtWidgets.QHBoxLayout()
+        log_top_bar.setContentsMargins(0, 0, 0, 0)
+        log_top_bar.addStretch(1)
+        self.clear_log_btn = QtWidgets.QPushButton("Clear Log")
+        self.clear_log_btn.clicked.connect(self._clear_activity_log)
+        log_top_bar.addWidget(self.clear_log_btn)
+        log_layout.addLayout(log_top_bar)
+
         self.log_edit = QtWidgets.QPlainTextEdit()
         self.log_edit.setObjectName("log_view")
         self.log_edit.setReadOnly(True)
@@ -140,7 +148,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Add tabs
         self.right_tabs.addTab(self.preview_tab, tr("preview_tab"))
-        self.right_tabs.addTab(log_widget, tr("log_tab"))
+        self.right_tabs.addTab(self.log_tab, tr("log_tab"))
+
+        self._pending_log_updates = 0
+        self.right_tabs.currentChanged.connect(self._on_right_tab_changed)
 
         self.main_splitter.addWidget(left_sidebar_scroll)
         self.main_splitter.addWidget(self.right_tabs)
@@ -188,7 +199,14 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             # Apply minimal polish that doesn't override native look
             from ui.styles import get_stylesheet
-            self.setStyleSheet(get_stylesheet(mode))
+            base = get_stylesheet(mode)
+            mode_btn_css = """
+QPushButton[active=\"true\"] {
+    font-weight: 700;
+    border: 1px solid #6b7280;
+}
+"""
+            self.setStyleSheet(base + "\n" + mode_btn_css)
         except Exception:
             # Fallback: no stylesheet at all (pure native)
             try:
@@ -212,24 +230,23 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def _build_left_sidebar(self):
-        """Build a clean, macOS-style left sidebar"""
+        """Build a native tabbed sidebar for teacher workflows."""
         sidebar = QtWidgets.QWidget()
         sidebar_layout = QtWidgets.QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(16, 16, 16, 16)
-        sidebar_layout.setSpacing(16)
+        sidebar_layout.setSpacing(12)
         # Keep a reference for compact mode adjustments from Preferences
         self._left_sidebar_layout = sidebar_layout
 
-        # Tabbed workflow: fiches vs evaluations
         self.sidebar_tabs = QtWidgets.QTabWidget()
         self.sidebar_tabs.setObjectName("SidebarTabs")
-        self.sidebar_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
         self.sidebar_tabs.setDocumentMode(True)
+        self.sidebar_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         self.sidebar_tabs.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
         self.sidebar_tabs.addTab(self._build_fiche_tab(), tr("fiches_tab"))
         self.sidebar_tabs.addTab(self._build_evaluation_tab(), tr("evaluations_tab"))
         self.sidebar_tabs.addTab(self._build_quiz_tab(), tr("quizzes_tab"))
-        sidebar_layout.addWidget(self.sidebar_tabs)
+        sidebar_layout.addWidget(self.sidebar_tabs, 1)
 
         # Progress section (shared)
         progress_group = self._build_progress_section()
@@ -241,6 +258,67 @@ class MainWindow(QtWidgets.QMainWindow):
 
         sidebar_layout.addStretch(1)
         return sidebar
+
+    def _switch_sidebar_mode(self, mode: str):
+        """Switch visible workflow section for generation intents."""
+        index_map = {"fiche": 0, "evaluation": 1, "quiz": 2}
+        mode = mode if mode in index_map else "fiche"
+
+        if hasattr(self, "sidebar_tabs"):
+            self.sidebar_tabs.setCurrentIndex(index_map[mode])
+        elif hasattr(self, "sidebar_stack"):
+            # Backward compatibility if stack exists in older UI states.
+            self.sidebar_stack.setCurrentIndex(index_map[mode])
+
+        if hasattr(self, "status_label"):
+            self.status_label.setText({
+                "fiche": "Ready to generate a lesson sheet.",
+                "evaluation": "Ready to build a full control/devoir.",
+                "quiz": "Ready to generate a quick quiz.",
+            }.get(mode, "Ready"))
+
+    def _switch_right_panel(self, panel: str):
+        """Switch between Preview and Activity tabs."""
+        panel = panel if panel in {"preview", "activity"} else "preview"
+        if not hasattr(self, "right_tabs"):
+            return
+
+        if panel == "preview":
+            self.right_tabs.setCurrentWidget(self.preview_tab)
+            if hasattr(self, "preview_edit_toggle"):
+                self.preview_edit_toggle.setEnabled(True)
+            self.right_tabs.setTabText(1, tr("log_tab"))
+        else:
+            self.right_tabs.setCurrentIndex(1)
+            if hasattr(self, "preview_edit_toggle"):
+                self.preview_edit_toggle.setEnabled(False)
+            self._pending_log_updates = 0
+            self.right_tabs.setTabText(1, tr("log_tab"))
+
+    def _update_content_badge(self):
+        """Update status bar with current content context."""
+        mode_map = {
+            "fiche": "Fiche",
+            "evaluation": "Evaluation",
+            "quiz": "Quiz",
+            "unknown": "No content",
+        }
+        mode = mode_map.get(self.current_content_type, "No content")
+        size = len((self.current_content or "").strip())
+        msg = f"{mode} ready" if size > 0 else "Ready"
+        if self.statusBar():
+            self.statusBar().showMessage(msg)
+
+    def _clear_activity_log(self):
+        self.log_edit.clear()
+        self._pending_log_updates = 0
+        if hasattr(self, "right_tabs"):
+            self.right_tabs.setTabText(1, tr("log_tab"))
+
+    def _on_right_tab_changed(self, index: int):
+        if index == 1:
+            self._pending_log_updates = 0
+            self.right_tabs.setTabText(1, tr("log_tab"))
 
     def _build_fiche_tab(self):
         tab = QtWidgets.QWidget()
@@ -259,8 +337,8 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
-        # Configuration (class & subject)
-        config_group = QtWidgets.QGroupBox("Configuration")
+        # Core setup
+        config_group = QtWidgets.QGroupBox("Class & Subject")
         config_form = QtWidgets.QFormLayout(config_group)
         config_form.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
@@ -283,7 +361,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(config_group)
 
         # Topics selection
-        topics_group = QtWidgets.QGroupBox("Lesson Topics")
+        topics_group = QtWidgets.QGroupBox("Lessons To Cover")
         topics_layout = QtWidgets.QVBoxLayout(topics_group)
 
         self.eval_lessons_list = QtWidgets.QListWidget()
@@ -308,9 +386,41 @@ class MainWindow(QtWidgets.QMainWindow):
         topics_layout.addWidget(self.eval_topics_edit)
         layout.addWidget(topics_group)
 
+        # Source material mode for evaluations
+        source_group = QtWidgets.QGroupBox("Source Material")
+        source_layout = QtWidgets.QVBoxLayout(source_group)
+        source_layout.setSpacing(6)
+
+        self.eval_source_guide_only = QtWidgets.QRadioButton("Teacher guide only")
+        self.eval_source_guide_plus_textbook = QtWidgets.QRadioButton("Teacher guide + student textbook")
+        self.eval_source_textbook_only = QtWidgets.QRadioButton("Student textbook only")
+
+        saved_source_mode = self.settings.value("eval_source_mode", "guide_plus_textbook")
+        if saved_source_mode == "guide_only":
+            self.eval_source_guide_only.setChecked(True)
+        elif saved_source_mode == "textbook_only":
+            self.eval_source_textbook_only.setChecked(True)
+        else:
+            self.eval_source_guide_plus_textbook.setChecked(True)
+
+        self.eval_source_guide_only.toggled.connect(lambda checked: checked and self.settings.setValue("eval_source_mode", "guide_only"))
+        self.eval_source_guide_plus_textbook.toggled.connect(lambda checked: checked and self.settings.setValue("eval_source_mode", "guide_plus_textbook"))
+        self.eval_source_textbook_only.toggled.connect(lambda checked: checked and self.settings.setValue("eval_source_mode", "textbook_only"))
+
+        source_layout.addWidget(self.eval_source_guide_only)
+        source_layout.addWidget(self.eval_source_guide_plus_textbook)
+        source_layout.addWidget(self.eval_source_textbook_only)
+
+        source_note = QtWidgets.QLabel("Tip: use student textbook (or both) for richer exercise styles in controls/devoirs.")
+        source_note.setWordWrap(True)
+        source_note.setStyleSheet("color: gray; font-size: 11px;")
+        source_layout.addWidget(source_note)
+        layout.addWidget(source_group)
+
         # Evaluation settings
-        settings_group = QtWidgets.QGroupBox("Evaluation Settings")
+        settings_group = QtWidgets.QGroupBox("Control Sheet Setup")
         settings_form = QtWidgets.QFormLayout(settings_group)
+        self.eval_settings_form = settings_form
         settings_form.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         # School name
@@ -374,44 +484,30 @@ class MainWindow(QtWidgets.QMainWindow):
         settings_form.addRow("Difficulty:", self.eval_difficulty_combo)
 
         self.eval_question_types_edit = QtWidgets.QPlainTextEdit()
-        self.eval_question_types_edit.setPlaceholderText("Question types (optional):\nMultiple choice, Short answers, Matching...")
-        self.eval_question_types_edit.setMaximumHeight(90)
+        self.eval_question_types_edit.setPlaceholderText("Optional (advanced): force question styles for this evaluation")
+        self.eval_question_types_edit.setMaximumHeight(70)
         settings_form.addRow("Question Types:", self.eval_question_types_edit)
         layout.addWidget(settings_group)
 
-        # AI preferences (simplified - model selector is in footer)
-        ai_group = QtWidgets.QGroupBox("AI Settings")
-        ai_form = QtWidgets.QFormLayout(ai_group)
-        ai_form.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-
-        temp_widget = QtWidgets.QWidget()
-        temp_layout = QtWidgets.QHBoxLayout(temp_widget)
-        temp_layout.setContentsMargins(0, 0, 0, 0)
-        self.eval_temperature_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.eval_temperature_slider.setRange(0, 100)
-        self.eval_temperature_slider.setValue(int(float(self.settings.value("temperature", "0.5")) * 100))
-        self.eval_temperature_label = QtWidgets.QLabel(f"{self.eval_temperature_slider.value()/100:.2f}")
-        self.eval_temperature_slider.valueChanged.connect(lambda v: self.eval_temperature_label.setText(f"{v/100:.2f}"))
-        temp_layout.addWidget(self.eval_temperature_slider, 1)
-        temp_layout.addWidget(self.eval_temperature_label)
-        ai_form.addRow("Temperature:", temp_widget)
-        
         # Note about model selection
-        note_label = QtWidgets.QLabel("💡 Gemini model (Pro/Flash) is selected in the Output section below")
-        note_label.setWordWrap(True)
-        note_label.setStyleSheet("color: gray; font-size: 11px; font-style: italic;")
-        ai_form.addRow("", note_label)
-        
-        layout.addWidget(ai_group)
+        model_note = QtWidgets.QLabel("Gemini model (Pro/Flash) is selected in Output below.")
+        model_note.setWordWrap(True)
+        model_note.setStyleSheet("color: gray; font-size: 11px; font-style: italic;")
+        layout.addWidget(model_note)
 
         # Formatting preferences
-        formatting_group = QtWidgets.QGroupBox("Formatting Preferences")
-        formatting_layout = QtWidgets.QVBoxLayout(formatting_group)
+        self.eval_formatting_group = QtWidgets.QGroupBox("Advanced Evaluation Controls")
+        formatting_layout = QtWidgets.QVBoxLayout(self.eval_formatting_group)
 
         self.eval_include_tables_chk = QtWidgets.QCheckBox("Include tabular questions (tables)")
         self.eval_include_boxes_chk = QtWidgets.QCheckBox("Highlight instructions with callout boxes")
         self.eval_include_matching_chk = QtWidgets.QCheckBox("Include matching/connect-the-dots exercises")
         self.eval_include_answer_key_chk = QtWidgets.QCheckBox("Append answer key at the end")
+
+        # Better defaults for control-style diversity.
+        self.eval_include_tables_chk.setChecked(True)
+        self.eval_include_matching_chk.setChecked(True)
+        self.eval_include_answer_key_chk.setChecked(True)
 
         formatting_layout.addWidget(self.eval_include_tables_chk)
         formatting_layout.addWidget(self.eval_include_boxes_chk)
@@ -443,7 +539,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.eval_extra_instructions_edit.setPlaceholderText("Additional instructions for AI (optional)...")
         self.eval_extra_instructions_edit.setMaximumHeight(90)
         formatting_layout.addWidget(self.eval_extra_instructions_edit)
-        layout.addWidget(formatting_group)
+        layout.addWidget(self.eval_formatting_group)
+
+        self.eval_ai_decides_note = QtWidgets.QLabel(
+            "AI-first mode: exercise layout and variety are handled automatically. "
+            "Enable advanced controls in Preferences if you want manual steering."
+        )
+        self.eval_ai_decides_note.setWordWrap(True)
+        self.eval_ai_decides_note.setStyleSheet("color: gray; font-size: 11px;")
+        layout.addWidget(self.eval_ai_decides_note)
 
         # Action buttons
         action_layout = QtWidgets.QHBoxLayout()
@@ -458,6 +562,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Initial data load
         self._load_eval_lessons()
+        self._apply_eval_advanced_visibility()
 
         return tab
 
@@ -619,6 +724,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def start_quiz_generation(self):
         """Start generating a quiz."""
+        self._switch_sidebar_mode("quiz")
         # Check if already running
         if self.worker is not None and self.worker.isRunning():
             QtWidgets.QMessageBox.information(
@@ -676,6 +782,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.preview_edit.clear()
         self.current_content = ""
         self.current_content_type = "quiz"
+        self.generate_btn.setEnabled(False)
+        self.generate_eval_btn.setEnabled(False)
+        self.generate_quiz_btn.setEnabled(False)
+        self.progress.setValue(0)
+        self.status_label.setText("Starting quiz generation...")
         self.save_pdf_btn.setEnabled(False)
         self.save_docx_btn.setEnabled(False)
         self._set_rating_enabled(False)
@@ -807,7 +918,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _build_progress_section(self):
         """Progress indicator and status"""
-        group = QtWidgets.QGroupBox("Progress")
+        group = QtWidgets.QGroupBox("Session Status")
         layout = QtWidgets.QVBoxLayout(group)
         layout.setSpacing(8)
 
@@ -817,7 +928,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.progress)
 
         # Status text (smaller, secondary)
-        self.status_label = QtWidgets.QLabel("Ready to generate")
+        self.status_label = QtWidgets.QLabel("Ready to generate a lesson sheet.")
         self.status_label.setObjectName("status_label")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
@@ -835,13 +946,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _build_sidebar_footer(self):
         """Rating and save controls"""
-        group = QtWidgets.QGroupBox("Output")
+        group = QtWidgets.QGroupBox("Export & Actions")
         layout = QtWidgets.QVBoxLayout(group)
         layout.setSpacing(8)
 
-        # Preferences button at the top
+        # Preferences button
         prefs_layout = QtWidgets.QHBoxLayout()
-        self.prefs_btn = QtWidgets.QPushButton("⚙️ Preferences")
+        self.prefs_btn = QtWidgets.QPushButton("Preferences")
         self.prefs_btn.setObjectName("prefs_btn")
         self.prefs_btn.clicked.connect(self._show_preferences)
         self.prefs_btn.setToolTip("Open application preferences")
@@ -850,7 +961,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addLayout(prefs_layout)
 
         # Gemini Model Toggle (Pro vs Flash) - Shared across fiches, evals, and quizzes
-        model_group = QtWidgets.QGroupBox("AI Model")
+        model_group = QtWidgets.QGroupBox("Generation Model")
         model_group_layout = QtWidgets.QHBoxLayout(model_group)
         model_group_layout.setContentsMargins(8, 8, 8, 8)
         
@@ -887,7 +998,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         layout.addWidget(model_group)
 
-        # PDF Template selector (shared across fiches, evals, and quizzes)
+        # PDF style selector (shared across fiches, evals, and quizzes)
         pdf_group = QtWidgets.QGroupBox("PDF Style")
         pdf_group_layout = QtWidgets.QHBoxLayout(pdf_group)
         pdf_group_layout.setContentsMargins(8, 8, 8, 8)
@@ -900,14 +1011,14 @@ class MainWindow(QtWidgets.QMainWindow):
         pdf_group_layout.addWidget(self.pdf_template_combo, 1)
         layout.addWidget(pdf_group)
 
-        # Student textbook toggle
-        self.use_student_textbook_chk = QtWidgets.QCheckBox("📚 Include student textbook context")
+        # Shared textbook toggle (fiche + quiz). Evaluation has dedicated source controls.
+        self.use_student_textbook_chk = QtWidgets.QCheckBox("Fiche/Quiz: include student textbook context")
         self.use_student_textbook_chk.setChecked(self.settings.value("use_student_textbook", "false") == "true")
-        self.use_student_textbook_chk.setToolTip("Extract content from student textbooks in addition to teacher guides\n(Useful for evaluations with exercises)")
+        self.use_student_textbook_chk.setToolTip("Used by fiche and quiz generation.\nEvaluation source mode is configured in the Evaluations tab.")
         self.use_student_textbook_chk.toggled.connect(self._on_student_textbook_toggle)
         layout.addWidget(self.use_student_textbook_chk)
 
-        # Rating section
+        # Quality rating section
         rating_layout = QtWidgets.QHBoxLayout()
         self.rating_label = QtWidgets.QLabel("Rate:")
         self.rating_combo = QtWidgets.QComboBox()
@@ -1063,16 +1174,16 @@ class MainWindow(QtWidgets.QMainWindow):
         act_show_log = QAction("Show &Log", self)
         act_show_log.setShortcut("Meta+L")
         def _show_log():
-            if hasattr(self, 'right_tabs'):
-                self.right_tabs.setCurrentIndex(1)  # Switch to log tab
+            if hasattr(self, '_switch_right_panel'):
+                self._switch_right_panel("activity")
         act_show_log.triggered.connect(_show_log)
         view_menu.addAction(act_show_log)
         
         act_show_preview = QAction("Show &Preview", self)
         act_show_preview.setShortcut("Meta+P")
         def _show_preview():
-            if hasattr(self, 'right_tabs'):
-                self.right_tabs.setCurrentIndex(0)  # Switch to preview tab
+            if hasattr(self, '_switch_right_panel'):
+                self._switch_right_panel("preview")
         act_show_preview.triggered.connect(_show_preview)
         view_menu.addAction(act_show_preview)
 
@@ -1221,6 +1332,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._left_sidebar_layout.setSpacing(8 if compact else 16)
         except Exception:
             pass
+
+        # Update advanced evaluation controls visibility.
+        try:
+            self._apply_eval_advanced_visibility()
+        except Exception:
+            pass
         
         # Refresh available lessons in case input directory changed
         self._load_available_lessons()
@@ -1301,6 +1418,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.eval_class_combo.setCurrentText(self.class_combo.currentText())
                 self.eval_class_combo.blockSignals(False)
             self._load_eval_lessons()
+        if hasattr(self, 'quiz_class_combo') and isinstance(self.quiz_class_combo, QtWidgets.QComboBox):
+            if self.quiz_class_combo.currentText() != self.class_combo.currentText():
+                self.quiz_class_combo.blockSignals(True)
+                self.quiz_class_combo.setCurrentText(self.class_combo.currentText())
+                self.quiz_class_combo.blockSignals(False)
+            self._load_quiz_lessons()
 
     def _on_eval_class_changed(self):
         """Reload evaluation lesson list when class changes."""
@@ -1321,6 +1444,34 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         for title in selected_titles:
             self._append_eval_topic(title)
+
+    def _get_eval_source_mode(self) -> str:
+        """Resolve evaluation source mode from radio controls."""
+        if hasattr(self, "eval_source_textbook_only") and self.eval_source_textbook_only.isChecked():
+            return "textbook_only"
+        if hasattr(self, "eval_source_guide_plus_textbook") and self.eval_source_guide_plus_textbook.isChecked():
+            return "guide_plus_textbook"
+        return "guide_only"
+
+    def _advanced_eval_controls_enabled(self) -> bool:
+        return self.settings.value("ui_show_eval_advanced_controls", "false") == "true"
+
+    def _apply_eval_advanced_visibility(self):
+        enabled = self._advanced_eval_controls_enabled()
+        if hasattr(self, "eval_formatting_group"):
+            self.eval_formatting_group.setVisible(enabled)
+        if hasattr(self, "eval_ai_decides_note"):
+            self.eval_ai_decides_note.setVisible(not enabled)
+        if hasattr(self, "eval_question_types_edit"):
+            self.eval_question_types_edit.setVisible(enabled)
+            self.eval_question_types_edit.setEnabled(enabled)
+        if hasattr(self, "eval_settings_form") and hasattr(self, "eval_question_types_edit"):
+            try:
+                label = self.eval_settings_form.labelForField(self.eval_question_types_edit)
+                if label is not None:
+                    label.setVisible(enabled)
+            except Exception:
+                pass
 
     def _load_eval_lessons(self):
         if not hasattr(self, 'eval_lessons_list'):
@@ -2256,7 +2407,7 @@ Documents/
         """Handle changes to the student textbook toggle"""
         self.settings.setValue("use_student_textbook", "true" if checked else "false")
         status = "enabled" if checked else "disabled"
-        self.append_log(f"📚 Student textbook extraction {status}")
+        self.append_log(f"📚 Student textbook extraction for fiche/quiz {status}")
 
     def _on_quick_preview_changed(self, checked):
         """Handle changes to the quick preview source setting"""
@@ -2268,6 +2419,9 @@ Documents/
         self.log_edit.appendPlainText(text)
         bar = self.log_edit.verticalScrollBar()
         bar.setValue(bar.maximum())
+        if self.right_tabs.currentIndex() != 1:
+            self._pending_log_updates += 1
+            self.right_tabs.setTabText(1, f"{tr('log_tab')} ({self._pending_log_updates})")
         if self.log_file_handle:
             try:
                 self.log_file_handle.write(f"{datetime.now().isoformat()} | {text}\n")
@@ -2277,6 +2431,7 @@ Documents/
 
     def start_generation(self):
         """Start fiche generation with comprehensive validation and worker setup."""
+        self._switch_sidebar_mode("fiche")
         # Check if already running
         if self.worker is not None and self.worker.isRunning():
             QtWidgets.QMessageBox.information(
@@ -2356,6 +2511,7 @@ Documents/
 
         # UI state
         self.generate_btn.setEnabled(False)
+        self.generate_quiz_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
         self.progress.setValue(0)
         self.status_label.setText("Starting generation...")
@@ -2405,6 +2561,7 @@ Documents/
 
     def start_evaluation_generation(self):
         """Start generation of evaluation/test with full validation."""
+        self._switch_sidebar_mode("evaluation")
         # Check if already running
         if self.worker is not None and self.worker.isRunning():
             QtWidgets.QMessageBox.information(
@@ -2472,21 +2629,31 @@ Documents/
         self.current_topics_list = list(topics_set)
 
         eval_duration = self.eval_duration_spin.value()
-        question_types_text = self.eval_question_types_edit.toPlainText().strip()
+        advanced_eval_controls = self._advanced_eval_controls_enabled()
+        question_types_text = self.eval_question_types_edit.toPlainText().strip() if advanced_eval_controls else ""
         difficulty = self.eval_difficulty_combo.currentText()
 
-        temperature = self.eval_temperature_slider.value() / 100
+        temperature = float(self.settings.value("temperature", "0.5"))
+        source_mode = self._get_eval_source_mode()
         
         # Use shared model toggle from footer
         use_pro = self.model_toggle.isChecked()
         model_name = get_configured_pro_model() if use_pro else get_configured_flash_model()
 
-        formatting_options = {
-            "include_tables": self.eval_include_tables_chk.isChecked(),
-            "include_boxes": self.eval_include_boxes_chk.isChecked(),
-            "include_matching": self.eval_include_matching_chk.isChecked(),
-            "include_answer_key": self.eval_include_answer_key_chk.isChecked(),
-        }
+        if advanced_eval_controls:
+            formatting_options = {
+                "include_tables": self.eval_include_tables_chk.isChecked(),
+                "include_boxes": self.eval_include_boxes_chk.isChecked(),
+                "include_matching": self.eval_include_matching_chk.isChecked(),
+                "include_answer_key": self.eval_include_answer_key_chk.isChecked(),
+            }
+        else:
+            formatting_options = {
+                "include_tables": False,
+                "include_boxes": False,
+                "include_matching": False,
+                "include_answer_key": True,
+            }
 
         extra_instructions = self.eval_extra_instructions_edit.toPlainText().strip()
         
@@ -2510,12 +2677,14 @@ Documents/
             temperature,
             formatting_options,
             extra_instructions,
-            eval_metadata
+            eval_metadata,
+            source_mode,
         )
 
 
     def _start_evaluation_worker(self, class_level, subject, topics_list, duration, question_types, difficulty,
-                                 model_name, temperature, formatting_options, extra_instructions, eval_metadata):
+                                 model_name, temperature, formatting_options, extra_instructions, eval_metadata,
+                                 source_mode):
         """Start the evaluation generation worker."""
         # Get settings from preferences
         output_dir = self.settings.value("output_dir", DEFAULT_OUTPUT_DIR)
@@ -2530,6 +2699,7 @@ Documents/
         # UI state
         self.generate_btn.setEnabled(False)
         self.generate_eval_btn.setEnabled(False)
+        self.generate_quiz_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
         self.progress.setValue(0)
         self.status_label.setText("Starting evaluation generation...")
@@ -2585,7 +2755,8 @@ Documents/
             guides_dir=guides_dir,
             eval_metadata=eval_metadata,
             textbook_dir=textbook_dir,
-            use_student_textbook=self.use_student_textbook_chk.isChecked()
+            use_student_textbook=self.use_student_textbook_chk.isChecked(),
+            source_mode=source_mode,
         )
         
         # Connect signals
@@ -2819,8 +2990,8 @@ Documents/
         self.save_pdf_btn.setEnabled(can_save)
         self.save_docx_btn.setEnabled(can_save and HAS_DOCX)
         self._set_rating_enabled(can_save)
-        # Switch to Preview tab for wow factor
-        self.right_tabs.setCurrentWidget(self.preview_tab)
+        self._update_content_badge()
+        self._switch_right_panel("preview")
 
     def _render_preview_content(self, text: str):
         """Render markdown preview with safety fallback for very large payloads."""
@@ -2922,6 +3093,8 @@ Documents/
         """Re-enable UI after generation completes or fails."""
         self.generate_btn.setEnabled(True)
         self.generate_eval_btn.setEnabled(True)
+        if hasattr(self, 'generate_quiz_btn'):
+            self.generate_quiz_btn.setEnabled(True)
         self.cancel_btn.setEnabled(False)
         
         # Close log file handle
@@ -3082,6 +3255,7 @@ Documents/
         self.current_content = ""
         self.current_content_type = "unknown"
         self.current_topics_list = []
+        self._update_content_badge()
 
     def _load_settings(self):
         # Ensure API keys are loaded first

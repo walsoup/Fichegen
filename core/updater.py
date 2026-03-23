@@ -162,12 +162,57 @@ def _ensure_build_env(repo_dir: str, log: Callable[[str], None]) -> str:
     return venv_python
 
 
-def _build_app(repo_dir: str, python_bin: str, log: Callable[[str], None]) -> str:
-    if not os.path.exists(os.path.join(repo_dir, "FicheGen.spec")):
-        raise RuntimeError("FicheGen.spec not found in repository; cannot build updater package.")
+def _find_build_spec(repo_dir: str) -> Optional[str]:
+    """Find a PyInstaller spec file, preferring FicheGen.spec, and return an absolute path."""
+    preferred = os.path.join(repo_dir, "FicheGen.spec")
+    if os.path.isfile(preferred):
+        return preferred
 
+    spec_files: list[str] = []
+    for root, dirs, files in os.walk(repo_dir):
+        # Skip build artifacts and env folders to keep scan fast and relevant.
+        dirs[:] = [
+            d for d in dirs
+            if d not in {".git", ".venv", ".venv-updater", "build", "dist", "__pycache__"}
+        ]
+        for filename in files:
+            if filename.lower().endswith(".spec"):
+                spec_files.append(os.path.join(root, filename))
+
+    if not spec_files:
+        return None
+
+    # Prefer a case-insensitive match on fichegen.spec, then shortest path.
+    spec_files.sort(key=lambda p: (0 if os.path.basename(p).lower() == "fichegen.spec" else 1, len(p), p.lower()))
+    return spec_files[0]
+
+
+def _build_app(repo_dir: str, python_bin: str, log: Callable[[str], None]) -> str:
+    spec_path = _find_build_spec(repo_dir)
     log("🏗️ Building macOS app bundle...")
-    _run_cmd([python_bin, "-m", "PyInstaller", "--clean", "--noconfirm", "FicheGen.spec"], cwd=repo_dir, log=log)
+    if spec_path:
+        log(f"🧭 Using spec file: {spec_path}")
+        _run_cmd([python_bin, "-m", "PyInstaller", "--clean", "--noconfirm", spec_path], cwd=repo_dir, log=log)
+    else:
+        entry_script = os.path.join(repo_dir, "main.py")
+        if not os.path.isfile(entry_script):
+            raise RuntimeError("No .spec file found and main.py is missing; cannot build updater package.")
+        log("⚠️ No .spec found. Falling back to one-shot PyInstaller build from main.py.")
+        _run_cmd(
+            [
+                python_bin,
+                "-m",
+                "PyInstaller",
+                "--clean",
+                "--noconfirm",
+                "--windowed",
+                "--name",
+                "FicheGen",
+                entry_script,
+            ],
+            cwd=repo_dir,
+            log=log,
+        )
 
     app_path = os.path.join(repo_dir, "dist", "FicheGen.app")
     if not os.path.exists(app_path):

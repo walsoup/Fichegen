@@ -10,7 +10,7 @@ from config import (
     TOC_CACHE_DIR, TABLE_OF_CONTENTS_PAGES, API_KEYS,
     get_configured_toc_prompt, get_configured_gemini_toc_model,
     get_configured_gemini_offset_model, get_configured_gemma_syntax_model,
-    get_configured_page_finding_prompt, GEMINI_TOC_MODEL
+    get_configured_page_finding_prompt, get_configured_flash_model, GEMINI_TOC_MODEL
 )
 from core.ai import _generate_with_model
 
@@ -110,10 +110,76 @@ def save_toc_to_cache(guide_path: str, toc_data: List[Dict[str, Any]], guides_di
             pass
         return False
 
+def parse_full_toc_with_heuristics(toc_text: str, queue=None) -> Optional[List[Dict[str, Any]]]:
+    """Fast local ToC parser to avoid unnecessary AI round-trips.
+
+    Returns a list of {"topic": str, "page": int} when enough candidates are found,
+    otherwise returns None so callers can fall back to AI parsing.
+    """
+    if not toc_text or not isinstance(toc_text, str):
+        return None
+
+    entries: List[Dict[str, Any]] = []
+    seen = set()
+
+    # Common line styles:
+    # - "Le systeme ... 23"
+    # - "Le systeme ............ 23"
+    # - "23 Le systeme"
+    pattern_topic_page = re.compile(r"^\s*(?P<topic>[^\d]{4,}?)\s*(?:\.{2,}|\s{2,})\s*(?P<page>\d{1,4})\s*$")
+    pattern_topic_page_loose = re.compile(r"^\s*(?P<topic>[^\d]{6,}?)\s+(?P<page>\d{1,4})\s*$")
+    pattern_page_topic = re.compile(r"^\s*(?P<page>\d{1,4})\s+(?P<topic>[^\d].{4,})\s*$")
+
+    for raw_line in toc_text.splitlines():
+        line = (raw_line or "").strip()
+        if len(line) < 6:
+            continue
+
+        match = pattern_topic_page.match(line) or pattern_topic_page_loose.match(line) or pattern_page_topic.match(line)
+        if not match:
+            continue
+
+        topic = re.sub(r"\s+", " ", (match.group("topic") or "").strip(" .-\t"))
+        try:
+            page = int(match.group("page"))
+        except Exception:
+            continue
+
+        if not topic or page <= 0 or page > 2000:
+            continue
+
+        key = (topic.lower(), page)
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append({"topic": topic, "page": page})
+
+    # Keep only ordered pages when possible, and require a minimum signal.
+    entries.sort(key=lambda item: int(item.get("page", 10**9)))
+    filtered: List[Dict[str, Any]] = []
+    last_page = -1
+    for entry in entries:
+        p = int(entry.get("page", 0))
+        if p >= last_page:
+            filtered.append(entry)
+            last_page = p
+
+    result = filtered if len(filtered) >= 8 else entries
+    if len(result) < 8:
+        return None
+
+    if queue is not None:
+        try:
+            queue.put(("log", f"⚡ Fast ToC parser extracted {len(result)} entries locally."))
+        except Exception:
+            pass
+    return result
+
+
 def parse_full_toc_with_ai(toc_text: str, queue):
     """Uses an AI model to parse a raw ToC string into a structured list of topics and pages."""
     queue.put(("log", "🧠 No cache found. Parsing full ToC with AI... (one-time operation per guide)"))
-    
+
     # Get the configured prompt template
     prompt_template = get_configured_toc_prompt()
     prompt = prompt_template.format(toc_text=toc_text)
@@ -123,20 +189,23 @@ def parse_full_toc_with_ai(toc_text: str, queue):
             queue.put(("log", "❌ Gemini API key needed for ToC parsing. Please add it to keys.txt or .env"))
             return None
 
+        model_name = get_configured_flash_model()
+        queue.put(("log", f"⚡ ToC parsing forced to Flash model: {model_name}"))
+
         response = _generate_with_model(
-            get_configured_gemini_toc_model(),
+            model_name,
             prompt,
             temperature=0.0,
         )
         resp = (response.text or "") if response else ""
-        
+
         # Clean the response to ensure it's valid JSON
         json_str = resp.strip()
         if json_str.startswith("```json"):
             json_str = json_str[7:]
         if json_str.endswith("```"):
             json_str = json_str[:-3]
-        
+
         parsed_json = json.loads(json_str)
         if isinstance(parsed_json, list):
             queue.put(("log", f"✅ AI parsed {len(parsed_json)} ToC entries."))
@@ -480,31 +549,33 @@ def extract_table_of_contents(pdf_path, queue):
         return None
 
 def get_pages_from_toc(toc_text, lesson_topic, queue):
-    queue.put(("log", f"🧠 Finding pages for '{lesson_topic}' using Gemini model..."))
+    queue.put(("log", f"🧠 Finding pages for '{lesson_topic}' using Gemini Flash model..."))
     
     # Get the configured prompt template
     prompt_template = get_configured_page_finding_prompt()
     prompt = prompt_template.format(lesson_topic=lesson_topic, toc_text=toc_text)
 
     try:
-        # Always use the Gemini TOC model for page finding regardless of user selection
+        # Always use Flash for page-finding to maximize speed and avoid Pro routing.
         if not API_KEYS.get("GEMINI_API_KEY"):
             queue.put(("log", "❌ Gemini API key needed for page-finding. Please add it to keys.txt or .env"))
             return None
 
+        model_name = get_configured_flash_model()
+
         response = _generate_with_model(
-            get_configured_gemini_toc_model(),
+            model_name,
             prompt,
             temperature=0.1,
         )
         resp = (response.text or "") if response else ""
         
         if resp and resp.strip():
-            queue.put(("log", f"✅ page-finding: used Gemini {GEMINI_TOC_MODEL}"))
+            queue.put(("log", f"✅ page-finding: used Gemini Flash ({model_name})"))
             queue.put(("log", f"🤖 Response: '{resp}'"))
             return resp.strip()
         else:
-            queue.put(("log", f"❌ page-finding: No response from Gemini {GEMINI_TOC_MODEL}."))
+            queue.put(("log", f"❌ page-finding: No response from Gemini Flash ({model_name})."))
             return None
     except Exception as e:
         queue.put(("log", f"❌ page-finding failed with Gemini: {e}"))

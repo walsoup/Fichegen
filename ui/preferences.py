@@ -378,6 +378,15 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.compact_sidebar_chk = QtWidgets.QCheckBox("Compact sidebar spacing")
         form.addRow("Sidebar:", self.compact_sidebar_chk)
 
+        # Advanced evaluation controls visibility
+        self.show_eval_advanced_controls_chk = QtWidgets.QCheckBox(
+            "Show advanced evaluation controls (formatting/type forcing)"
+        )
+        self.show_eval_advanced_controls_chk.setToolTip(
+            "When disabled, evaluation generation stays AI-first with a cleaner teacher workflow."
+        )
+        form.addRow("Evaluations:", self.show_eval_advanced_controls_chk)
+
         # Show PDF meta banner
         self.pdf_meta_banner_chk = QtWidgets.QCheckBox("Show PDF meta banner (title, classe, durée)")
         self.pdf_meta_banner_chk.setChecked(False)
@@ -423,6 +432,9 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.preview_source_chk.setChecked(settings.value("preview_source", "false") == "true")
         self.special_instructions_edit.setText(settings.value("special_instructions", ""))
         self.compact_sidebar_chk.setChecked(settings.value("ui_compact_sidebar", "false") == "true")
+        self.show_eval_advanced_controls_chk.setChecked(
+            settings.value("ui_show_eval_advanced_controls", "false") == "true"
+        )
         self.pdf_meta_banner_chk.setChecked(settings.value("pdf_show_meta", "false") == "true")
         
         # Load language setting
@@ -505,6 +517,10 @@ class PreferencesDialog(QtWidgets.QDialog):
         settings.setValue("preview_source", "true" if self.preview_source_chk.isChecked() else "false")
         settings.setValue("special_instructions", self.special_instructions_edit.toPlainText())
         settings.setValue("ui_compact_sidebar", "true" if self.compact_sidebar_chk.isChecked() else "false")
+        settings.setValue(
+            "ui_show_eval_advanced_controls",
+            "true" if self.show_eval_advanced_controls_chk.isChecked() else "false"
+        )
         settings.setValue("pdf_show_meta", "true" if self.pdf_meta_banner_chk.isChecked() else "false")
         settings.setValue("ui_language", self.language_combo.currentData())
         settings.setValue("default_duration", str(self.default_duration_spin.value()))
