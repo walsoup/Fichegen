@@ -1,5 +1,6 @@
 import json
 import time
+import hashlib
 from typing import Optional, List, Dict, Any
 from functools import lru_cache
 from google import genai
@@ -28,7 +29,11 @@ def get_genai_client(api_key_name: str = "GEMINI_API_KEY") -> Optional[genai.Cli
     if not api_key and not (use_vertex and project):
         return None
 
-    client_cache_key = f"vertex:{project}:{location}" if (use_vertex and project) else f"key:{api_key}"
+    client_cache_key = (
+        f"vertex:{project}:{location}"
+        if (use_vertex and project)
+        else f"key:{hashlib.sha256((api_key or '').encode('utf-8')).hexdigest()[:16]}"
+    )
 
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY
     with _GENAI_CLIENT_LOCK:

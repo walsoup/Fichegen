@@ -79,6 +79,10 @@ def _is_truthy(value: str) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _get_api_key(key_name: str = "GEMINI_API_KEY") -> str:
+    return (API_KEYS.get(key_name) or "").strip()
+
+
 def get_vertex_ai_config() -> tuple[bool, str, str]:
     """Return Vertex AI routing configuration for google-genai."""
     settings = QtCore.QSettings("FicheGen", "Pedago")
@@ -99,13 +103,16 @@ def get_vertex_ai_config() -> tuple[bool, str, str]:
         os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").strip()
         or settings.value("google_genai_use_vertexai", "").strip()
     )
+    # Auto-enable Vertex when a project is configured so cloud-authenticated
+    # environments (for example, ADC/service-account auth) can work without
+    # explicit extra toggles.
     use_vertex = _is_truthy(use_vertex_raw) if use_vertex_raw else bool(project)
     return use_vertex, project, location
 
 
 def has_gemini_access(api_key_name: str = "GEMINI_API_KEY") -> bool:
     """True when Gemini can be reached via API key or Vertex AI."""
-    if (API_KEYS.get(api_key_name) or "").strip():
+    if _get_api_key(api_key_name):
         return True
     use_vertex, project, _location = get_vertex_ai_config()
     return use_vertex and bool(project)
