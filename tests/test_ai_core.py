@@ -127,3 +127,17 @@ def test_thinking_level_not_supported_fallback():
         
         assert response.text == "success without thinking"
         assert call_count[0] == 2
+
+
+def test_get_genai_client_uses_vertex_when_configured():
+    with patch('core.ai.API_KEYS', {}), \
+         patch('core.ai.get_vertex_ai_config', return_value=(True, "demo-project", "us-central1")), \
+         patch('core.ai.genai.Client') as mock_client_ctor:
+        from core.ai import get_genai_client
+        get_genai_client("GEMINI_API_KEY")
+
+    mock_client_ctor.assert_called_once_with(
+        vertexai=True,
+        project="demo-project",
+        location="us-central1",
+    )

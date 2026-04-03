@@ -9,26 +9,39 @@ from PyQt6 import QtCore
 from config import (
     API_KEYS, _GENAI_CLIENT, _GENAI_CLIENT_KEY, _GENAI_CLIENT_LOCK,
     get_configured_gemini_model, get_configured_flash_model,
-    _clamp_temperature
+    _clamp_temperature, has_gemini_access, get_vertex_ai_config
 )
 
 def _api_key_route_label(api_key_name: str) -> str:
+    use_vertex, project, location = get_vertex_ai_config()
+    if use_vertex and project:
+        return f"Vertex AI ({project}/{location})"
     if api_key_name == "GEMINI_API_KEY":
         return "Gemini key"
     return api_key_name
 
 
 def get_genai_client(api_key_name: str = "GEMINI_API_KEY") -> Optional[genai.Client]:
-    """Return a cached google-genai client configured with the selected API key."""
+    """Return a cached google-genai client configured with API key or Vertex AI."""
     api_key = API_KEYS.get(api_key_name)
-    if not api_key:
+    use_vertex, project, location = get_vertex_ai_config()
+    if not api_key and not (use_vertex and project):
         return None
+
+    client_cache_key = f"vertex:{project}:{location}" if (use_vertex and project) else f"key:{api_key}"
 
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY
     with _GENAI_CLIENT_LOCK:
-        if _GENAI_CLIENT is None or _GENAI_CLIENT_KEY != api_key:
-            _GENAI_CLIENT = genai.Client(api_key=api_key)
-            _GENAI_CLIENT_KEY = api_key
+        if _GENAI_CLIENT is None or _GENAI_CLIENT_KEY != client_cache_key:
+            if use_vertex and project:
+                _GENAI_CLIENT = genai.Client(
+                    vertexai=True,
+                    project=project,
+                    location=location,
+                )
+            else:
+                _GENAI_CLIENT = genai.Client(api_key=api_key)
+            _GENAI_CLIENT_KEY = client_cache_key
     return _GENAI_CLIENT
 
 def get_ai_client(api_provider):
@@ -39,7 +52,7 @@ def get_ai_client(api_provider):
         return None, f"Failed to initialise Gemini client: {exc}"
 
     if client is None:
-        return None, "Gemini API key not found in environment or keys.txt"
+        return None, "Gemini access is not configured (add API key or Vertex AI project settings)"
 
     return client, None
 
@@ -64,7 +77,7 @@ def _call_model(
 
     client = get_genai_client(api_key_name)
     if client is None:
-        raise RuntimeError(f"Missing Gemini API key: {api_key_name}")
+        raise RuntimeError("Missing Gemini access (API key or Vertex AI configuration)")
 
     config_kwargs: Dict[str, Any] = {"temperature": _clamp_temperature(temperature)}
     
@@ -270,8 +283,8 @@ def generate_with_fallback(
 
     api_key_name = "GEMINI_API_KEY"
     queue.put(("log", f"🔑 API route: {_api_key_route_label(api_key_name)}"))
-    if not API_KEYS.get(api_key_name):
-        queue.put(("log", f"❌ No Gemini API key configured for {purpose}"))
+    if not has_gemini_access(api_key_name):
+        queue.put(("log", f"❌ No Gemini access configured for {purpose}"))
         return None
     
     # Try primary model first
