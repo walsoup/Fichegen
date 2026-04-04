@@ -74,6 +74,49 @@ def legacy_key_sources_allowed() -> bool:
     settings = QtCore.QSettings("FicheGen", "Pedago")
     return settings.value("security_allow_legacy_keys", "true") == "true"
 
+
+def _is_truthy(value: str) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_api_key(key_name: str = "GEMINI_API_KEY") -> str:
+    return (API_KEYS.get(key_name) or "").strip()
+
+
+def get_vertex_ai_config() -> tuple[bool, str, str]:
+    """Return Vertex AI routing configuration for google-genai."""
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+
+    project = (
+        os.getenv("GOOGLE_CLOUD_PROJECT", "").strip()
+        or os.getenv("GCP_PROJECT", "").strip()
+        or settings.value("vertex_project", "").strip()
+    )
+    location = (
+        os.getenv("GOOGLE_CLOUD_LOCATION", "").strip()
+        or os.getenv("VERTEX_LOCATION", "").strip()
+        or settings.value("vertex_location", "").strip()
+        or "global"
+    )
+
+    use_vertex_raw = (
+        os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").strip()
+        or settings.value("google_genai_use_vertexai", "").strip()
+    )
+    # Auto-enable Vertex when a project is configured so cloud-authenticated
+    # environments (for example, ADC/service-account auth) can work without
+    # explicit extra toggles.
+    use_vertex = _is_truthy(use_vertex_raw) if use_vertex_raw else bool(project)
+    return use_vertex, project, location
+
+
+def has_gemini_access(api_key_name: str = "GEMINI_API_KEY") -> bool:
+    """True when Gemini can be reached via API key or Vertex AI."""
+    if _get_api_key(api_key_name):
+        return True
+    use_vertex, project, _location = get_vertex_ai_config()
+    return use_vertex and bool(project)
+
 def _store_api_key(value: str, key_name: str = "GEMINI_API_KEY"):
     """Persist key in memory and reset cached client if it changes."""
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY

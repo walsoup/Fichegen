@@ -11,7 +11,6 @@ from config import (
     DEFAULT_INPUT_DIR,
     DEFAULT_OUTPUT_DIR,
     CLASS_LEVELS,
-    API_KEYS,
     HAS_IMAGE_GENERATION,
     HAS_DOCX,
     ICON_PATH,
@@ -20,7 +19,8 @@ from config import (
     get_configured_pro_model,
     get_configured_flash_model,
     load_api_keys_from_settings,
-    save_rating_record
+    save_rating_record,
+    has_gemini_access
 )
 from core.workers import GenerationWorker, EvaluationWorker, QuizWorker, ExportWorker, UpdateWorker
 from core.updater import REPO_URL, REPO_BRANCH
@@ -735,11 +735,11 @@ QPushButton[active=\"true\"] {
             return
         
         # Check API key
-        if not API_KEYS.get("GEMINI_API_KEY"):
+        if not has_gemini_access("GEMINI_API_KEY"):
             reply = QtWidgets.QMessageBox.warning(
                 self,
-                "API Key Missing",
-                "Gemini API key is not configured.\n\nWould you like to open Preferences?",
+                "Gemini Access Missing",
+                "Gemini access is not configured (API key or Vertex AI).\n\nWould you like to open Preferences?",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.Yes
             )
@@ -2455,11 +2455,11 @@ Documents/
         self.current_topics_list = [topic]
         
         # Check API key availability
-        if not API_KEYS.get("GEMINI_API_KEY"):
+        if not has_gemini_access("GEMINI_API_KEY"):
             reply = QtWidgets.QMessageBox.warning(
                 self,
-                "API Key Missing",
-                "No Gemini API key configured for fiche generation.\nConfigure your Gemini key in Preferences.",
+                "Gemini Access Missing",
+                "No Gemini access configured for fiche generation.\nConfigure API key or Vertex AI in Preferences/environment.",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.Yes
             )
@@ -2572,11 +2572,11 @@ Documents/
             return
         
         # Check API key
-        if not API_KEYS.get("GEMINI_API_KEY"):
+        if not has_gemini_access("GEMINI_API_KEY"):
             reply = QtWidgets.QMessageBox.warning(
                 self,
-                "API Key Missing",
-                "Gemini API key is required for evaluations and quizzes.\n\nWould you like to open Preferences to configure it?",
+                "Gemini Access Missing",
+                "Gemini access is required for evaluations and quizzes (API key or Vertex AI).\n\nWould you like to open Preferences to configure it?",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.Yes
             )

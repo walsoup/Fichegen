@@ -43,3 +43,30 @@ def test_load_keys_uses_env_when_legacy_enabled():
 
     assert loaded is True
     assert config.API_KEYS.get("GEMINI_API_KEY") == "env-key-1234567890"
+
+
+def test_has_gemini_access_true_when_vertex_configured_without_api_key():
+    config.API_KEYS.clear()
+    settings = _DummySettings({})
+
+    with patch("config.QtCore.QSettings", return_value=settings), \
+         patch("config.os.getenv") as mock_getenv:
+        def _getenv(key, default=""):
+            if key == "GOOGLE_CLOUD_PROJECT":
+                return "demo-project"
+            if key == "GOOGLE_CLOUD_LOCATION":
+                return "europe-west1"
+            if key == "GOOGLE_GENAI_USE_VERTEXAI":
+                return "true"
+            return default
+        mock_getenv.side_effect = _getenv
+        assert config.has_gemini_access("GEMINI_API_KEY") is True
+
+
+def test_has_gemini_access_false_without_api_key_or_vertex():
+    config.API_KEYS.clear()
+    settings = _DummySettings({})
+
+    with patch("config.QtCore.QSettings", return_value=settings), \
+         patch("config.os.getenv", return_value=""):
+        assert config.has_gemini_access("GEMINI_API_KEY") is False

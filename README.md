@@ -15,7 +15,9 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
 ## Prerequisites
 
 *   Python 3.9+
-*   Google Gemini API Key (get one from [Google AI Studio](https://ai.google.dev/))
+*   Gemini access via either:
+    * Gemini API key (from [Google AI Studio](https://ai.google.dev/)), or
+    * Vertex AI (Google Cloud project credentials + `GOOGLE_CLOUD_PROJECT`, optional `GOOGLE_CLOUD_LOCATION`, and `GOOGLE_GENAI_USE_VERTEXAI=true`)
 *   macOS 12 users: install the pinned dependencies from `requirements.txt` so Qt stays on a compatible release line
 
 ## Installation
@@ -45,7 +47,7 @@ FicheGen is an intelligent pedagogical content generator designed for teachers. 
 
 2.  **Configuration**:
     *   Go to **Preferences** (Cmd+, or File > Preferences).
-    *   Enter your **Gemini API Key** in the "AI & Models" tab.
+    *   Configure Gemini access in the "AI & Models" tab (API key) or via Vertex AI environment variables.
     *   Optionally enable OpenRouter UI references from the same tab if you want provider-related guidance visible.
     *   Set the **Input Guides** folder (where your PDF guides are stored).
     *   Set the **Output Folder** (where generated files will be saved).
