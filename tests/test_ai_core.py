@@ -130,9 +130,9 @@ def test_thinking_level_not_supported_fallback():
         assert call_count[0] == 2
 
 
-def test_get_genai_client_uses_aistudio_route():
+def test_get_genai_client_uses_aistudio_when_api_key_present():
     with patch.dict('core.ai.API_KEYS', {'GEMINI_API_KEY': 'fake-key'}, clear=True), \
-         patch('core.ai.get_active_api_route', return_value='aistudio'), \
+         patch('core.ai.get_vertex_ai_config', return_value=(False, '', 'us-central1')), \
          patch('core.ai.genai.Client') as mock_client_ctor:
         ai._GENAI_CLIENT = None
         ai._GENAI_CLIENT_KEY = None
@@ -146,37 +146,27 @@ def test_get_genai_client_uses_aistudio_route():
         mock_client_ctor.assert_called_once_with(api_key='fake-key')
 
 
-def test_get_genai_client_uses_vertex_route_with_context():
-    with patch.dict('core.ai.API_KEYS', {'GEMINI_API_KEY': 'fake-key'}, clear=True), \
-         patch('core.ai.get_active_api_route', return_value='vertex'), \
-         patch('core.ai.get_vertex_project', return_value='my-project'), \
-         patch('core.ai.get_vertex_location', return_value='us-central1'), \
+def test_get_genai_client_uses_vertex_when_configured():
+    with patch.dict('core.ai.API_KEYS', {}, clear=True), \
+         patch('core.ai.get_vertex_ai_config', return_value=(True, "demo-project", "us-central1")), \
+         patch('core.ai.genai.Client') as mock_client_ctor:
+        ai._GENAI_CLIENT = None
+        ai._GENAI_CLIENT_KEY = None
+        ai.get_genai_client("GEMINI_API_KEY")
+
+    mock_client_ctor.assert_called_once_with(
+        vertexai=True,
+        project="demo-project",
+        location="us-central1",
+    )
+
+
+def test_get_genai_client_returns_none_without_access():
+    with patch.dict('core.ai.API_KEYS', {}, clear=True), \
+         patch('core.ai.get_vertex_ai_config', return_value=(False, '', 'us-central1')), \
          patch('core.ai.genai.Client') as mock_client_ctor:
         ai._GENAI_CLIENT = None
         ai._GENAI_CLIENT_KEY = None
 
-        sentinel = MagicMock()
-        mock_client_ctor.return_value = sentinel
-
-        client = ai.get_genai_client('GEMINI_API_KEY')
-
-        assert client is sentinel
-        mock_client_ctor.assert_called_once_with(
-            vertexai=True,
-            project='my-project',
-            location='us-central1',
-            api_key='fake-key',
-        )
-
-
-def test_get_genai_client_returns_none_for_vertex_without_project():
-    with patch.dict('core.ai.API_KEYS', {'GEMINI_API_KEY': 'fake-key'}, clear=True), \
-         patch('core.ai.get_active_api_route', return_value='vertex'), \
-         patch('core.ai.get_vertex_project', return_value=''), \
-         patch('core.ai.genai.Client') as mock_client_ctor:
-        ai._GENAI_CLIENT = None
-        ai._GENAI_CLIENT_KEY = None
-
-        client = ai.get_genai_client('GEMINI_API_KEY')
-        assert client is None
+        assert ai.get_genai_client('GEMINI_API_KEY') is None
         mock_client_ctor.assert_not_called()

@@ -53,7 +53,6 @@ def _get_image_client(api_key: Optional[str] = None) -> Optional[genai.Client]:
                     vertexai=True,
                     project=vertex_project,
                     location=vertex_location,
-                    api_key=key,
                 )
             else:
                 _IMAGE_CLIENT = genai.Client(api_key=key)

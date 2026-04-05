@@ -30,13 +30,11 @@ def parse_repo_slug(repo_url: str) -> Tuple[str, str]:
 
 
 def compare_commits(local_sha: Optional[str], remote_sha: Optional[str]) -> bool:
-    """Return True when remote looks newer/different than local."""
+    """Fallback SHA comparison used when ahead/behind data is unavailable."""
     local = (local_sha or "").strip()
     remote = (remote_sha or "").strip()
-    if not remote:
+    if not remote or not local:
         return False
-    if not local:
-        return True
     return local != remote
 
 
@@ -92,6 +90,30 @@ def _git_local_commit(repo_dir: str, log: Callable[[str], None]) -> Optional[str
         return None
 
 
+def _git_ahead_behind(repo_dir: str, branch: str, log: Callable[[str], None]) -> Optional[Tuple[int, int]]:
+    """Return (local_ahead, remote_ahead) against origin/branch, or None when unavailable."""
+    git_dir = os.path.join(repo_dir, ".git")
+    if not os.path.isdir(git_dir):
+        return None
+
+    try:
+        _run_cmd(["git", "fetch", "origin", branch, "--quiet"], cwd=repo_dir, log=log, timeout=60)
+        counts = _run_cmd(
+            ["git", "rev-list", "--left-right", "--count", f"HEAD...origin/{branch}"],
+            cwd=repo_dir,
+            log=log,
+            timeout=30,
+        )
+        parts = (counts or "").strip().split()
+        if len(parts) != 2:
+            return None
+        local_ahead = int(parts[0])
+        remote_ahead = int(parts[1])
+        return local_ahead, remote_ahead
+    except Exception:
+        return None
+
+
 def check_update_status(repo_dir: str, repo_url: str = REPO_URL, branch: str = REPO_BRANCH, log: Optional[Callable[[str], None]] = None):
     """
     Check if a newer commit exists on GitHub.
@@ -102,12 +124,25 @@ def check_update_status(repo_dir: str, repo_url: str = REPO_URL, branch: str = R
 
     local_sha = _git_local_commit(repo_dir, logger)
     remote_sha = _github_latest_commit(repo_url, branch)
-    available = compare_commits(local_sha, remote_sha)
+    ahead_behind = _git_ahead_behind(repo_dir, branch, logger)
 
-    if available:
-        message = "A newer version is available on GitHub."
+    if ahead_behind is not None:
+        local_ahead, remote_ahead = ahead_behind
+        available = remote_ahead > 0
+        if available:
+            message = f"A newer version is available on GitHub ({remote_ahead} commit(s) ahead)."
+        elif local_ahead > 0:
+            message = "You are ahead of GitHub; no update is required."
+        else:
+            message = "You already have the latest version."
     else:
-        message = "You already have the latest version."
+        available = compare_commits(local_sha, remote_sha)
+        if available:
+            message = "A newer version is available on GitHub."
+        elif local_sha and remote_sha:
+            message = "You already have the latest version."
+        else:
+            message = "Could not determine local git history; update status is unavailable."
 
     return available, local_sha, remote_sha, message
 

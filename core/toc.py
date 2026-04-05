@@ -7,10 +7,11 @@ from typing import List, Dict, Any, Optional
 import pdfplumber
 
 from config import (
-    TOC_CACHE_DIR, TABLE_OF_CONTENTS_PAGES, API_KEYS,
+    TOC_CACHE_DIR, TABLE_OF_CONTENTS_PAGES,
     get_configured_toc_prompt, get_configured_gemini_toc_model,
     get_configured_gemini_offset_model, get_configured_gemma_syntax_model,
-    get_configured_page_finding_prompt, get_configured_flash_model, GEMINI_TOC_MODEL
+    get_configured_page_finding_prompt, get_configured_flash_model, GEMINI_TOC_MODEL,
+    has_gemini_access
 )
 from core.ai import _generate_with_model
 
@@ -185,8 +186,8 @@ def parse_full_toc_with_ai(toc_text: str, queue):
     prompt = prompt_template.format(toc_text=toc_text)
 
     try:
-        if not API_KEYS.get("GEMINI_API_KEY"):
-            queue.put(("log", "❌ Gemini API key needed for ToC parsing. Please add it to keys.txt or .env"))
+        if not has_gemini_access("GEMINI_API_KEY"):
+            queue.put(("log", "❌ Gemini access needed for ToC parsing. Configure API key or Vertex AI."))
             return None
 
         model_name = get_configured_flash_model()
@@ -339,7 +340,7 @@ def detect_page_offset(pdf_path: str, queue) -> int:
                         return int(best_delta)
 
             # Heuristic failed: optional AI fallback if available
-            if not API_KEYS.get("GEMINI_API_KEY"):
+            if not has_gemini_access("GEMINI_API_KEY"):
                 queue.put(("log", "⚠️ No clear page labels found; assuming no offset."))
                 return 0
 
@@ -480,8 +481,8 @@ def find_pages_from_cached_toc(cached_toc: list, lesson_topic: str, queue, page_
 def correct_lesson_topic_syntax(lesson_topic: str, queue, toc_json: str | None = None) -> str:
     """Uses Gemma to correct spelling, grammar, capitalization, and punctuation in lesson topics."""
     try:
-        if not API_KEYS.get("GEMINI_API_KEY"):
-            queue.put(("log", "⚠️ Gemini API key needed for syntax correction. Using original topic."))
+        if not has_gemini_access("GEMINI_API_KEY"):
+            queue.put(("log", "⚠️ Gemini access needed for syntax correction. Using original topic."))
             return lesson_topic
 
         toc_context = ""
@@ -557,8 +558,8 @@ def get_pages_from_toc(toc_text, lesson_topic, queue):
 
     try:
         # Always use Flash for page-finding to maximize speed and avoid Pro routing.
-        if not API_KEYS.get("GEMINI_API_KEY"):
-            queue.put(("log", "❌ Gemini API key needed for page-finding. Please add it to keys.txt or .env"))
+        if not has_gemini_access("GEMINI_API_KEY"):
+            queue.put(("log", "❌ Gemini access needed for page-finding. Configure API key or Vertex AI."))
             return None
 
         model_name = get_configured_flash_model()

@@ -62,3 +62,21 @@ def test_get_vertex_context_defaults():
     with patch("config.QtCore.QSettings", return_value=settings):
         assert config.get_vertex_project() == ""
         assert config.get_vertex_location() == "us-central1"
+
+
+def test_has_gemini_access_true_when_vertex_configured_without_api_key():
+    config.API_KEYS.clear()
+    settings = _DummySettings({"api_route": "vertex", "vertex_project": "demo-project", "vertex_location": "europe-west1"})
+
+    with patch("config.QtCore.QSettings", return_value=settings), \
+         patch("config.os.getenv", return_value=""):
+        assert config.has_gemini_access("GEMINI_API_KEY") is True
+
+
+def test_has_gemini_access_false_without_api_key_or_vertex():
+    config.API_KEYS.clear()
+    settings = _DummySettings({})
+
+    with patch("config.QtCore.QSettings", return_value=settings), \
+         patch("config.os.getenv", return_value=""):
+        assert config.has_gemini_access("GEMINI_API_KEY") is False
