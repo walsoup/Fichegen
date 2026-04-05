@@ -7,7 +7,8 @@ from google.genai import types
 
 from config import (
     API_KEYS, IMAGE_MODEL, STYLE_TEMPLATES, COMPLEXITY_LEVELS,
-    get_configured_image_model
+    get_configured_image_model, get_active_api_route,
+    get_vertex_project, get_vertex_location
 )
 
 # Image generation using Google Imagen 4
@@ -31,14 +32,32 @@ def _clear_last_image_generation_error() -> None:
 def _get_image_client(api_key: Optional[str] = None) -> Optional[genai.Client]:
     """Return a cached google-genai client for image-related calls."""
     global _IMAGE_CLIENT, _IMAGE_CLIENT_KEY
-    
+
     key = (api_key or API_KEYS.get("GEMINI_API_KEY") or "").strip()
     if not key:
         return None
+
+    route = get_active_api_route()
+    vertex_project = get_vertex_project() if route == "vertex" else ""
+    vertex_location = get_vertex_location() if route == "vertex" else ""
+
+    if route == "vertex" and not vertex_project:
+        return None
+
+    cache_identity = (route, key, vertex_project, vertex_location)
+
     with _IMAGE_CLIENT_LOCK:
-        if _IMAGE_CLIENT is None or _IMAGE_CLIENT_KEY != key:
-            _IMAGE_CLIENT = genai.Client(api_key=key)
-            _IMAGE_CLIENT_KEY = key
+        if _IMAGE_CLIENT is None or _IMAGE_CLIENT_KEY != cache_identity:
+            if route == "vertex":
+                _IMAGE_CLIENT = genai.Client(
+                    vertexai=True,
+                    project=vertex_project,
+                    location=vertex_location,
+                    api_key=key,
+                )
+            else:
+                _IMAGE_CLIENT = genai.Client(api_key=key)
+            _IMAGE_CLIENT_KEY = cache_identity
     return _IMAGE_CLIENT
 
 def _extract_function_args(response) -> Optional[Dict[str, Any]]:
@@ -218,7 +237,10 @@ def generate_illustration(
     _clear_last_image_generation_error()
     client = _get_image_client(api_key)
     if client is None:
-        msg = "Missing Gemini API key for image generation"
+        if get_active_api_route() == "vertex" and not get_vertex_project():
+            msg = "Vertex API route selected, but Vertex Project is missing in Preferences"
+        else:
+            msg = "Missing Gemini API key for image generation"
         _set_last_image_generation_error(msg)
         log(f"⚠️ {msg}")
         return None

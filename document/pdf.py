@@ -9,7 +9,9 @@ from typing import Dict, List, Any, Optional
 from xml.sax.saxutils import escape
 
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, XPreformatted, KeepInFrame, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, XPreformatted, KeepInFrame, HRFlowable, Flowable
+from reportlab.graphics.shapes import Drawing, Line, Rect, String
+from reportlab.graphics import renderPDF
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.units import cm, inch
@@ -1172,6 +1174,639 @@ def save_fiche_to_pdf(
         return None
 
 
+def _score_text_pdf(value) -> str:
+    """Format a numeric score for display, stripping trailing zeros."""
+    try:
+        number = float(value)
+        if number.is_integer():
+            return str(int(number))
+        return f"{number:.1f}".rstrip("0").rstrip(".")
+    except Exception:
+        return str(value if value is not None else "")
+
+
+def _build_evaluation_story_from_json(
+    data: Dict[str, Any],
+    styles,
+    template,
+    ui_metadata: Optional[Dict[str, Any]] = None,
+    markdown_content: Optional[str] = None,
+) -> List[Any]:
+    """Build a ReportLab story directly from structured evaluation JSON.
+
+    Renders each answer-type (tableau, matching, fill_blanks, short_answer,
+    qcm, vf) with a distinct visual treatment so the PDF looks like a
+    handmade, office-quality exam paper.
+    """
+    if not isinstance(data, dict):
+        return []
+
+    title_color = safe_color(template.get('title_color', '#0E3A5D'))
+    accent = safe_color(template.get('accent_color', '#0E3A5D'))
+    soft_bg = safe_color(template.get('background_accent', '#EEF4FA'))
+    line_color = colors.HexColor('#B0BEC5')     # subtle grey for rules
+    dot_color = colors.HexColor('#90A4AE')      # dotted answer lines
+    badge_bg = colors.HexColor('#E8EEF2')       # light badge background
+    white = colors.white
+
+    # Derived colors
+    try:
+        _r = accent.red; _g = accent.green; _b = accent.blue
+        accent_light = colors.Color(_r + (1 - _r) * 0.82,
+                                    _g + (1 - _g) * 0.82,
+                                    _b + (1 - _b) * 0.82)
+    except Exception:
+        accent_light = soft_bg
+
+    # ── Paragraph styles ────────────────────────────────────────────────
+    tpl_styles = get_template_styles(template)
+    title_parent = styles.get(tpl_styles['title'], styles['Title'])
+    heading_parent = styles.get(tpl_styles['heading'], styles['Heading1'])
+    body_parent = styles.get(tpl_styles['body'], styles['BodyText'])
+    font_family = template.get('font_family', 'Helvetica')
+
+    s_title = ParagraphStyle('EvTitle', parent=title_parent,
+                             fontSize=20, leading=24, alignment=TA_CENTER,
+                             textColor=white, spaceBefore=0, spaceAfter=0,
+                             fontName=font_family + '-Bold' if font_family != 'Times-Roman' else 'Times-Bold')
+    s_subtitle = ParagraphStyle('EvSubtitle', parent=body_parent,
+                                fontSize=9, leading=11, alignment=TA_CENTER,
+                                textColor=white)
+    s_meta_label = ParagraphStyle('EvMetaL', parent=body_parent,
+                                  fontSize=9, leading=12, alignment=TA_LEFT,
+                                  textColor=colors.HexColor('#5C6B77'))
+    s_meta_value = ParagraphStyle('EvMetaV', parent=body_parent,
+                                  fontSize=10, leading=13, alignment=TA_LEFT,
+                                  textColor=colors.HexColor('#1A2A39'),
+                                  fontName=font_family + '-Bold' if font_family != 'Times-Roman' else 'Times-Bold')
+    s_heading = ParagraphStyle('EvHead', parent=heading_parent,
+                               fontSize=13, leading=16, textColor=white,
+                               spaceBefore=0, spaceAfter=0,
+                               fontName=font_family + '-Bold' if font_family != 'Times-Roman' else 'Times-Bold')
+    s_body = ParagraphStyle('EvBody', parent=body_parent,
+                            fontSize=10.5, leading=14.5, alignment=TA_LEFT)
+    s_instruction = ParagraphStyle('EvInstr', parent=body_parent,
+                                   fontSize=10, leading=13, alignment=TA_LEFT,
+                                   textColor=colors.HexColor('#4A5568'),
+                                   fontName=font_family + '-Oblique' if font_family != 'Times-Roman' else 'Times-Italic')
+    s_q_label = ParagraphStyle('EvQLbl', parent=body_parent,
+                               fontSize=10, leading=13,
+                               fontName=font_family + '-Bold' if font_family != 'Times-Roman' else 'Times-Bold')
+    s_small = ParagraphStyle('EvSmall', parent=body_parent,
+                             fontSize=8.5, leading=11, alignment=TA_LEFT,
+                             textColor=colors.HexColor('#78909C'))
+    s_consigne = ParagraphStyle('EvCons', parent=body_parent,
+                                fontSize=9.5, leading=13, alignment=TA_LEFT,
+                                textColor=colors.HexColor('#37474F'))
+    s_cell = ParagraphStyle('EvCell', parent=body_parent,
+                            fontSize=10, leading=13, alignment=TA_CENTER)
+    s_cell_left = ParagraphStyle('EvCellL', parent=body_parent,
+                                 fontSize=10, leading=13, alignment=TA_LEFT)
+
+    # ── Helpers ─────────────────────────────────────────────────────────
+    PAGE_W = 16 * cm  # usable content width
+
+    def _section_bar(label: str, bg=accent) -> Table:
+        """Accent-coloured section header bar."""
+        t = Table([[Paragraph(label, s_heading)]], colWidths=[PAGE_W])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), bg),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        return t
+
+    def _dotted_lines(n: int = 3, width: float = PAGE_W) -> Drawing:
+        """Return a Drawing with n horizontal dotted writing-lines."""
+        h = n * 0.75 * cm
+        d = Drawing(width, h)
+        for i in range(n):
+            y = h - (i + 1) * 0.7 * cm + 0.05 * cm
+            ln = Line(0, y, width, y,
+                      strokeColor=dot_color, strokeWidth=0.4,
+                      strokeDashArray=[2, 3])
+            d.add(ln)
+        return d
+
+    def _checkbox_row(options: List[str], wide: bool = False) -> Table:
+        """One row of ☐-prefixed options, spread across available width."""
+        cells = []
+        for opt in options:
+            cells.append(Paragraph(f"☐  {escape(opt.strip())}", s_body))
+        ncols = len(cells) or 1
+        col_w = PAGE_W / ncols
+        if wide:
+            col_w = max(col_w, 5 * cm)
+        t = Table([cells], colWidths=[col_w] * ncols)
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        return t
+
+    def _vf_row(statement: str) -> Table:
+        """Vrai/Faux two-checkbox row for a single statement."""
+        t = Table([
+            [Paragraph(escape(statement), s_body),
+             Paragraph("☐ Vrai", s_cell),
+             Paragraph("☐ Faux", s_cell)],
+        ], colWidths=[PAGE_W - 5 * cm, 2.5 * cm, 2.5 * cm])
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOX', (0, 0), (-1, -1), 0.4, line_color),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, line_color),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        return t
+
+    def _matching_table(prompt: str) -> Table:
+        """Two-column matching/connecting table from prompt text.
+        
+        Attempts to parse items like 'A → ?' separated by | or newlines.
+        Falls back to generic layout.
+        """
+        raw_items = re.split(r'[|\n]', prompt)
+        raw_items = [s.strip() for s in raw_items if s.strip()]
+        left_items = []
+        for item in raw_items:
+            clean = re.sub(r'\s*[→\-:]\s*[?_…\.]+\s*$', '', item).strip()
+            if clean:
+                left_items.append(clean)
+        if not left_items:
+            left_items = [prompt.strip()]
+
+        rows = [[Paragraph("<b>Éléments</b>", s_cell_left),
+                 Paragraph("<b>Réponses</b>", s_cell_left)]]
+        for li in left_items:
+            rows.append([
+                Paragraph(f"• {escape(li)}", s_cell_left),
+                Paragraph("________________________", s_cell_left),
+            ])
+        t = Table(rows, colWidths=[PAGE_W * 0.5, PAGE_W * 0.5])
+        ts = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), accent),
+            ('TEXTCOLOR', (0, 0), (-1, 0), white),
+            ('BOX', (0, 0), (-1, -1), 0.6, accent),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, line_color),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ])
+        for r in range(1, len(rows)):
+            if r % 2 == 0:
+                ts.add('BACKGROUND', (0, r), (-1, r), accent_light)
+        t.setStyle(ts)
+        return t
+
+    def _tableau_grid(prompt: str) -> Table:
+        """Parse a prompt containing a markdown-ish table (| delimiters)
+        or a list of column headers, and create an empty grid for students."""
+        lines = [l.strip() for l in prompt.splitlines() if l.strip()]
+        header_cells: List[str] = []
+        data_rows: List[List[str]] = []
+
+        for line in lines:
+            if '|' in line:
+                parts = [c.strip() for c in line.split('|') if c.strip()]
+                if all(set(p) <= set('-: ') for p in parts):
+                    continue  # separator row
+                if not header_cells:
+                    header_cells = parts
+                else:
+                    data_rows.append(parts)
+
+        ncols = len(header_cells) if header_cells else 3
+        if not header_cells:
+            header_cells = [f"Col {i+1}" for i in range(ncols)]
+
+        # Ensure at least 3 empty rows for students to fill
+        while len(data_rows) < 3:
+            data_rows.append([""] * ncols)
+
+        rows = [[Paragraph(f"<b>{escape(h)}</b>", s_cell) for h in header_cells]]
+        for dr in data_rows:
+            while len(dr) < ncols:
+                dr.append("")
+            rows.append([Paragraph(escape(c), s_cell) for c in dr[:ncols]])
+
+        col_w = PAGE_W / ncols
+        t = Table(rows, colWidths=[col_w] * ncols,
+                  rowHeights=[None] + [0.8 * cm] * len(data_rows))
+        ts = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), accent),
+            ('TEXTCOLOR', (0, 0), (-1, 0), white),
+            ('BOX', (0, 0), (-1, -1), 0.6, accent),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, line_color),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ])
+        for r in range(1, len(rows)):
+            if r % 2 == 0:
+                ts.add('BACKGROUND', (0, r), (-1, r), accent_light)
+        t.setStyle(ts)
+        return t
+
+    def _fill_blanks_para(prompt: str) -> Paragraph:
+        """Replace ___ sequences with dotted underline spans."""
+        escaped = escape(prompt)
+        # Replace sequences of 3+ underscores with a styled blank
+        filled = re.sub(
+            r'_{3,}',
+            '<u><font color="#90A4AE">  ..................  </font></u>',
+            escaped,
+        )
+        return Paragraph(filled, s_body)
+
+    def _answer_lines(n: int = 3) -> List:
+        """Dotted-line answer area for open/short-answer questions."""
+        elements = []
+        elements.append(Spacer(1, 2))
+        elements.append(_dotted_lines(n, PAGE_W))
+        elements.append(Spacer(1, 2))
+        return elements
+
+    # ── Extract header data ─────────────────────────────────────────────
+    header = data.get("header") or {}
+    school_name = data.get("school_name") or "Groupe Scolaire"
+    class_level = header.get("class_level") or (ui_metadata or {}).get("classe", "")
+    academic_year = header.get("academic_year") or "2025/2026"
+    subject = header.get("subject") or (ui_metadata or {}).get("matière", "Matière")
+    duration = header.get("duration_minutes") or 45
+    max_score = _score_text_pdf(header.get("max_score", 20))
+    session_label = header.get("session_label") or ""
+    if not session_label:
+        eval_num = header.get("evaluation_number", 1)
+        semester = header.get("semester", "1")
+        num_word = "1er" if eval_num == 1 else f"{eval_num}e"
+        sem_word = "1er" if str(semester) == "1" else f"{semester}e"
+        session_label = f"{num_word} contrôle du {sem_word} semestre"
+
+    exercises = data.get("exercises") or []
+    answer_key = data.get("answer_key") or []
+
+    story: List[Any] = []
+
+    # ════════════════════════════════════════════════════════════════════
+    # 1.  HERO TITLE BANNER
+    # ════════════════════════════════════════════════════════════════════
+    hero_content = [
+        [Paragraph("ÉPREUVE D'ÉVALUATION", s_title)],
+        [Paragraph(escape(f"{subject}  ·  {class_level}  ·  Année {academic_year}"), s_subtitle)],
+    ]
+    hero = Table(hero_content, colWidths=[PAGE_W])
+    hero.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), title_color),
+        ('BOX', (0, 0), (-1, -1), 1.5, title_color),
+        ('TOPPADDING', (0, 0), (0, 0), 14),
+        ('BOTTOMPADDING', (0, 1), (0, 1), 10),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(hero)
+    story.append(Spacer(1, 6))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 2.  METADATA — compact 4-cell grid
+    # ════════════════════════════════════════════════════════════════════
+    def _meta_cell(label, value):
+        return [Paragraph(f"<font size='8' color='#78909C'>{escape(label)}</font>", s_meta_label),
+                Paragraph(f"<b>{escape(str(value))}</b>", s_meta_value)]
+
+    meta_grid = Table(
+        [[Table([_meta_cell("Établissement", school_name)], colWidths=[PAGE_W * 0.35]),
+          Table([_meta_cell("Session", session_label)], colWidths=[PAGE_W * 0.35]),
+          Table([_meta_cell("Durée", f"{duration} min")], colWidths=[PAGE_W * 0.15]),
+          Table([_meta_cell("Barème", f"/ {max_score}")], colWidths=[PAGE_W * 0.15])]],
+        colWidths=[PAGE_W * 0.35, PAGE_W * 0.35, PAGE_W * 0.15, PAGE_W * 0.15],
+    )
+    meta_grid.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), soft_bg),
+        ('BOX', (0, 0), (-1, -1), 0.6, accent),
+        ('INNERGRID', (0, 0), (-1, -1), 0.3, line_color),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(meta_grid)
+    story.append(Spacer(1, 6))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 3.  STUDENT IDENTITY BOX
+    # ════════════════════════════════════════════════════════════════════
+    id_label = ParagraphStyle('EvIdLbl', parent=s_meta_label, fontSize=9,
+                              textColor=colors.HexColor('#546E7A'))
+    id_field = ParagraphStyle('EvIdFld', parent=s_body, fontSize=10,
+                              textColor=colors.HexColor('#90A4AE'))
+
+    identity = Table([
+        [Paragraph("Nom et prénom", id_label),
+         Paragraph("....................................................................", id_field),
+         Paragraph("Classe", id_label),
+         Paragraph("..................", id_field)],
+        [Paragraph("Date", id_label),
+         Paragraph("..........................................", id_field),
+         Paragraph("Note", id_label),
+         Paragraph(f".......... / {max_score}", id_field)],
+    ], colWidths=[3 * cm, 6.4 * cm, 2.2 * cm, 4.4 * cm])
+    identity.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.8, accent),
+        ('INNERGRID', (0, 0), (-1, -1), 0.3, line_color),
+        ('FONTNAME', (0, 0), (-1, -1), font_family),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (0, -1), badge_bg),
+        ('BACKGROUND', (2, 0), (2, -1), badge_bg),
+    ]))
+    story.append(identity)
+    story.append(Spacer(1, 8))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 4.  CONSIGNES GÉNÉRALES — indented bullet list
+    # ════════════════════════════════════════════════════════════════════
+    consignes = [
+        f"Lis chaque consigne avec attention et respecte la durée ({duration} min).",
+        "Soigne la présentation et justifie quand la consigne l'exige.",
+        "Réponds directement dans les espaces prévus.",
+    ]
+    story.append(_section_bar("Consignes Générales"))
+    story.append(Spacer(1, 3))
+    for ci, rule in enumerate(consignes, 1):
+        story.append(Paragraph(
+            f"<font color='#0E3A5D'><b>{ci}.</b></font>  {escape(rule)}", s_consigne))
+    story.append(Spacer(1, 6))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 5.  BARÈME — horizontal inline bar (compact)
+    # ════════════════════════════════════════════════════════════════════
+    if exercises:
+        bareme_cells = []
+        for ei, ex in enumerate(exercises, 1):
+            if not isinstance(ex, dict):
+                continue
+            label = ex.get("title") or f"Ex. {ei}"
+            pts = _score_text_pdf(ex.get("points", ""))
+            bareme_cells.append(
+                Paragraph(f"<b>{escape(label)}</b><br/><font size='9'>{escape(pts)} pts</font>",
+                          s_cell))
+        bareme_cells.append(
+            Paragraph(f"<b>Total</b><br/><font size='9'><b>{max_score} pts</b></font>", s_cell))
+
+        ncols = len(bareme_cells)
+        col_w = PAGE_W / ncols if ncols else PAGE_W
+        bareme_table = Table([bareme_cells], colWidths=[col_w] * ncols)
+        bs = TableStyle([
+            ('BACKGROUND', (0, 0), (-2, -1), accent_light),
+            ('BACKGROUND', (-1, 0), (-1, -1), accent),
+            ('TEXTCOLOR', (-1, 0), (-1, -1), white),
+            ('BOX', (0, 0), (-1, -1), 0.6, accent),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, accent),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ])
+        bareme_table.setStyle(bs)
+        story.append(bareme_table)
+        story.append(Spacer(1, 8))
+
+    story.append(HRFlowable(width='100%', thickness=1.2, color=accent,
+                             spaceBefore=2, spaceAfter=6))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 6.  EXERCISES — with answer-type-aware rendering
+    # ════════════════════════════════════════════════════════════════════
+    # Pre-extract embedded images from markdown (if available)
+    images_by_exercise: Dict[int, List[Dict[str, str]]] = {}
+    if markdown_content:
+        md_lines = (markdown_content or "").splitlines()
+        current_ex_num = 0
+        for md_line in md_lines:
+            stripped = md_line.strip()
+            ex_match = re.match(r'^##\s+Exercice\s+(\d+)\s*-', stripped, re.IGNORECASE)
+            if ex_match:
+                current_ex_num = int(ex_match.group(1))
+            img_match = re.match(r'!\[(.*?)\]\((.*?)\)', stripped)
+            if img_match and current_ex_num > 0:
+                images_by_exercise.setdefault(current_ex_num, []).append({
+                    "alt": img_match.group(1).strip(),
+                    "src": img_match.group(2).strip(),
+                })
+
+    for ex_idx, ex in enumerate(exercises, start=1):
+        if not isinstance(ex, dict):
+            continue
+
+        ex_title = (ex.get("title") or f"Exercice {ex_idx}").strip()
+        ex_instructions = (ex.get("instructions") or "").strip()
+        ex_points = _score_text_pdf(ex.get("points", ""))
+
+        # ─── Exercise header: number badge + title + points pill ────
+        badge_num = Paragraph(
+            f"<font color='white'><b>{ex_idx}</b></font>", s_cell)
+        badge_t = Table([[badge_num]], colWidths=[0.9 * cm], rowHeights=[0.9 * cm])
+        badge_t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), title_color),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+
+        pts_pill = Paragraph(
+            f"<font size='9' color='white'><b>{escape(ex_points)} pts</b></font>",
+            s_cell)
+        pts_t = Table([[pts_pill]], colWidths=[2.2 * cm], rowHeights=[0.7 * cm])
+        pts_t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), accent),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+
+        title_para = Paragraph(
+            f"<b>Exercice {ex_idx}</b> — {escape(ex_title)}", s_q_label)
+
+        header_row = Table(
+            [[badge_t, title_para, pts_t]],
+            colWidths=[1.2 * cm, PAGE_W - 1.2 * cm - 2.5 * cm, 2.5 * cm],
+        )
+        header_row.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (1, 0), (1, 0), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        story.append(header_row)
+
+        # Thin accent underline
+        story.append(HRFlowable(width='100%', thickness=1.5, color=accent,
+                                 spaceBefore=1, spaceAfter=3))
+
+        # Instructions
+        if ex_instructions:
+            story.append(Paragraph(f"<i>{escape(ex_instructions)}</i>", s_instruction))
+            story.append(Spacer(1, 4))
+
+        # Embedded images
+        ex_images = images_by_exercise.get(ex_idx, [])
+        for img_info in ex_images:
+            src = img_info.get("src") or ""
+            alt = img_info.get("alt") or "Illustration"
+            try:
+                if src.startswith('data:image/') and ';base64,' in src:
+                    _, encoded = src.split(';base64,', 1)
+                    img_elem = Image(BytesIO(base64.b64decode(encoded)))
+                elif os.path.exists(src):
+                    img_elem = Image(src)
+                else:
+                    continue
+                max_w = 14 * cm
+                if img_elem.drawWidth > max_w:
+                    factor = max_w / float(img_elem.drawWidth)
+                    img_elem.drawWidth = max_w
+                    img_elem.drawHeight = img_elem.drawHeight * factor
+                story.append(img_elem)
+                story.append(Spacer(1, 2))
+                story.append(Paragraph(escape(alt), s_small))
+                story.append(Spacer(1, 4))
+            except Exception:
+                continue
+
+        # ─── Questions with answer-type-aware rendering ─────────────
+        questions = ex.get("questions") or []
+        for q_idx, question in enumerate(questions, start=1):
+            if not isinstance(question, dict):
+                continue
+            prompt = (question.get("prompt") or "").strip()
+            if not prompt:
+                continue
+            answer_type = (question.get("answer_type") or "short_answer").strip().lower()
+            # Normalise answer_type aliases
+            at = answer_type.replace(" ", "_").replace("-", "_")
+
+            # Question number label
+            story.append(Spacer(1, 3))
+            story.append(Paragraph(
+                f"<font color='{accent.hexval()}'><b>Q{ex_idx}.{q_idx}</b></font>",
+                s_q_label))
+
+            # ── answer-type-specific rendering ──
+            if at in ("qcm", "mcq", "choix_multiple", "multiple_choice"):
+                # MCQ: prompt followed by checkbox options
+                # Try to parse options from prompt (look for lines starting with A. B. etc.)
+                option_lines = re.split(r'\n|(?=[A-F]\.\s)', prompt)
+                main_prompt = option_lines[0].strip()
+                options = [o.strip() for o in option_lines[1:] if o.strip()]
+                story.append(Paragraph(escape(main_prompt), s_body))
+                story.append(Spacer(1, 2))
+                if options:
+                    story.append(_checkbox_row(options))
+                else:
+                    # No parseable options — fall back to open lines
+                    story.extend(_answer_lines(2))
+
+            elif at in ("vf", "vrai_faux", "true_false"):
+                # Vrai/Faux: parse each statement, add checkbox pair
+                statements = [s.strip() for s in re.split(r'[;\n|]', prompt) if s.strip()]
+                for stmt in statements:
+                    story.append(_vf_row(stmt))
+                    story.append(Spacer(1, 2))
+
+            elif at in ("matching", "relier", "associer", "connect"):
+                story.append(Paragraph(escape(prompt), s_body))
+                story.append(Spacer(1, 2))
+                story.append(_matching_table(prompt))
+
+            elif at in ("tableau", "table", "grid", "grille"):
+                story.append(Paragraph(escape(prompt), s_body))
+                story.append(Spacer(1, 2))
+                story.append(_tableau_grid(prompt))
+
+            elif at in ("fill_blanks", "fill_blank", "texte_a_trous",
+                         "completer", "compléter", "trous"):
+                story.append(_fill_blanks_para(prompt))
+                story.append(Spacer(1, 2))
+
+            else:
+                # short_answer / open / default → prompt + dotted writing lines
+                story.append(Paragraph(escape(prompt), s_body))
+                story.append(Spacer(1, 2))
+                story.extend(_answer_lines(3))
+
+            story.append(Spacer(1, 4))
+
+        # Exercise separator
+        story.append(Spacer(1, 3))
+        story.append(HRFlowable(width='60%', thickness=0.5, color=line_color,
+                                 spaceBefore=2, spaceAfter=6))
+
+    # ════════════════════════════════════════════════════════════════════
+    # 7.  ANSWER KEY (teacher correction)
+    # ════════════════════════════════════════════════════════════════════
+    if answer_key:
+        story.append(Spacer(1, 6))
+        corr_header = _section_bar("Corrigé Enseignant", bg=colors.HexColor('#3B4956'))
+        story.append(corr_header)
+        story.append(Spacer(1, 4))
+
+        corr_rows = []
+        for item in answer_key:
+            if isinstance(item, dict):
+                ref = (item.get("reference") or "Question").strip()
+                value = (item.get("answer") or "").strip()
+                corr_rows.append([
+                    Paragraph(f"<b>{escape(ref)}</b>", s_cell_left),
+                    Paragraph(escape(value), s_cell_left),
+                ])
+            else:
+                # Simple string — split on first colon if present
+                txt = str(item)
+                if ':' in txt:
+                    ref, _, val = txt.partition(':')
+                    corr_rows.append([
+                        Paragraph(f"<b>{escape(ref.strip())}</b>", s_cell_left),
+                        Paragraph(escape(val.strip()), s_cell_left),
+                    ])
+                else:
+                    corr_rows.append([
+                        Paragraph("•", s_cell),
+                        Paragraph(escape(txt), s_cell_left),
+                    ])
+
+        if corr_rows:
+            corr_table = Table(corr_rows, colWidths=[4 * cm, PAGE_W - 4 * cm])
+            cts = TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#3B4956')),
+                ('INNERGRID', (0, 0), (-1, -1), 0.3, line_color),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ])
+            for r in range(len(corr_rows)):
+                if r % 2 == 0:
+                    cts.add('BACKGROUND', (0, r), (-1, r), colors.HexColor('#F5F7F9'))
+            corr_table.setStyle(cts)
+            story.append(corr_table)
+
+    return story
+
+
 def _clean_md_inline(text: str) -> str:
     return (text or "").replace("**", "").replace("*", "").strip()
 
@@ -1498,8 +2133,15 @@ def save_evaluation_to_pdf(
     template_name: str | None = "Normal",
     subject: str | None = None,
     show_meta_banner: Optional[bool] = None,
+    parsed_data: Optional[Dict[str, Any]] = None,
 ):
-    """Save evaluation content as PDF using ReportLab"""
+    """Save evaluation content as PDF using ReportLab.
+
+    When *parsed_data* (the structured evaluation JSON from Gemini) is
+    provided the PDF is rendered directly from the JSON — bypassing the
+    lossy markdown round-trip.  When only *content* (markdown string) is
+    available we fall back to the generic ``parse_markdown_to_story`` parser.
+    """
     try:
         os.makedirs(output_dir, exist_ok=True)
         
@@ -1527,7 +2169,7 @@ def save_evaluation_to_pdf(
             bottomMargin=margins[3]
         )
         
-        # Create styles and story
+        # Create styles
         styles = create_pdf_styles(template)
         
         # Create metadata for evaluation
@@ -1537,7 +2179,18 @@ def save_evaluation_to_pdf(
             'sujets': ', '.join(topics_list)
         }
         
-        story = _build_reimagined_evaluation_story(content, styles, template, ui_metadata)
+        # Primary path: render directly from structured JSON
+        if isinstance(parsed_data, dict) and parsed_data.get("exercises"):
+            queue.put(("log", "📐 Using structured JSON for PDF rendering"))
+            story = _build_evaluation_story_from_json(
+                parsed_data, styles, template, ui_metadata,
+                markdown_content=content,
+            )
+        else:
+            # Fallback: use generic markdown parser (handles tables, bullets, etc.)
+            queue.put(("log", "📝 Using markdown fallback for PDF rendering"))
+            story = parse_markdown_to_story(content, styles, template, ui_metadata)
+
         doc.build(story)
         
         queue.put(("log", f"💾 Evaluation PDF saved: {full_path}"))

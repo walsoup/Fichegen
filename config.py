@@ -69,6 +69,25 @@ _GENAI_CLIENT_KEY = None
 _GENAI_CLIENT_LOCK = threading.Lock()
 
 
+def get_active_api_route() -> str:
+    """Return the active API route: 'aistudio' (default) or 'vertex'."""
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+    route = str(settings.value("api_route", "aistudio") or "aistudio").strip().lower()
+    return "vertex" if route == "vertex" else "aistudio"
+
+
+def get_vertex_project() -> str:
+    """Return configured Vertex project id or empty string."""
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+    return str(settings.value("vertex_project", "") or "").strip()
+
+
+def get_vertex_location() -> str:
+    """Return configured Vertex location with a safe default."""
+    settings = QtCore.QSettings("FicheGen", "Pedago")
+    return str(settings.value("vertex_location", "us-central1") or "us-central1").strip() or "us-central1"
+
+
 def legacy_key_sources_allowed() -> bool:
     """Whether insecure legacy key sources (env/plaintext files) are allowed."""
     settings = QtCore.QSettings("FicheGen", "Pedago")

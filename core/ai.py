@@ -9,7 +9,7 @@ from PyQt6 import QtCore
 from config import (
     API_KEYS, _GENAI_CLIENT, _GENAI_CLIENT_KEY, _GENAI_CLIENT_LOCK,
     get_configured_gemini_model, get_configured_flash_model,
-    _clamp_temperature
+    _clamp_temperature, get_active_api_route, get_vertex_project, get_vertex_location
 )
 
 def _api_key_route_label(api_key_name: str) -> str:
@@ -24,22 +24,44 @@ def get_genai_client(api_key_name: str = "GEMINI_API_KEY") -> Optional[genai.Cli
     if not api_key:
         return None
 
+    route = get_active_api_route()
+    vertex_project = get_vertex_project() if route == "vertex" else ""
+    vertex_location = get_vertex_location() if route == "vertex" else ""
+
+    if route == "vertex" and not vertex_project:
+        return None
+
+    cache_identity = (route, api_key_name, api_key, vertex_project, vertex_location)
+
     global _GENAI_CLIENT, _GENAI_CLIENT_KEY
     with _GENAI_CLIENT_LOCK:
-        if _GENAI_CLIENT is None or _GENAI_CLIENT_KEY != api_key:
-            _GENAI_CLIENT = genai.Client(api_key=api_key)
-            _GENAI_CLIENT_KEY = api_key
+        if _GENAI_CLIENT is None or _GENAI_CLIENT_KEY != cache_identity:
+            if route == "vertex":
+                _GENAI_CLIENT = genai.Client(
+                    vertexai=True,
+                    project=vertex_project,
+                    location=vertex_location,
+                    api_key=api_key,
+                )
+            else:
+                _GENAI_CLIENT = genai.Client(api_key=api_key)
+            _GENAI_CLIENT_KEY = cache_identity
     return _GENAI_CLIENT
 
 def get_ai_client(api_provider):
     """Get Gemini client - OpenRouter has been removed."""
+    route = get_active_api_route()
+    if route == "vertex" and not get_vertex_project():
+        return None, "Vertex API route is selected but Vertex Project is missing. Configure it in Preferences."
+
     try:
         client = get_genai_client("GEMINI_API_KEY")
     except Exception as exc:
-        return None, f"Failed to initialise Gemini client: {exc}"
+        route_label = "Vertex API" if route == "vertex" else "AI Studio"
+        return None, f"Failed to initialise Gemini client ({route_label}): {exc}"
 
     if client is None:
-        return None, "Gemini API key not found in environment or keys.txt"
+        return None, "Gemini API key is missing. Configure it in Preferences."
 
     return client, None
 
@@ -64,6 +86,11 @@ def _call_model(
 
     client = get_genai_client(api_key_name)
     if client is None:
+        if get_active_api_route() == "vertex" and not get_vertex_project():
+            raise RuntimeError(
+                "Vertex API route is selected but Vertex Project is missing. "
+                "Set it in Preferences and try again."
+            )
         raise RuntimeError(f"Missing Gemini API key: {api_key_name}")
 
     config_kwargs: Dict[str, Any] = {"temperature": _clamp_temperature(temperature)}
@@ -103,8 +130,6 @@ def _call_model(
             thinking_level=thinking_level
         )
 
-    config = types.GenerateContentConfig(**config_kwargs)
-    
     def _is_invalid_api_key_error(message: str) -> bool:
         return any(
             token in message for token in (
@@ -698,8 +723,10 @@ def _render_evaluation_markdown(data: Dict[str, Any]) -> str:
     lines.append("")
     lines.append(f"> **{school_name}**")
     lines.append(f"> **Session**: {session_label}")
-    lines.append(f"> **Niveau**: {class_level}  |  **Matière**: {subject}")
-    lines.append(f"> **Durée**: {duration} min  |  **Total**: {max_score} points")
+    lines.append(f"> **Niveau**: {class_level}")
+    lines.append(f"> **Matière**: {subject}")
+    lines.append(f"> **Durée**: {duration} min")
+    lines.append(f"> **Total**: {max_score} points")
     lines.append("")
 
     lines.append("## Cadre élève")

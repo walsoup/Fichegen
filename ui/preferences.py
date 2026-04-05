@@ -118,13 +118,26 @@ class PreferencesDialog(QtWidgets.QDialog):
         
         # Help text for API keys
         help_text = QtWidgets.QLabel(
-            'Get your free Gemini API key:<br>'
-            '• <a href="https://ai.google.dev/">Google AI Studio</a> - Free Gemini access'
+            'Use one Google key and choose the API route:<br>'
+            '• <a href="https://ai.google.dev/">Google AI Studio</a> - Gemini Developer API<br>'
+            '• <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts">Vertex AI</a> - Google Cloud billing/credits'
         )
         help_text.setOpenExternalLinks(True)
         help_text.setWordWrap(True)
         help_text.setStyleSheet("color: #666; font-size: 11px; margin-bottom: 8px;")
         layout.addRow("", help_text)
+
+        # API route selector (single key, selectable backend route)
+        self.route_aistudio_radio = QtWidgets.QRadioButton("AI Studio (Gemini Developer API)")
+        self.route_vertex_radio = QtWidgets.QRadioButton("Vertex API (Google Cloud)")
+        self.route_aistudio_radio.setChecked(True)
+
+        route_widget = QtWidgets.QWidget()
+        route_layout = QtWidgets.QVBoxLayout(route_widget)
+        route_layout.setContentsMargins(0, 0, 0, 0)
+        route_layout.addWidget(self.route_aistudio_radio)
+        route_layout.addWidget(self.route_vertex_radio)
+        layout.addRow("API Route:", route_widget)
         
         # Gemini API Key
         self.gemini_key_edit = QtWidgets.QLineEdit()
@@ -143,6 +156,20 @@ class PreferencesDialog(QtWidgets.QDialog):
         gemini_layout.addWidget(self.gemini_key_edit, 1)
         gemini_layout.addWidget(show_gemini_btn)
         layout.addRow("Gemini Key:", gemini_widget)
+
+        # Vertex setup (used only when Vertex route is selected)
+        self.vertex_project_edit = QtWidgets.QLineEdit()
+        self.vertex_project_edit.setPlaceholderText("your-gcp-project-id")
+        self.vertex_project_edit.setToolTip("Required when using Vertex API route")
+        layout.addRow("Vertex Project:", self.vertex_project_edit)
+
+        self.vertex_location_edit = QtWidgets.QLineEdit()
+        self.vertex_location_edit.setPlaceholderText("us-central1")
+        self.vertex_location_edit.setToolTip("Vertex location (for example us-central1)")
+        layout.addRow("Vertex Location:", self.vertex_location_edit)
+
+        self.route_aistudio_radio.toggled.connect(self._sync_api_route_ui)
+        self.route_vertex_radio.toggled.connect(self._sync_api_route_ui)
 
         # Optional provider visibility toggle for OpenRouter references in UI/help
         self.enable_openrouter_chk = QtWidgets.QCheckBox("Enable OpenRouter references in UI")
@@ -177,6 +204,12 @@ class PreferencesDialog(QtWidgets.QDialog):
         layout.addRow("Temperature:", temp_widget)
         
         return widget
+
+    def _sync_api_route_ui(self):
+        """Enable Vertex context fields only when Vertex route is selected."""
+        use_vertex = self.route_vertex_radio.isChecked()
+        self.vertex_project_edit.setEnabled(use_vertex)
+        self.vertex_location_edit.setEnabled(use_vertex)
         
     def _create_folders_tab(self):
         widget = QtWidgets.QWidget()
@@ -418,6 +451,12 @@ class PreferencesDialog(QtWidgets.QDialog):
         # Load API keys
         gemini_key = get_secret("gemini_api_key") or settings.value("gemini_api_key", "")
         self.gemini_key_edit.setText(gemini_key)
+        api_route = settings.value("api_route", "aistudio")
+        self.route_vertex_radio.setChecked(api_route == "vertex")
+        self.route_aistudio_radio.setChecked(api_route != "vertex")
+        self.vertex_project_edit.setText(settings.value("vertex_project", ""))
+        self.vertex_location_edit.setText(settings.value("vertex_location", "us-central1"))
+        self._sync_api_route_ui()
         self.enable_openrouter_chk.setChecked(settings.value("enable_openrouter_ui", "false") == "true")
         self.allow_legacy_keys_chk.setChecked(settings.value("security_allow_legacy_keys", "true") == "true")
         
@@ -503,6 +542,20 @@ class PreferencesDialog(QtWidgets.QDialog):
         # Single-key mode: remove legacy fiche-only key from all stores.
         delete_secret("gemini_fiche_api_key")
         settings.remove("gemini_fiche_api_key")
+
+        use_vertex = self.route_vertex_radio.isChecked()
+        settings.setValue("api_route", "vertex" if use_vertex else "aistudio")
+        settings.setValue("vertex_project", self.vertex_project_edit.text().strip())
+        settings.setValue("vertex_location", self.vertex_location_edit.text().strip() or "us-central1")
+
+        if use_vertex and not self.vertex_project_edit.text().strip():
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Vertex Configuration",
+                "Vertex API route is selected, but Vertex Project is empty. "
+                "Generation will fail until you set a project in Preferences."
+            )
+
         settings.setValue("enable_openrouter_ui", "true" if self.enable_openrouter_chk.isChecked() else "false")
         settings.setValue("security_allow_legacy_keys", "true" if self.allow_legacy_keys_chk.isChecked() else "false")
         

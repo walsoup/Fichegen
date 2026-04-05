@@ -451,6 +451,7 @@ class ExportWorker(QtCore.QThread):
         lesson_topic: str,
         topics_list: Optional[List[str]],
         show_meta_banner: bool,
+        parsed_data: Optional[Dict[str, Any]] = None,
     ):
         super().__init__()
         self.export_format = (export_format or "").lower()
@@ -463,6 +464,7 @@ class ExportWorker(QtCore.QThread):
         self.lesson_topic = lesson_topic or "Lecon"
         self.topics_list = topics_list or ["Unknown"]
         self.show_meta_banner = bool(show_meta_banner)
+        self.parsed_data = parsed_data
 
     def run(self):
         class _Queue:
@@ -493,6 +495,7 @@ class ExportWorker(QtCore.QThread):
                         self.template_name,
                         self.subject,
                         self.show_meta_banner,
+                        parsed_data=self.parsed_data,
                     )
                 else:
                     path = save_fiche_to_pdf(
@@ -1100,6 +1103,7 @@ class EvaluationWorker(QtCore.QThread):
         self.textbook_dir = textbook_dir
         self.use_student_textbook = use_student_textbook
         self.source_mode = (source_mode or "guide_only").strip()
+        self.parsed_evaluation_data = None  # Structured JSON from Gemini; stored for PDF rendering
 
     def cancel(self):
         self.cancel_event.set()
@@ -1107,101 +1111,6 @@ class EvaluationWorker(QtCore.QThread):
     def confirm_evaluation_preview(self):
         """Called when user confirms the evaluation prompt preview."""
         self.confirmed = True
-
-        def _build_evaluation_prompt(self, extracted_content: str = "") -> str:
-                """Build a robust prompt that enforces varied exercise formats and school-style output."""
-                topics_text = ", ".join(self.topics_list)
-
-                school_name = self.eval_metadata.get("school_name", "Groupe Scolaire")
-                academic_year = self.eval_metadata.get("academic_year", "2025/2026")
-                eval_number = self.eval_metadata.get("eval_number", 1)
-                semester = self.eval_metadata.get("semester", "1")
-                max_score = self.eval_metadata.get("max_score", 10)
-
-                num_word = "1er" if eval_number == 1 else f"{eval_number}e"
-                sem_word = "1er" if semester == "1" else f"{semester}e"
-                session_label = f"{num_word} contrôle du {sem_word} semestre"
-
-                is_early_grade = self.class_level.lower() in ["cp", "ce1"]
-                early_grade_note = """
-Pour CP/CE1: privilégie relier, cocher, tableau simple, texte à trous avec banque de mots, réponses courtes.
-Évite les longues productions écrites.
-""" if is_early_grade else ""
-
-                if (extracted_content or "").strip():
-                        content_section = f"""
-SOURCE PÉDAGOGIQUE À EXPLOITER PRIORITAIREMENT:
----
-{extracted_content[:3500]}{"..." if len(extracted_content) > 3500 else ""}
----
-"""
-                else:
-                        content_section = "Aucune source extraite. Génère selon le programme du niveau et les sujets fournis."
-
-                extra_block = (self.extra_instructions or "").strip()
-                extra_block = f"\nINSTRUCTIONS ENSEIGNANT:\n{extra_block}\n" if extra_block else ""
-
-                prompt = f"""Tu es un expert en évaluation scolaire francophone (primaire/collège). Crée une évaluation exploitable immédiatement.
-
-CONTEXTE:
-- Niveau: {self.class_level.upper()}
-- Matière: {self.subject or "Sciences"}
-- Sujets: {topics_text}
-- Durée: {self.duration} minutes
-- Total: {max_score} points
-
-{content_section}
-{early_grade_note}
-{extra_block}
-
-EXIGENCES PÉDAGOGIQUES (OBLIGATOIRES):
-1. Génère 3 à 5 exercices variés et non redondants.
-2. Inclus obligatoirement:
-     - au moins un exercice en tableau,
-     - au moins un exercice de type relier / matching,
-     - au moins un exercice de type texte à trous ou production courte.
-3. Progression du plus simple au plus complexe.
-4. Consignes claires et adaptées au niveau.
-5. Le total des points doit être EXACTEMENT {max_score}.
-
-FORMAT D'ENTÊTE (à conserver dans le JSON):
-- École: {school_name}
-- Année scolaire: {academic_year}
-- Session: {session_label}
-- Durée: {self.duration} min
-- Note: ___ / {max_score}
-
-RÉPONDS UNIQUEMENT AVEC UN JSON VALIDE (aucun texte autour), avec cette structure:
-{{
-    "school_name": "{school_name}",
-    "header": {{
-        "class_level": "{self.class_level.upper()}",
-        "academic_year": "{academic_year}",
-        "evaluation_number": {eval_number},
-        "semester": "{semester}",
-        "session_label": "{session_label}",
-        "duration_minutes": {self.duration},
-        "max_score": {max_score},
-        "subject": "{self.subject or 'Sciences'}"
-    }},
-    "exercises": [
-        {{
-            "title": "Exercice 1",
-            "instructions": "...",
-            "points": 0,
-            "questions": [
-                {{
-                    "prompt": "...",
-                    "answer_type": "tableau|matching|fill_blanks|short_answer|qcm|vf",
-                    "expected_answer": "..."
-                }}
-            ]
-        }}
-    ],
-    "answer_key": ["..."]
-}}
-"""
-                return prompt
 
     def run(self):
         """Generate evaluation based on lesson topics."""
@@ -1393,6 +1302,7 @@ RÉPONDS UNIQUEMENT AVEC UN JSON VALIDE (aucun texte autour), avec cette structu
                 parsed = _parse_structured_response(response)
                 if isinstance(parsed, dict):
                     parsed_evaluation = parsed
+                    self.parsed_evaluation_data = parsed
                     evaluation_content = _render_evaluation_markdown(parsed)
                 else:
                     evaluation_content = (response.text or "").strip()

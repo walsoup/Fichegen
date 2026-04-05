@@ -53,6 +53,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_worker = None
         self.current_content = ""
         self.current_content_type = "unknown"
+        self.current_parsed_data = None
         self.current_topics_list = []
         self.preview_markdown_limit = 300_000
         self._preview_large_mode = False
@@ -2975,10 +2976,12 @@ Documents/
         sender = self.sender()
         if isinstance(sender, EvaluationWorker):
             self.current_content_type = "evaluation"
+            self.current_parsed_data = getattr(sender, 'parsed_evaluation_data', None)
         elif isinstance(sender, QuizWorker):
             self.current_content_type = "quiz"
         elif isinstance(sender, GenerationWorker):
             self.current_content_type = "fiche"
+            self.current_parsed_data = None
         elif self.current_content_type not in {"fiche", "evaluation", "quiz"}:
             self.current_content_type = "fiche"
         # Populate both the preview (rendered) and editor (raw)
@@ -3211,6 +3214,7 @@ Documents/
             lesson_topic=ctx["lesson_topic"],
             topics_list=ctx["topics_list"],
             show_meta_banner=ctx["show_meta"],
+            parsed_data=getattr(self, 'current_parsed_data', None) if is_eval else None,
         )
         self.export_worker.log.connect(self.append_log)
         self.export_worker.success.connect(self._on_export_success)
@@ -3254,6 +3258,7 @@ Documents/
         self._set_rating_enabled(False)
         self.current_content = ""
         self.current_content_type = "unknown"
+        self.current_parsed_data = None
         self.current_topics_list = []
         self._update_content_badge()
 
