@@ -24,3 +24,4 @@ tests/*
 oldcore
 oldcore/*
 .build/
+BuildData/
