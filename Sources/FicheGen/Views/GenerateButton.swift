@@ -4,6 +4,7 @@ import SwiftUI
 struct GenerateButton: View {
     @EnvironmentObject var state: AppState
     let label: String
+    var isEnabled: Bool = true
     let action: () -> Void
 
     var body: some View {
@@ -20,6 +21,7 @@ struct GenerateButton: View {
             .controlSize(.large)
             .buttonStyle(.borderedProminent)
             .tint(state.isGenerating ? .red : .accentColor)
+            .disabled(!state.isGenerating && !isEnabled)
             .keyboardShortcut(state.isGenerating ? .cancelAction : .defaultAction)
         }
     }

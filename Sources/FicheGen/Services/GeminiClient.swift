@@ -6,6 +6,7 @@ enum AIProvider: String, CaseIterable {
     case gemini   = "gemini"
     case vertex   = "vertex"
     case proxy    = "proxy"
+    case vercel   = "vercel"
     case `default` = "default"
 }
 
@@ -17,10 +18,13 @@ struct AIConfig: Sendable {
     // Credentials
     let geminiApiKey: String
     let proxyApiKey: String
+    let vercelApiKey: String
     // Global routing
     let apiRoute: String          // "aistudio" | "vertex"
     let proxyEnabled: Bool
     let proxyBaseURL: String
+    let vercelEnabled: Bool
+    let vercelBaseURL: String
     // Vertex
     let vertexProject: String
     let vertexLocation: String
@@ -44,9 +48,12 @@ struct AIConfig: Sendable {
     init(from state: AppState) {
         geminiApiKey        = state.geminiApiKey
         proxyApiKey         = state.proxyApiKey
+        vercelApiKey        = state.vercelApiKey
         apiRoute            = state.apiRoute
         proxyEnabled        = state.proxyEnabled
         proxyBaseURL        = state.proxyBaseURL
+        vercelEnabled       = state.vercelEnabled
+        vercelBaseURL       = state.vercelBaseURL
         vertexProject       = state.vertexProject
         vertexLocation      = state.vertexLocation
         geminiModel         = state.geminiModel
@@ -187,6 +194,17 @@ actor GeminiClient {
                 responseJSON: responseJSON,
                 maxRetries: config.expMaxRetries
             )
+        case .vercel:
+            return try await callVercel(
+                baseURL: config.vercelBaseURL,
+                apiKey: config.vercelApiKey,
+                model: model ?? "gemini-3.5-flash",
+                prompt: prompt,
+                temperature: temperature,
+                responseJSON: responseJSON,
+                timeout: config.expRequestTimeout,
+                maxRetries: config.expMaxRetries
+            )
         default: // .gemini / .default
             return try await callGeminiAIStudio(
                 apiKey: config.geminiApiKey,
@@ -221,6 +239,8 @@ actor GeminiClient {
         if perProvider == .default {
             if config.proxyEnabled {
                 perProvider = .proxy
+            } else if config.vercelEnabled {
+                perProvider = .vercel
             } else if config.apiRoute == "vertex" {
                 perProvider = .vertex
             } else {
@@ -383,6 +403,51 @@ actor GeminiClient {
         }
     }
 
+    // MARK: - Vercel AI SDK route
+
+    func callVercel(
+        baseURL: String,
+        apiKey: String,
+        model: String,
+        prompt: String,
+        temperature: Double,
+        responseJSON: Bool,
+        timeout: Int = 90,
+        maxRetries: Int = 1
+    ) async throws -> String {
+        let endpoint = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions"
+        guard let url = URL(string: endpoint) else { throw AIClientError.invalidURL(endpoint) }
+
+        var content = prompt
+        if responseJSON && !content.lowercased().contains("json") {
+            content += "\n\nReturn your response as valid JSON."
+        }
+
+        let body = OpenAIChatRequest(
+            model: model,
+            messages: [.init(role: "user", content: content)],
+            temperature: temperature,
+            response_format: responseJSON ? .init(type: "json_object") : nil
+        )
+
+        return try await withRetry(maxRetries) {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if !apiKey.isEmpty { req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+            req.timeoutInterval = Double(timeout)
+            req.httpBody = try JSONEncoder().encode(body)
+            let (data, resp) = try await self.session.data(for: req)
+            try self.checkHTTP(resp, data: data)
+            let decoded = try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
+            if let err = decoded.error { throw AIClientError.apiError("Vercel: \(err.message)") }
+            guard let text = decoded.choices?.first?.message.content else {
+                throw AIClientError.emptyResponse("Vercel returned no content (model: \(model)).")
+            }
+            return text
+        }
+    }
+
     // MARK: - Helpers
 
     private func makeGeminiBody(
@@ -456,29 +521,31 @@ actor GeminiClient {
 
     private func gcloudToken() async throws -> String {
         try await withCheckedThrowingContinuation { cont in
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            proc.arguments = ["gcloud", "auth", "print-access-token"]
-            let pipe = Pipe()
-            proc.standardOutput = pipe
-            proc.standardError  = Pipe()
-            do {
-                try proc.run()
-                proc.waitUntilExit()
-                let raw = pipe.fileHandleForReading.readDataToEndOfFile()
-                let tok = String(data: raw, encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                if tok.isEmpty {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                proc.arguments = ["gcloud", "auth", "print-access-token"]
+                let pipe = Pipe()
+                proc.standardOutput = pipe
+                proc.standardError  = Pipe()
+                do {
+                    try proc.run()
+                    proc.waitUntilExit()
+                    let raw = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let tok = String(data: raw, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    if tok.isEmpty {
+                        cont.resume(throwing: AIClientError.missingAPIKey(
+                            "Could not obtain Vertex AI token. Run 'gcloud auth login' in Terminal."
+                        ))
+                    } else {
+                        cont.resume(returning: tok)
+                    }
+                } catch {
                     cont.resume(throwing: AIClientError.missingAPIKey(
-                        "Could not obtain Vertex AI token. Run 'gcloud auth login' in Terminal."
+                        "gcloud not found. Install Google Cloud SDK for Vertex AI support."
                     ))
-                } else {
-                    cont.resume(returning: tok)
                 }
-            } catch {
-                cont.resume(throwing: AIClientError.missingAPIKey(
-                    "gcloud not found. Install Google Cloud SDK for Vertex AI support."
-                ))
             }
         }
     }

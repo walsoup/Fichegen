@@ -9,6 +9,26 @@ final class GenerationEngine {
 
     static let shared = GenerationEngine()
 
+    static func cleanJSONResponse(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("```") else { return trimmed }
+        
+        let pattern = "^```(?:json)?\\s*(.*?)\\s*```$"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
+           let range = Range(match.range(at: 1), in: trimmed) {
+            return String(trimmed[range])
+        }
+        return trimmed
+    }
+
+    static func safeInt(_ val: Any?) -> Int? {
+        if let i = val as? Int { return i }
+        if let s = val as? String { return Int(s.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)) }
+        if let d = val as? Double { return Int(d) }
+        return nil
+    }
+
     private let defaultFicheStructure = """
     **Titre du chapitre** : (à déduire du manuel)
     **Titre de la leçon** : (à déduire de la leçon)
@@ -91,7 +111,8 @@ final class GenerationEngine {
         onProgress(95)
 
         // Parse JSON → render Markdown
-        if let data = responseText.data(using: .utf8),
+        let cleanedText = GenerationEngine.cleanJSONResponse(responseText)
+        if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
             var markdown = renderFicheMarkdown(json)
@@ -203,7 +224,8 @@ final class GenerationEngine {
 
         onProgress(95)
 
-        if let data = responseText.data(using: .utf8),
+        let cleanedText = GenerationEngine.cleanJSONResponse(responseText)
+        if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
             let markdown = renderEvaluationMarkdown(json)
@@ -261,7 +283,8 @@ final class GenerationEngine {
 
         onProgress(95)
 
-        if let data = responseText.data(using: .utf8),
+        let cleanedText = GenerationEngine.cleanJSONResponse(responseText)
+        if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
             let markdown = renderQuizMarkdown(json)
@@ -584,7 +607,7 @@ final class GenerationEngine {
         let title = ((data["title"] as? String) ?? (metadata["lesson_title"] as? String) ?? "Fiche pédagogique").trimmingCharacters(in: .whitespaces)
         let classLevel = metadata["class_level"] as? String
         let subject = metadata["subject"] as? String
-        let duration = metadata["duration_minutes"] as? Int
+        let duration = GenerationEngine.safeInt(metadata["duration_minutes"])
         let chapterTitle = metadata["chapter_title"] as? String
         let materials = cleanList(metadata["materials"])
         let objectives = cleanList(data["objectives"])
@@ -622,7 +645,7 @@ final class GenerationEngine {
             for (i, phase) in phases.enumerated() {
                 let name = (phase["name"] as? String) ?? "Phase \(i + 1)"
                 let goal = (phase["goal"] as? String ?? "").trimmingCharacters(in: .whitespaces)
-                let dur = phase["duration_minutes"] as? Int
+                let dur = GenerationEngine.safeInt(phase["duration_minutes"])
                 let durText = dur.map { "\($0) min" } ?? "à adapter"
                 if goal.isEmpty {
                     lines.append("- **Bloc \(i + 1) (\(durText))**: \(name)")
@@ -635,7 +658,7 @@ final class GenerationEngine {
             lines.append("## Déroulement détaillé")
             for (i, phase) in phases.enumerated() {
                 let name = (phase["name"] as? String) ?? "Phase \(i + 1)"
-                let dur = phase["duration_minutes"] as? Int
+                let dur = GenerationEngine.safeInt(phase["duration_minutes"])
                 var header = "### Bloc \(i + 1) - \(name)"
                 if let d = dur { header += " (\(d) min)" }
                 lines.append(header)
@@ -717,7 +740,7 @@ final class GenerationEngine {
 
         var sessionLabel = cleanText(header["session_label"])
         if sessionLabel.isEmpty {
-            let evalNum = (header["evaluation_number"] as? Int) ?? 1
+            let evalNum = GenerationEngine.safeInt(header["evaluation_number"]) ?? 1
             let semester = cleanText(header["semester"], fallback: "1")
             let numWord = evalNum == 1 ? "1er" : "\(evalNum)e"
             let semWord = semester == "1" ? "1er" : "\(semester)e"
@@ -811,7 +834,7 @@ final class GenerationEngine {
     func renderQuizMarkdown(_ data: [String: Any]) -> String {
         let title = (data["title"] as? String) ?? "Quiz: \(data["topic"] as? String ?? "Sujet")"
         let classLevel = data["class_level"] as? String ?? ""
-        let duration = data["duration_minutes"] as? Int
+        let duration = GenerationEngine.safeInt(data["duration_minutes"])
         let subject = data["subject"] as? String ?? ""
         let topic = data["topic"] as? String ?? ""
 
@@ -855,8 +878,4 @@ final class GenerationEngine {
     }
 }
 
-extension GenerationEngine {
-    func editFiche(instruction: String, markdown: String) async throws -> String {
-        return markdown // User will implement this
-    }
-}
+// Extension with redundant editFiche placeholder removed

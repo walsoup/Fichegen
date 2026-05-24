@@ -103,7 +103,12 @@ struct PDFProcessor {
         
         guard let data = try? Data(contentsOf: cacheURL) else { return nil }
         let decoder = JSONDecoder()
-        return try? decoder.decode([ToCEntry].self, from: data)
+        do {
+            return try decoder.decode([ToCEntry].self, from: data)
+        } catch {
+            try? fileManager.removeItem(at: cacheURL)
+            return nil
+        }
     }
     
     static func saveTOCToCache(pdfURL: URL, guidesDir: String, toc: [ToCEntry]) {
@@ -113,16 +118,10 @@ struct PDFProcessor {
         
         guard let data = try? encoder.encode(toc) else { return }
         
-        // Atomic write
-        let tempURL = cacheURL.appendingPathExtension("tmp")
         do {
-            try data.write(to: tempURL, options: .atomic)
-            if FileManager.default.fileExists(atPath: cacheURL.path) {
-                try FileManager.default.removeItem(at: cacheURL)
-            }
-            try FileManager.default.moveItem(at: tempURL, to: cacheURL)
+            try data.write(to: cacheURL, options: .atomic)
         } catch {
-            try? FileManager.default.removeItem(at: tempURL)
+            print("Failed to cache TOC: \(error)")
         }
     }
     
@@ -214,8 +213,8 @@ struct PDFProcessor {
             }
         }
         
-        let result = filtered.count >= 8 ? filtered : entries
-        return result.count >= 8 ? result : nil
+        let result = filtered.isEmpty ? entries : filtered
+        return result.isEmpty ? nil : result
     }
     
     // MARK: - Offset detection

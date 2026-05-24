@@ -33,13 +33,15 @@ struct ResultPanel: View {
                 Spacer()
 
                 if !state.generatedMarkdown.isEmpty {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Button(action: { showChatInspector.toggle() }) {
-                            Image(systemName: "wand.and.stars")
+                            Label("Assistant", systemImage: "wand.and.stars")
                         }
-                        .help("Ouvrir l'assistant")
+                        .buttonStyle(.bordered)
+                        .tint(.blue)
+                        .help("Ouvrir l'assistant IA")
                         
-                        Button("Exporter PDF") {
+                        Button(action: {
                             let generator = PDFGenerator()
                             let panel = NSSavePanel()
                             panel.title = "Exporter en PDF"
@@ -47,8 +49,7 @@ struct ResultPanel: View {
                             panel.nameFieldStringValue = "fiche.pdf"
                             panel.canCreateDirectories = true
                             if panel.runModal() == .OK, let url = panel.url {
-                                // Default to Modern style for now, can be expanded to let the user pick
-                                generator.generatePDF(from: state.generatedMarkdown, styleName: "Modern", outputURL: url) { result in
+                                generator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
                                     DispatchQueue.main.async {
                                         switch result {
                                         case .success(let savedURL):
@@ -59,18 +60,31 @@ struct ResultPanel: View {
                                     }
                                 }
                             }
+                        }) {
+                            Label("PDF", systemImage: "doc.plaintext")
                         }
+                        .buttonStyle(.bordered)
+                        .help("Exporter au format PDF")
                         
-                        Button("Markdown") {
+                        Button(action: {
                             saveMarkdown(state.generatedMarkdown)
+                        }) {
+                            Label("Markdown", systemImage: "doc.text")
                         }
+                        .buttonStyle(.bordered)
+                        .help("Exporter au format Markdown")
                         
-                        Button("Copier") {
+                        Button(action: {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(state.generatedMarkdown, forType: .string)
+                        }) {
+                            Label("Copier", systemImage: "doc.on.doc")
                         }
+                        .buttonStyle(.bordered)
+                        .help("Copier le texte dans le presse-papiers")
                     }
                     .padding(.trailing, 12)
+                    .controlSize(.small)
                 }
 
                 if state.isGenerating {
@@ -131,16 +145,91 @@ struct ResultPanel: View {
 
 struct EmptyStateView: View {
     @EnvironmentObject var state: AppState
+    @State private var isAnimating = false
+
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
-            Text(state.isGenerating ? "Génération en cours…" : "Remplissez le formulaire et cliquez sur Générer")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 20) {
+            if state.isGenerating {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            lineWidth: 3
+                        )
+                        .frame(width: 64, height: 64)
+                        .scaleEffect(isAnimating ? 1.2 : 0.8)
+                        .opacity(isAnimating ? 0.3 : 0.8)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 28))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
+                        )
+                        .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                }
+                .frame(width: 80, height: 80)
+                .onAppear {
+                    withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                        isAnimating = true
+                    }
+                }
+                .onDisappear {
+                    isAnimating = false
+                }
+                
+                VStack(spacing: 8) {
+                    Text("Création en cours...")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    
+                    if let lastLog = state.logMessages.last {
+                        Text(lastLog)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                            .transition(.opacity)
+                    } else {
+                        Text("Initialisation de la génération...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary.opacity(0.03))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.blue, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .opacity(0.8)
+                        .offset(x: -4, y: -4)
+
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.purple)
+                        .offset(x: 18, y: 18)
+                }
+                .padding(.bottom, 8)
+                
+                Text("Prêt pour la création")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+                
+                Text("Remplissez le formulaire de gauche puis cliquez sur Générer pour créer vos fiches de cours.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 48)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 }
 
@@ -153,6 +242,14 @@ struct MarkdownWebView: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.setValue(false, forKey: "drawsBackground")
+        
+        let escaped = markdown
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+            .replacingOccurrences(of: "$", with: "\\$")
+        
+        let initialHTML = getScaffolding(content: markdown.isEmpty ? "" : escaped)
+        wv.loadHTMLString(initialHTML, baseURL: nil)
         return wv
     }
 
@@ -160,9 +257,15 @@ struct MarkdownWebView: NSViewRepresentable {
         let escaped = markdown
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
+            .replacingOccurrences(of: "$", with: "\\$")
         
+        let js = "if (typeof marked !== 'undefined') { document.getElementById('content').innerHTML = marked.parse(`\(escaped)`); }"
+        wv.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    private func getScaffolding(content: String) -> String {
         let markedJS: String
-        if let jsURL = Bundle.main.url(forResource: "marked.min", withExtension: "js"),
+        if let jsURL = Bundle.module.url(forResource: "marked.min", withExtension: "js"),
            let jsContent = try? String(contentsOf: jsURL, encoding: .utf8) {
             markedJS = jsContent
         } else {
@@ -173,7 +276,9 @@ struct MarkdownWebView: NSViewRepresentable {
             ? "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>"
             : "<script>\(markedJS)</script>"
 
-        let html = """
+        let parsedContent = content.isEmpty ? "" : "marked.parse(`\(content)`)"
+
+        return """
         <!DOCTYPE html>
         <html>
         <head>
@@ -207,12 +312,13 @@ struct MarkdownWebView: NSViewRepresentable {
         <body>
         <div id="content"></div>
         <script>
-          document.getElementById('content').innerHTML = marked.parse(`\(escaped)`);
+          if (typeof marked !== 'undefined' && `\(content)` !== '') {
+            document.getElementById('content').innerHTML = \(parsedContent);
+          }
         </script>
         </body>
         </html>
         """
-        wv.loadHTMLString(html, baseURL: nil)
     }
 }
 

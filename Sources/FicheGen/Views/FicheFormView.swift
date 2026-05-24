@@ -8,25 +8,31 @@ struct FicheFormView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // ── API Key Warning Banner ──────────────────────────────
                 if state.geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.shield.fill")
+                            .font(.title2)
                             .foregroundColor(.orange)
-                        Text("⚠️ Gemini API Key not configured. Please open Settings (Cmd + ,) to configure it.")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Clé API Google AI Studio manquante")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Veuillez configurer votre clé dans les Préférences (Cmd + ,) pour pouvoir générer des fiches.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                         Spacer()
                     }
-                    .padding(12)
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(8)
+                    .padding(16)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.orange, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
                     )
                 }
 
                 // ── Class & Subject ──────────────────────────────────────
-                GroupBox("Classe & Matière") {
+                GroupBox(label: Label("Classe & Matière", systemImage: "graduationcap")) {
                     Form {
                         Picker("Classe", selection: $state.ficheClassLevel) {
                             ForEach(state.classLevels, id: \.self) { Text($0) }
@@ -39,7 +45,7 @@ struct FicheFormView: View {
                 }
 
                 // ── Lesson ───────────────────────────────────────────────
-                GroupBox("Leçon") {
+                GroupBox(label: Label("Leçon & Programme", systemImage: "book")) {
                     VStack(alignment: .leading, spacing: 10) {
                         if !state.availableLessons.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
@@ -84,7 +90,7 @@ struct FicheFormView: View {
                 }
 
                 // ── Parameters ───────────────────────────────────────────
-                GroupBox("Paramètres") {
+                GroupBox(label: Label("Paramètres de génération", systemImage: "slider.horizontal.3")) {
                     Form {
                         Stepper("Durée: \(state.ficheDurationMinutes) min",
                                 value: $state.ficheDurationMinutes,
@@ -107,24 +113,86 @@ struct FicheFormView: View {
                 }
 
                 // ── Instructions ─────────────────────────────────────────
-                GroupBox("Instructions spéciales (optionnel)") {
+                GroupBox(label: Label("Instructions spéciales (Optionnel)", systemImage: "lightbulb")) {
                     TextEditor(text: $state.ficheSpecialInstructions)
                         .font(.system(.body, design: .default))
                         .frame(minHeight: 70, maxHeight: 120)
                         .scrollContentBackground(.hidden)
                 }
+                
+                // ── Advanced Routing ─────────────────────────────────────
+                if state.expShowAdvancedRoutingInForms {
+                    GroupBox(label: Label("Routage Avancé (Expérimental)", systemImage: "network")) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Picker("Fournisseur", selection: Binding(
+                                get: { state.routingFicheProvider },
+                                set: { state.updateSetting(key: "routing_fiche_provider", value: $0) }
+                            )) {
+                                Text("Par défaut").tag("default")
+                                Text("Gemini Studio").tag("gemini")
+                                Text("Vertex AI").tag("vertex")
+                                Text("Proxy API").tag("proxy")
+                                Text("Vercel AI").tag("vercel")
+                            }
+                            .pickerStyle(.menu)
+                            
+                            HStack(spacing: 4) {
+                                TextField("Nom de modèle spécifique (Optionnel)", text: Binding(
+                                    get: { state.routingFicheModel },
+                                    set: { state.updateSetting(key: "routing_fiche_model", value: $0) }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                
+                                Menu {
+                                    Button("gemini-3.5-flash") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemini-3.5-flash")
+                                    }
+                                    Button("gemini-2.5-pro") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemini-2.5-pro")
+                                    }
+                                    Button("gemini-2.5-flash") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemini-2.5-flash")
+                                    }
+                                    Button("gemma-4-31b-it") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemma-4-31b-it")
+                                    }
+                                    Button("gemma-4-27b-e4b-it") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemma-4-27b-e4b-it")
+                                    }
+                                    Divider()
+                                    Button("gpt-4o") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gpt-4o")
+                                    }
+                                    Button("gpt-4o-mini") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gpt-4o-mini")
+                                    }
+                                    Button("claude-3-5-sonnet") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "claude-3-5-sonnet")
+                                    }
+                                } label: {
+                                    Image(systemName: "cpu")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .menuStyle(.borderlessButton)
+                                .fixedSize()
+                            }
+                        }
+                    }
+                }
 
                 // ── Action ───────────────────────────────────────────────
-                GenerateButton(label: "Générer la Fiche") {
+                GenerateButton(
+                    label: "Générer la Fiche",
+                    isEnabled: !state.ficheSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
+                               !state.ficheLessonTopic.trimmingCharacters(in: .whitespaces).isEmpty &&
+                               state.isConfigured
+                ) {
                     state.generateFiche()
                 }
             }
             .padding(16)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .onAppear {
-            state.loadAvailableLessons(classLevel: state.ficheClassLevel)
-        }
         .onChange(of: state.ficheClassLevel) { _, newValue in
             state.loadAvailableLessons(classLevel: newValue)
         }

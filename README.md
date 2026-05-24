@@ -51,7 +51,7 @@ xcodebuild -project FicheGen.xcodeproj -scheme FicheGen -configuration Release
 - **API Key:** A valid Google Gemini API key (can be securely configured in the app's Preferences).
 
 ## Privacy & Security
-FicheGen communicates directly with the Gemini API via native Swift `URLSession`. Your API keys are securely stored in the macOS Keychain. No intermediate servers or analytics trackers are used.
+FicheGen communicates directly with the Gemini API via native Swift `URLSession`. Your API keys and user preferences are saved locally in the standard macOS Application Support directory (`~/Library/Application Support/FicheGen/settings.json`), ensuring full user ownership and offline persistence. No intermediate servers or analytics trackers are used.
 
 ---
 *FicheGen: Empowering educators, one lesson plan at a time.*

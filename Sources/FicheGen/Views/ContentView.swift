@@ -40,7 +40,7 @@ struct ContentView: View {
             }
         }
         .inspector(isPresented: $showChatInspector) {
-            ChatPanelView()
+            ChatPanelView(isPresented: $showChatInspector)
         }
         .navigationTitle("FicheGen")
         .toolbar {
@@ -63,13 +63,26 @@ struct ContentView: View {
     }
 
     private var serverStatusIndicator: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Circle()
-                .fill(state.geminiApiKey.isEmpty ? Color.orange : Color.green)
+                .fill(isConfigured ? Color.green : Color.orange)
                 .frame(width: 8, height: 8)
-            Text(state.geminiApiKey.isEmpty ? "Clé API non configurée" : "IA Prête ✦ Native")
+            Text(isConfigured ? "Configuration active" : "Configuration requise")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
+        }
+        .help(configHelpText)
+    }
+
+    private var isConfigured: Bool {
+        state.isConfigured
+    }
+
+    private var configHelpText: String {
+        if isConfigured {
+            return "Le service \(state.apiRoute.uppercased()) est prêt."
+        } else {
+            return "Configuration incomplète pour la route active (\(state.apiRoute.uppercased()))."
         }
     }
 }

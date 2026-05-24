@@ -22,7 +22,7 @@ extension Color: RawRepresentable {
     }
 }
 
-struct StyleBuilderView: View {
+struct StyleBuilderSections: View {
     @AppStorage("customPdfPrimaryColor") private var primaryColor: Color = .blue
     @AppStorage("customPdfSecondaryColor") private var secondaryColor: Color = .gray
     @AppStorage("customPdfFont") private var fontName: String = "Helvetica"
@@ -31,7 +31,7 @@ struct StyleBuilderView: View {
     let availableFonts = ["Helvetica", "Times New Roman", "Courier", "Avenir", "Georgia", "San Francisco"]
 
     var body: some View {
-        Form {
+        Group {
             Section("Couleurs du PDF") {
                 ColorPicker("Couleur Principale", selection: $primaryColor)
                 ColorPicker("Couleur Secondaire", selection: $secondaryColor)
@@ -43,6 +43,7 @@ struct StyleBuilderView: View {
                         Text(font).tag(font)
                     }
                 }
+                .pickerStyle(.menu)
             }
             
             Section("Marges") {
@@ -50,7 +51,7 @@ struct StyleBuilderView: View {
                     HStack {
                         Text("Marge globale :")
                         Spacer()
-                        Text("\(Int(margin)) px")
+                        Text("\(Int(margin)) mm")
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
@@ -74,6 +75,14 @@ struct StyleBuilderView: View {
                 .cornerRadius(8)
                 .shadow(radius: 2)
             }
+        }
+    }
+}
+
+struct StyleBuilderView: View {
+    var body: some View {
+        Form {
+            StyleBuilderSections()
         }
         .formStyle(.grouped)
         .padding()

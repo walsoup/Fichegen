@@ -32,6 +32,9 @@ final class AppState: ObservableObject {
     @Published var proxyEnabled: Bool = false
     @Published var proxyBaseURL: String = "http://localhost:11434/v1"
     @Published var proxyApiKey: String = ""
+    @Published var vercelEnabled: Bool = false
+    @Published var vercelBaseURL: String = "https://api.vercel.ai/v1"
+    @Published var vercelApiKey: String = ""
 
     // MARK: - Per-Function Providers
     @Published var routingFicheProvider: String = "default"
@@ -55,6 +58,7 @@ final class AppState: ObservableObject {
     @Published var previewSource: Bool = false
     @Published var saveLogs: Bool = false
     @Published var autoUpdateChecks: Bool = true
+    @Published var quitOnClose: Bool = true
 
     // MARK: - Advanced settings
     @Published var specialInstructions: String = ""
@@ -75,6 +79,7 @@ final class AppState: ObservableObject {
     @Published var expRequestTimeout: Int = 90
     @Published var expEnableCache: Bool = true
     @Published var expParallelToc: Bool = false
+    @Published var expShowAdvancedRoutingInForms: Bool = false
 
     // MARK: - Highly Experimental Settings
     @Published var expMultiPassGen: Bool = false
@@ -119,6 +124,23 @@ final class AppState: ObservableObject {
     @Published var quizNumQuestions: Int = 10
     @Published var quizDifficulty: String = "medium"
 
+    var isConfigured: Bool {
+        switch apiRoute {
+        case "aistudio":
+            return !geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case "vertex":
+            return !vertexProject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
+                   !vertexLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case "proxy":
+            return proxyEnabled && !proxyBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case "vercel":
+            return vercelEnabled && !vercelBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
+                   !vercelApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        default:
+            return !geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
     // MARK: - Available class levels
 
     let classLevels = ["CP", "CE1", "CE2", "CM1", "CM2", "6e", "5e", "4e", "3e"]
@@ -126,15 +148,10 @@ final class AppState: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var generationTask: Task<Void, Never>?
+    private var lessonsTask: Task<Void, Never>?
 
     init() {
-        // Load API keys from Keychain immediately — no server needed
-        if let key = KeychainHelper.load(for: "gemini_api_key"), !key.isEmpty {
-            geminiApiKey = key
-        }
-        if let key = KeychainHelper.load(for: "proxy_api_key"), !key.isEmpty {
-            proxyApiKey = key
-        }
+        // Init happens. Sinks react to class level and guides directory changes.
 
         $ficheClassLevel
             .sink { [weak self] newLevel in
@@ -151,6 +168,14 @@ final class AppState: ObservableObject {
         $quizClassLevel
             .sink { [weak self] newLevel in
                 self?.loadAvailableLessons(classLevel: newLevel)
+            }
+            .store(in: &cancellables)
+
+        $guidesDir
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.loadAvailableLessons(classLevel: self.ficheClassLevel)
             }
             .store(in: &cancellables)
     }
@@ -179,32 +204,31 @@ final class AppState: ObservableObject {
         let guidesDir = self.guidesDir
 
         generationTask = Task {
-            // Try to extract lesson text from PDF natively
-            var lessonText = ""
-            if let guideURL = PDFProcessor.findGuideFile(classLevel: classLevel, guidesDir: guidesDir) {
-                appendLog("📖 Guide trouvé: \(guideURL.lastPathComponent)")
-                progress = 30
-                // Use cached TOC to find pages, then extract text
+            progress = 30
+            let lessonText = await Task.detached(priority: .userInitiated) { () -> String in
+                guard !Task.isCancelled else { return "" }
+                guard let guideURL = PDFProcessor.findGuideFile(classLevel: classLevel, guidesDir: guidesDir) else {
+                    return ""
+                }
                 if let cached = PDFProcessor.loadCachedTOC(pdfURL: guideURL, guidesDir: guidesDir) {
                     let withRanges = PDFProcessor.computePageRanges(for: cached)
                     if let match = withRanges.first(where: {
                         $0.entry.topic.localizedCaseInsensitiveContains(lessonTopic) ||
                         lessonTopic.localizedCaseInsensitiveContains($0.entry.topic)
                     }) {
-                        let pages = match.pages
-                        if !pages.isEmpty {
-                            appendLog("📄 Pages trouvées: \(pages.map(String.init).joined(separator: ", "))")
-                            lessonText = PDFProcessor.extractText(from: guideURL, pages: pages)
-                            appendLog("✅ \(lessonText.count) caractères extraits du guide.")
-                        }
-                    } else {
-                        appendLog("⚠️ Leçon '\(lessonTopic)' introuvable dans le cache TOC — génération sans source.")
+                        let offset = PDFProcessor.detectPageOffset(pdfURL: guideURL)
+                        let physicalPages = match.pages.map { $0 + offset }
+                        return PDFProcessor.extractText(from: guideURL, pages: physicalPages)
                     }
-                } else {
-                    appendLog("ℹ️ Pas de cache TOC — génération sans source PDF.")
                 }
+                return ""
+            }.value
+
+            guard !Task.isCancelled else { return }
+            if !lessonText.isEmpty {
+                appendLog("✅ \(lessonText.count) caractères extraits du guide (avec décalage de page corrigé).")
             } else {
-                appendLog("ℹ️ Aucun guide PDF trouvé — génération directe.")
+                appendLog("ℹ️ Génération directe (aucune source guide pédagogique correspondante).")
             }
             progress = 60
 
@@ -220,13 +244,26 @@ final class AppState: ObservableObject {
                     useTopRatedExamples: useTopRated,
                     lessonText: lessonText,
                     config: cfg,
-                    onLog: { [weak self] msg in self?.appendLog(msg) },
-                    onProgress: { [weak self] v in self?.progress = v }
+                    onLog: { [weak self] msg in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.appendLog(msg)
+                    },
+                    onProgress: { [weak self] v in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.progress = v
+                    }
                 )
+                guard !Task.isCancelled else { return }
                 generatedMarkdown = markdown
+            } catch is CancellationError {
+                // Swallowed
+            } catch let error as URLError where error.code == .cancelled {
+                // Swallowed
             } catch {
+                guard !Task.isCancelled else { return }
                 appendLog("❌ \(error.localizedDescription)")
             }
+            guard !Task.isCancelled else { return }
             isGenerating = false
         }
     }
@@ -263,13 +300,26 @@ final class AppState: ObservableObject {
                     extraInstructions: "",
                     lessonText: "",
                     config: cfg,
-                    onLog: { [weak self] msg in self?.appendLog(msg) },
-                    onProgress: { [weak self] v in self?.progress = v }
+                    onLog: { [weak self] msg in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.appendLog(msg)
+                    },
+                    onProgress: { [weak self] v in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.progress = v
+                    }
                 )
+                guard !Task.isCancelled else { return }
                 generatedMarkdown = markdown
+            } catch is CancellationError {
+                // Swallowed
+            } catch let error as URLError where error.code == .cancelled {
+                // Swallowed
             } catch {
+                guard !Task.isCancelled else { return }
                 appendLog("❌ \(error.localizedDescription)")
             }
+            guard !Task.isCancelled else { return }
             isGenerating = false
         }
     }
@@ -303,13 +353,26 @@ final class AppState: ObservableObject {
                     difficulty: difficulty,
                     temperature: temperature,
                     config: cfg,
-                    onLog: { [weak self] msg in self?.appendLog(msg) },
-                    onProgress: { [weak self] v in self?.progress = v }
+                    onLog: { [weak self] msg in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.appendLog(msg)
+                    },
+                    onProgress: { [weak self] v in
+                        guard let self = self, !Task.isCancelled else { return }
+                        self.progress = v
+                    }
                 )
+                guard !Task.isCancelled else { return }
                 generatedMarkdown = markdown
+            } catch is CancellationError {
+                // Swallowed
+            } catch let error as URLError where error.code == .cancelled {
+                // Swallowed
             } catch {
+                guard !Task.isCancelled else { return }
                 appendLog("❌ \(error.localizedDescription)")
             }
+            guard !Task.isCancelled else { return }
             isGenerating = false
         }
     }
@@ -330,15 +393,15 @@ final class AppState: ObservableObject {
     // MARK: - Settings: fetch on startup from Keychain + UserDefaults
 
     func fetchSettingsFromServer() async {
-        // Load API keys (Keychain takes priority)
-        if let k = KeychainHelper.load(for: "gemini_api_key"), !k.isEmpty { geminiApiKey = k }
-        if let k = KeychainHelper.load(for: "proxy_api_key"), !k.isEmpty   { proxyApiKey = k }
-
-        let ud = UserDefaults.standard
-        func str(_ key: String, _ fallback: String) -> String { ud.string(forKey: "fg_\(key)") ?? fallback }
-        func bool(_ key: String, _ fallback: Bool) -> Bool { ud.object(forKey: "fg_\(key)") != nil ? ud.bool(forKey: "fg_\(key)") : fallback }
-        func int_(_ key: String, _ fallback: Int) -> Int { ud.object(forKey: "fg_\(key)") != nil ? ud.integer(forKey: "fg_\(key)") : fallback }
-        func dbl(_ key: String, _ fallback: Double) -> Double { ud.object(forKey: "fg_\(key)") != nil ? ud.double(forKey: "fg_\(key)") : fallback }
+        let settings = PreferencesStorage.load()
+        
+        func str(_ key: String, _ fallback: String) -> String { settings[key] as? String ?? fallback }
+        func bool(_ key: String, _ fallback: Bool) -> Bool { settings[key] as? Bool ?? fallback }
+        func int_(_ key: String, _ fallback: Int) -> Int { settings[key] as? Int ?? fallback }
+        func dbl(_ key: String, _ fallback: Double) -> Double { settings[key] as? Double ?? fallback }
+        
+        geminiApiKey    = str("gemini_api_key", "")
+        proxyApiKey     = str("proxy_api_key", "")
 
         guidesDir       = str("guides_dir", "")
         textbookDir     = str("textbook_dir", "")
@@ -352,6 +415,9 @@ final class AppState: ObservableObject {
         vertexLocation  = str("vertex_location", "us-central1")
         proxyEnabled    = bool("proxy_enabled", false)
         proxyBaseURL    = str("proxy_base_url", "http://localhost:11434/v1")
+        vercelEnabled   = bool("vercel_enabled", false)
+        vercelBaseURL   = str("vercel_base_url", "https://api.vercel.ai/v1")
+        vercelApiKey    = str("vercel_api_key", "")
         routingFicheProvider  = str("routing_fiche_provider", "default")
         routingFicheModel     = str("routing_fiche_model", "")
         routingEvalProvider   = str("routing_eval_provider", "default")
@@ -369,6 +435,7 @@ final class AppState: ObservableObject {
         previewSource   = bool("preview_source", false)
         saveLogs        = bool("save_logs", false)
         autoUpdateChecks = bool("updates_auto_check", true)
+        quitOnClose     = bool("quit_on_close", true)
         specialInstructions = str("special_instructions", "")
         advancedEnablePromptEditing = bool("advanced_enable_prompt_editing", false)
         advancedTocPrompt  = str("advanced_toc_prompt", "")
@@ -383,6 +450,7 @@ final class AppState: ObservableObject {
         expRequestTimeout = int_("exp_request_timeout", 90)
         expEnableCache  = bool("exp_enable_cache", true)
         expParallelToc  = bool("exp_parallel_toc", false)
+        expShowAdvancedRoutingInForms = bool("exp_show_advanced_routing_in_forms", false)
         expMultiPassGen = bool("exp_multi_pass_gen", false)
         expMultiPassIterations = int_("exp_multi_pass_iterations", 2)
         expStyleTransfer = bool("exp_style_transfer", false)
@@ -401,22 +469,22 @@ final class AppState: ObservableObject {
         evalSubject      = defaultSubject
         quizDuration     = defaultDuration
         quizSubject      = defaultSubject
+        
+        // After loading guidesDir, we can safely fetch the TOC cache
+        loadAvailableLessons(classLevel: ficheClassLevel)
     }
 
-    // MARK: - Settings: persist to UserDefaults + Keychain
+    // MARK: - Settings: persist to JSON
 
     func saveSettingsToServer() {
-        // API keys → Keychain
-        KeychainHelper.save(geminiApiKey, for: "gemini_api_key")
-        KeychainHelper.save(proxyApiKey,  for: "proxy_api_key")
-
-        let ud = UserDefaults.standard
         let settings: [String: Any] = [
+            "gemini_api_key": geminiApiKey, "proxy_api_key": proxyApiKey,
             "guides_dir": guidesDir,   "textbook_dir": textbookDir,  "output_dir": outputDir,
             "temperature": temperatureSetting, "default_duration": defaultDuration,
             "default_subject": defaultSubject, "gemini_model": geminiModel,
             "api_route": apiRoute,  "vertex_project": vertexProject, "vertex_location": vertexLocation,
             "proxy_enabled": proxyEnabled,  "proxy_base_url": proxyBaseURL,
+            "vercel_enabled": vercelEnabled, "vercel_base_url": vercelBaseURL, "vercel_api_key": vercelApiKey,
             "routing_fiche_provider": routingFicheProvider, "routing_fiche_model": routingFicheModel,
             "routing_eval_provider": routingEvalProvider,   "routing_eval_model": routingEvalModel,
             "routing_quiz_provider": routingQuizProvider,   "routing_quiz_model": routingQuizModel,
@@ -425,7 +493,8 @@ final class AppState: ObservableObject {
             "routing_syntax_provider": routingSyntaxProvider, "routing_syntax_model": routingSyntaxModel,
             "default_pdf_style": defaultPdfStyle, "use_top_examples": useTopExamples,
             "preview_source": previewSource,  "save_logs": saveLogs,
-            "updates_auto_check": autoUpdateChecks, "special_instructions": specialInstructions,
+            "updates_auto_check": autoUpdateChecks, "quit_on_close": quitOnClose,
+            "special_instructions": specialInstructions,
             "advanced_enable_prompt_editing": advancedEnablePromptEditing,
             "advanced_toc_prompt": advancedTocPrompt, "advanced_page_finding_prompt": advancedPageFindingPrompt,
             "advanced_fiche_prompt": advancedFichePrompt,
@@ -433,28 +502,22 @@ final class AppState: ObservableObject {
             "ui_show_eval_advanced_controls": uiShowEvalAdvancedControls, "pdf_show_meta": pdfShowMeta,
             "exp_streaming_response": expStreamingResponse, "exp_max_retries": expMaxRetries,
             "exp_request_timeout": expRequestTimeout, "exp_enable_cache": expEnableCache,
-            "exp_parallel_toc": expParallelToc, "exp_multi_pass_gen": expMultiPassGen,
+            "exp_parallel_toc": expParallelToc, "exp_show_advanced_routing_in_forms": expShowAdvancedRoutingInForms,
+            "exp_multi_pass_gen": expMultiPassGen,
             "exp_multi_pass_iterations": expMultiPassIterations,
             "exp_style_transfer": expStyleTransfer, "exp_auto_grade_difficulty": expAutoGradeDifficulty,
             "exp_chain_of_thought": expChainOfThought, "exp_json_validation": expJsonValidation,
             "exp_speculative_decoding": expSpeculativeDecoding, "exp_agentic_loop": expAgenticLoop
         ]
-        settings.forEach { ud.set($0.value, forKey: "fg_\($0.key)") }
-        ud.synchronize()
+        PreferencesStorage.save(settings)
     }
 
     func updateSetting(key: String, value: Any) {
         switch key {
         case "gemini_api_key":
-            if let val = value as? String {
-                geminiApiKey = val
-                KeychainHelper.save(val, for: "gemini_api_key")
-            }
+            if let val = value as? String { geminiApiKey = val }
         case "proxy_api_key":
-            if let val = value as? String {
-                proxyApiKey = val
-                KeychainHelper.save(val, for: "proxy_api_key")
-            }
+            if let val = value as? String { proxyApiKey = val }
         case "guides_dir", "input_dir":
             if let val = value as? String { guidesDir = val }
         case "textbook_dir":
@@ -479,6 +542,12 @@ final class AppState: ObservableObject {
             if let val = value as? Bool { proxyEnabled = val }
         case "proxy_base_url":
             if let val = value as? String { proxyBaseURL = val }
+        case "vercel_enabled":
+            if let val = value as? Bool { vercelEnabled = val }
+        case "vercel_base_url":
+            if let val = value as? String { vercelBaseURL = val }
+        case "vercel_api_key":
+            if let val = value as? String { vercelApiKey = val }
         case "routing_fiche_provider":
             if let val = value as? String { routingFicheProvider = val }
         case "routing_fiche_model":
@@ -513,6 +582,8 @@ final class AppState: ObservableObject {
             if let val = value as? Bool { saveLogs = val }
         case "updates_auto_check":
             if let val = value as? Bool { autoUpdateChecks = val }
+        case "quit_on_close":
+            if let val = value as? Bool { quitOnClose = val }
         case "special_instructions":
             if let val = value as? String { specialInstructions = val }
         case "advanced_enable_prompt_editing":
@@ -541,6 +612,8 @@ final class AppState: ObservableObject {
             if let val = value as? Bool { expEnableCache = val }
         case "exp_parallel_toc":
             if let val = value as? Bool { expParallelToc = val }
+        case "exp_show_advanced_routing_in_forms":
+            if let val = value as? Bool { expShowAdvancedRoutingInForms = val }
         case "exp_multi_pass_gen":
             if let val = value as? Bool { expMultiPassGen = val }
         case "exp_multi_pass_iterations":
@@ -567,36 +640,33 @@ final class AppState: ObservableObject {
     // MARK: - Lesson Operations
 
     func loadAvailableLessons(classLevel: String) {
+        lessonsTask?.cancel()
         let currentGuidesDir = self.guidesDir
-        Task.detached(priority: .userInitiated) {
-            // Find guide file
-            guard let guideURL = PDFProcessor.findGuideFile(classLevel: classLevel, guidesDir: currentGuidesDir) else {
-                await self.loadAvailableLessonsFromServer(classLevel: classLevel)
-                return
-            }
-            
-            // Check cache
-            if let cached = PDFProcessor.loadCachedTOC(pdfURL: guideURL, guidesDir: currentGuidesDir) {
-                let lessons = cached.map { $0.topic }
-                await MainActor.run {
-                    self.availableLessons = lessons
+        lessonsTask = Task {
+            let lessons = await Task.detached(priority: .userInitiated) { () -> [String]? in
+                guard !Task.isCancelled else { return nil }
+                guard let guideURL = PDFProcessor.findGuideFile(classLevel: classLevel, guidesDir: currentGuidesDir) else {
+                    return nil
                 }
-                return
-            }
-            
-            // Scan and parse
-            if let rawText = PDFProcessor.extractRawTOCText(pdfURL: guideURL),
-               let parsed = PDFProcessor.parseTOCWithHeuristics(tocText: rawText) {
-                PDFProcessor.saveTOCToCache(pdfURL: guideURL, guidesDir: currentGuidesDir, toc: parsed)
-                let lessons = parsed.map { $0.topic }
-                await MainActor.run {
-                    self.availableLessons = lessons
+                
+                if let cached = PDFProcessor.loadCachedTOC(pdfURL: guideURL, guidesDir: currentGuidesDir) {
+                    return cached.map { $0.topic }
                 }
-                return
-            }
+                
+                if let rawText = PDFProcessor.extractRawTOCText(pdfURL: guideURL),
+                   let parsed = PDFProcessor.parseTOCWithHeuristics(tocText: rawText) {
+                    PDFProcessor.saveTOCToCache(pdfURL: guideURL, guidesDir: currentGuidesDir, toc: parsed)
+                    return parsed.map { $0.topic }
+                }
+                return nil
+            }.value
             
-            // Fallback to server
-            await self.loadAvailableLessonsFromServer(classLevel: classLevel)
+            guard !Task.isCancelled else { return }
+            if let lessons = lessons {
+                self.availableLessons = lessons
+            } else {
+                self.availableLessons = []
+            }
         }
     }
     

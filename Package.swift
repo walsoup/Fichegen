@@ -8,7 +8,10 @@ let package = Package(
         .executableTarget(
             name: "FicheGen",
             path: "Sources/FicheGen",
-            resources: [.process("Resources")]
+            resources: [
+                .process("Resources"),
+                .process("icon.icns")
+            ]
         )
     ]
 )

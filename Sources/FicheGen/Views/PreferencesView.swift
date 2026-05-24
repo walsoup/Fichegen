@@ -53,7 +53,7 @@ struct PreferencesView: View {
 struct GeneralPrefsTab: View {
     @EnvironmentObject var state: AppState
     
-    let pdfStyles = ["Normal", "Professional", "Coral", "Aesthetic", "Minimal Pro", "Classic Serif"]
+    let pdfStyles = ["Modern", "Classic", "Minimal", "Academic", "Playful", "Custom"]
     
     var body: some View {
         Form {
@@ -103,6 +103,11 @@ struct GeneralPrefsTab: View {
                     get: { state.autoUpdateChecks },
                     set: { state.updateSetting(key: "updates_auto_check", value: $0) }
                 ))
+                
+                Toggle("Quitter l'application à la fermeture de la fenêtre principale", isOn: Binding(
+                    get: { state.quitOnClose },
+                    set: { state.updateSetting(key: "quit_on_close", value: $0) }
+                ))
             }
         }
         .formStyle(.grouped)
@@ -113,13 +118,16 @@ struct AIModelsPrefsTab: View {
     @EnvironmentObject var state: AppState
     @State private var showGeminiKey = false
     @State private var showProxyKey = false
+    @State private var showVercelKey = false
     
     let geminiModels = [
+        "gemini-3.5-flash",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
+        "gemma-4-31b-it",
+        "gemma-4-27b-e4b-it",
         "gemini-1.5-pro",
-        "gemini-1.5-flash",
-        "gemini-flash-latest"
+        "gemini-1.5-flash"
     ]
     
     var body: some View {
@@ -196,6 +204,40 @@ struct AIModelsPrefsTab: View {
                             }
                             Button(showProxyKey ? "Masquer" : "Afficher") {
                                 showProxyKey.toggle()
+                            }
+                        }
+                    }
+                }
+                
+                Section("Route Alternative : Vercel AI SDK") {
+                    Toggle("Activer la route Vercel AI SDK", isOn: Binding(
+                        get: { state.vercelEnabled },
+                        set: { state.updateSetting(key: "vercel_enabled", value: $0) }
+                    ))
+                    
+                    if state.vercelEnabled {
+                        TextField("URL de base Vercel", text: Binding(
+                            get: { state.vercelBaseURL },
+                            set: { state.updateSetting(key: "vercel_base_url", value: $0) }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                        
+                        HStack {
+                            if showVercelKey {
+                                TextField("Clé API Vercel", text: Binding(
+                                    get: { state.vercelApiKey },
+                                    set: { state.updateSetting(key: "vercel_api_key", value: $0) }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                            } else {
+                                SecureField("Clé API Vercel", text: Binding(
+                                    get: { state.vercelApiKey },
+                                    set: { state.updateSetting(key: "vercel_api_key", value: $0) }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                            }
+                            Button(showVercelKey ? "Masquer" : "Afficher") {
+                                showVercelKey.toggle()
                             }
                         }
                     }
@@ -367,6 +409,11 @@ struct AdvancedPrefsTab: View {
                         get: { state.expParallelToc },
                         set: { state.updateSetting(key: "exp_parallel_toc", value: $0) }
                     ))
+                    
+                    Toggle("Afficher les menus de routage expérimental sur les formulaires", isOn: Binding(
+                        get: { state.expShowAdvancedRoutingInForms },
+                        set: { state.updateSetting(key: "exp_show_advanced_routing_in_forms", value: $0) }
+                    ))
                 }
                 
                 Section("Paramètres Hautement Expérimentaux (⚠️ Instables)") {
@@ -472,15 +519,51 @@ struct AdvancedPrefsTab: View {
                 Text("Gemini Studio").tag("gemini")
                 Text("Vertex AI").tag("vertex")
                 Text("Proxy API").tag("proxy")
+                Text("Vercel AI").tag("vercel")
             }
             .pickerStyle(.menu)
             .frame(width: 130)
             
-            TextField("Modèle personnalisé (facultatif)", text: Binding(
-                get: { model },
-                set: { state.updateSetting(key: modelKey, value: $0) }
-            ))
-            .textFieldStyle(.roundedBorder)
+            HStack(spacing: 4) {
+                TextField("Modèle personnalisé (facultatif)", text: Binding(
+                    get: { model },
+                    set: { state.updateSetting(key: modelKey, value: $0) }
+                ))
+                .textFieldStyle(.roundedBorder)
+                
+                Menu {
+                    Button("gemini-3.5-flash") {
+                        state.updateSetting(key: modelKey, value: "gemini-3.5-flash")
+                    }
+                    Button("gemini-2.5-pro") {
+                        state.updateSetting(key: modelKey, value: "gemini-2.5-pro")
+                    }
+                    Button("gemini-2.5-flash") {
+                        state.updateSetting(key: modelKey, value: "gemini-2.5-flash")
+                    }
+                    Button("gemma-4-31b-it") {
+                        state.updateSetting(key: modelKey, value: "gemma-4-31b-it")
+                    }
+                    Button("gemma-4-27b-e4b-it") {
+                        state.updateSetting(key: modelKey, value: "gemma-4-27b-e4b-it")
+                    }
+                    Divider()
+                    Button("gpt-4o") {
+                        state.updateSetting(key: modelKey, value: "gpt-4o")
+                    }
+                    Button("gpt-4o-mini") {
+                        state.updateSetting(key: modelKey, value: "gpt-4o-mini")
+                    }
+                    Button("claude-3-5-sonnet") {
+                        state.updateSetting(key: modelKey, value: "claude-3-5-sonnet")
+                    }
+                } label: {
+                    Image(systemName: "cpu")
+                        .foregroundStyle(.secondary)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
         }
     }
 }
@@ -518,7 +601,7 @@ struct AppearancePrefsTab: View {
                 ))
             }
             
-            StyleBuilderView()
+            StyleBuilderSections()
         }
         .formStyle(.grouped)
     }
