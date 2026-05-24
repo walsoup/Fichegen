@@ -41,6 +41,7 @@ struct ContentView: View {
         }
         .inspector(isPresented: $showChatInspector) {
             ChatPanelView(isPresented: $showChatInspector)
+                .inspectorColumnWidth(min: 280, ideal: 360, max: 600)
         }
         .navigationTitle("FicheGen")
         .toolbar {

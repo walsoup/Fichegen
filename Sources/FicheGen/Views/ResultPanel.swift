@@ -8,10 +8,11 @@ struct ResultPanel: View {
     @EnvironmentObject var state: AppState
     @Binding var showChatInspector: Bool
     @State private var selectedTab: ResultTab = .preview
+    @State private var pdfGenerator = PDFGenerator()
 
     enum ResultTab: String, CaseIterable, Identifiable {
         case preview = "Preview"
-        case source  = "Markdown"
+        case source  = "HTML"
         case log     = "Log"
         var id: String { rawValue }
     }
@@ -21,7 +22,7 @@ struct ResultPanel: View {
             // ── Toolbar ───────────────────────────────────────────────
             HStack(spacing: 0) {
                 Picker("", selection: $selectedTab) {
-                    ForEach(ResultTab.allCases) { tab in
+                    ForEach(ResultTab.allCases.filter { $0 != .log || state.advancedShowLogTab }) { tab in
                         Text(tab.rawValue).tag(tab)
                     }
                 }
@@ -42,14 +43,13 @@ struct ResultPanel: View {
                         .help("Ouvrir l'assistant IA")
                         
                         Button(action: {
-                            let generator = PDFGenerator()
                             let panel = NSSavePanel()
                             panel.title = "Exporter en PDF"
                             panel.allowedContentTypes = [.pdf]
-                            panel.nameFieldStringValue = "fiche.pdf"
+                            panel.nameFieldStringValue = "\(!state.ficheLessonTopic.isEmpty ? state.ficheLessonTopic : "Fiche")-\(Int(Date().timeIntervalSince1970)).pdf"
                             panel.canCreateDirectories = true
                             if panel.runModal() == .OK, let url = panel.url {
-                                generator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
+                                pdfGenerator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
                                     DispatchQueue.main.async {
                                         switch result {
                                         case .success(let savedURL):
@@ -67,12 +67,12 @@ struct ResultPanel: View {
                         .help("Exporter au format PDF")
                         
                         Button(action: {
-                            saveMarkdown(state.generatedMarkdown)
+                            saveHTML(state.generatedMarkdown)
                         }) {
-                            Label("Markdown", systemImage: "doc.text")
+                            Label("HTML", systemImage: "doc.text")
                         }
                         .buttonStyle(.bordered)
-                        .help("Exporter au format Markdown")
+                        .help("Exporter au format HTML")
                         
                         Button(action: {
                             NSPasteboard.general.clearContents()
@@ -97,12 +97,9 @@ struct ResultPanel: View {
 
             Divider()
 
-            // ── Progress bar ──────────────────────────────────────────
-            if state.isGenerating && state.progress > 0 {
-                ProgressView(value: Double(state.progress), total: 100)
-                    .progressViewStyle(.linear)
-                    .padding(.horizontal, 0)
-                    .frame(height: 2)
+            // ── Progress indicator ──────────────────────────────────────
+            if state.isGenerating {
+                PulsingProgressView(message: state.logMessages.last ?? "Génération en cours...")
             }
 
             // ── Content ───────────────────────────────────────────────
@@ -112,7 +109,7 @@ struct ResultPanel: View {
                     if state.generatedMarkdown.isEmpty {
                         EmptyStateView()
                     } else {
-                        MarkdownWebView(markdown: state.generatedMarkdown)
+                        MarkdownWebView(htmlContent: state.generatedMarkdown)
                     }
                 case .source:
                     SourceEditor(text: $state.generatedMarkdown)
@@ -128,16 +125,48 @@ struct ResultPanel: View {
         .animation(.spring(), value: state.generatedMarkdown.isEmpty)
     }
     
-    private func saveMarkdown(_ markdown: String) {
+    private func saveHTML(_ html: String) {
         let panel = NSSavePanel()
         panel.title = "Exporter la fiche"
-        panel.allowedContentTypes = [.init(filenameExtension: "md")!]
-        panel.nameFieldStringValue = "fiche.md"
+        panel.allowedContentTypes = [.init(filenameExtension: "html")!]
+        panel.nameFieldStringValue = "\(!state.ficheLessonTopic.isEmpty ? state.ficheLessonTopic : "Fiche")-\(Int(Date().timeIntervalSince1970)).html"
         panel.canCreateDirectories = true
         if panel.runModal() == .OK, let url = panel.url {
-            try? markdown.write(to: url, atomically: true, encoding: .utf8)
+            try? html.write(to: url, atomically: true, encoding: .utf8)
             NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
         }
+    }
+}
+
+// MARK: - Pulsing Progress View
+
+struct PulsingProgressView: View {
+    let message: String
+    @State private var isPulsing = false
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color.blue)
+                .frame(width: 8, height: 8)
+                .scaleEffect(isPulsing ? 1.2 : 0.8)
+                .opacity(isPulsing ? 0.5 : 1.0)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                        isPulsing = true
+                    }
+                }
+            
+            Text(message)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.windowBackgroundColor))
     }
 }
 
@@ -236,55 +265,40 @@ struct EmptyStateView: View {
 // MARK: - Markdown WebView
 
 struct MarkdownWebView: NSViewRepresentable {
-    let markdown: String
+    let htmlContent: String
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.setValue(false, forKey: "drawsBackground")
         
-        let escaped = markdown
+        let escapedHTML = htmlContent
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
             .replacingOccurrences(of: "$", with: "\\$")
         
-        let initialHTML = getScaffolding(content: markdown.isEmpty ? "" : escaped)
+        let initialHTML = getScaffolding(content: htmlContent.isEmpty ? "" : escapedHTML)
         wv.loadHTMLString(initialHTML, baseURL: nil)
         return wv
     }
 
     func updateNSView(_ wv: WKWebView, context: Context) {
-        let escaped = markdown
+        let escapedHTML = htmlContent
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
             .replacingOccurrences(of: "$", with: "\\$")
         
-        let js = "if (typeof marked !== 'undefined') { document.getElementById('content').innerHTML = marked.parse(`\(escaped)`); }"
+        let js = "document.getElementById('content').innerHTML = `\(escapedHTML)`;"
         wv.evaluateJavaScript(js, completionHandler: nil)
     }
 
     private func getScaffolding(content: String) -> String {
-        let markedJS: String
-        if let jsURL = Bundle.module.url(forResource: "marked.min", withExtension: "js"),
-           let jsContent = try? String(contentsOf: jsURL, encoding: .utf8) {
-            markedJS = jsContent
-        } else {
-            markedJS = ""
-        }
-
-        let scriptTag = markedJS.isEmpty 
-            ? "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>"
-            : "<script>\(markedJS)</script>"
-
-        let parsedContent = content.isEmpty ? "" : "marked.parse(`\(content)`)"
-
         return """
         <!DOCTYPE html>
         <html>
         <head>
         <meta charset="utf-8">
         <meta name="color-scheme" content="light dark">
-        \(scriptTag)
         <style>
           body {
             font-family: -apple-system, sans-serif;
@@ -312,8 +326,8 @@ struct MarkdownWebView: NSViewRepresentable {
         <body>
         <div id="content"></div>
         <script>
-          if (typeof marked !== 'undefined' && `\(content)` !== '') {
-            document.getElementById('content').innerHTML = \(parsedContent);
+          if (`\(content)` !== '') {
+            document.getElementById('content').innerHTML = `\(content)`;
           }
         </script>
         </body>

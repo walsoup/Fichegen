@@ -254,6 +254,16 @@ struct AIModelsPrefsTab: View {
                     }
                     .pickerStyle(.menu)
                     
+                    Picker("Modèle de Chat par défaut", selection: Binding(
+                        get: { state.chatModel },
+                        set: { state.updateSetting(key: "chat_model", value: $0) }
+                    )) {
+                        ForEach(geminiModels, id: \.self) { model in
+                            Text(model).tag(model)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text("Créativité (Température)")
@@ -369,22 +379,26 @@ struct AdvancedPrefsTab: View {
                 
                 Section("Routage Par Fonction") {
                     VStack(alignment: .leading, spacing: 8) {
-                        routingRow(label: "Génération Fiche", providerKey: "routing_fiche_provider", modelKey: "routing_fiche_model", provider: state.routingFicheProvider, model: state.routingFicheModel)
+                        routingRow(label: "Génération Fiche", providerKey: "routing_fiche_provider", modelKey: "routing_fiche_model", provider: $state.routingFicheProvider, model: $state.routingFicheModel)
                         Divider()
-                        routingRow(label: "Génération Éval", providerKey: "routing_eval_provider", modelKey: "routing_eval_model", provider: state.routingEvalProvider, model: state.routingEvalModel)
+                        routingRow(label: "Génération Éval", providerKey: "routing_eval_provider", modelKey: "routing_eval_model", provider: $state.routingEvalProvider, model: $state.routingEvalModel)
                         Divider()
-                        routingRow(label: "Génération Quiz", providerKey: "routing_quiz_provider", modelKey: "routing_quiz_model", provider: state.routingQuizProvider, model: state.routingQuizModel)
+                        routingRow(label: "Génération Quiz", providerKey: "routing_quiz_provider", modelKey: "routing_quiz_model", provider: $state.routingQuizProvider, model: $state.routingQuizModel)
                         Divider()
-                        routingRow(label: "Parseur ToC", providerKey: "routing_toc_provider", modelKey: "routing_toc_model", provider: state.routingTocProvider, model: state.routingTocModel)
+                        routingRow(label: "Parseur ToC", providerKey: "routing_toc_provider", modelKey: "routing_toc_model", provider: $state.routingTocProvider, model: $state.routingTocModel)
                         Divider()
-                        routingRow(label: "Décalage Pages", providerKey: "routing_offset_provider", modelKey: "routing_offset_model", provider: state.routingOffsetProvider, model: state.routingOffsetModel)
+                        routingRow(label: "Décalage Pages", providerKey: "routing_offset_provider", modelKey: "routing_offset_model", provider: $state.routingOffsetProvider, model: $state.routingOffsetModel)
                         Divider()
-                        routingRow(label: "Correction Syntaxe", providerKey: "routing_syntax_provider", modelKey: "routing_syntax_model", provider: state.routingSyntaxProvider, model: state.routingSyntaxModel)
+                        routingRow(label: "Correction Syntaxe", providerKey: "routing_syntax_provider", modelKey: "routing_syntax_model", provider: $state.routingSyntaxProvider, model: $state.routingSyntaxModel)
+                        Divider()
+                        routingRow(label: "Assistant Chat", providerKey: "routing_chat_provider", modelKey: "routing_chat_model", provider: $state.routingChatProvider, model: $state.routingChatModel)
                     }
                     .padding(.vertical, 4)
                 }
                 
                 Section("Paramètres Expérimentaux") {
+                    Toggle("Afficher l'onglet des journaux (Logs)", isOn: $state.advancedShowLogTab)
+
                     Toggle("Aperçu de la réponse en streaming", isOn: Binding(
                         get: { state.expStreamingResponse },
                         set: { state.updateSetting(key: "exp_streaming_response", value: $0) }
@@ -506,14 +520,17 @@ struct AdvancedPrefsTab: View {
     }
     
     @ViewBuilder
-    private func routingRow(label: String, providerKey: String, modelKey: String, provider: String, model: String) -> some View {
+    private func routingRow(label: String, providerKey: String, modelKey: String, provider: Binding<String>, model: Binding<String>) -> some View {
         HStack {
             Text(label)
                 .frame(width: 140, alignment: .leading)
             
             Picker("", selection: Binding(
-                get: { provider },
-                set: { state.updateSetting(key: providerKey, value: $0) }
+                get: { provider.wrappedValue },
+                set: {
+                    provider.wrappedValue = $0
+                    state.updateSetting(key: providerKey, value: $0)
+                }
             )) {
                 Text("Par défaut").tag("default")
                 Text("Gemini Studio").tag("gemini")
@@ -526,35 +543,46 @@ struct AdvancedPrefsTab: View {
             
             HStack(spacing: 4) {
                 TextField("Modèle personnalisé (facultatif)", text: Binding(
-                    get: { model },
-                    set: { state.updateSetting(key: modelKey, value: $0) }
+                    get: { model.wrappedValue },
+                    set: {
+                        model.wrappedValue = $0
+                        state.updateSetting(key: modelKey, value: $0)
+                    }
                 ))
                 .textFieldStyle(.roundedBorder)
                 
                 Menu {
                     Button("gemini-3.5-flash") {
+                        model.wrappedValue = "gemini-3.5-flash"
                         state.updateSetting(key: modelKey, value: "gemini-3.5-flash")
                     }
                     Button("gemini-2.5-pro") {
+                        model.wrappedValue = "gemini-2.5-pro"
                         state.updateSetting(key: modelKey, value: "gemini-2.5-pro")
                     }
                     Button("gemini-2.5-flash") {
+                        model.wrappedValue = "gemini-2.5-flash"
                         state.updateSetting(key: modelKey, value: "gemini-2.5-flash")
                     }
                     Button("gemma-4-31b-it") {
+                        model.wrappedValue = "gemma-4-31b-it"
                         state.updateSetting(key: modelKey, value: "gemma-4-31b-it")
                     }
                     Button("gemma-4-27b-e4b-it") {
+                        model.wrappedValue = "gemma-4-27b-e4b-it"
                         state.updateSetting(key: modelKey, value: "gemma-4-27b-e4b-it")
                     }
                     Divider()
                     Button("gpt-4o") {
+                        model.wrappedValue = "gpt-4o"
                         state.updateSetting(key: modelKey, value: "gpt-4o")
                     }
                     Button("gpt-4o-mini") {
+                        model.wrappedValue = "gpt-4o-mini"
                         state.updateSetting(key: modelKey, value: "gpt-4o-mini")
                     }
                     Button("claude-3-5-sonnet") {
+                        model.wrappedValue = "claude-3-5-sonnet"
                         state.updateSetting(key: modelKey, value: "claude-3-5-sonnet")
                     }
                 } label: {

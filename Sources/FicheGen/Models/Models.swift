@@ -121,9 +121,21 @@ struct RatingRecord: Encodable {
 
 // MARK: - Chat Message
 
+struct DiffLine: Identifiable, Equatable {
+    let id = UUID()
+    enum Kind: String, Codable {
+        case added
+        case removed
+        case unchanged
+    }
+    let kind: Kind
+    let text: String
+}
+
 struct ChatMessage: Identifiable, Equatable {
     let id = UUID()
     let role: String // "user" or "assistant"
     let text: String
     let timestamp = Date()
+    var diffLines: [DiffLine]? = nil
 }

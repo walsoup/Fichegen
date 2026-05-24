@@ -49,6 +49,8 @@ final class AppState: ObservableObject {
     @Published var routingOffsetModel: String = ""
     @Published var routingSyntaxProvider: String = "default"
     @Published var routingSyntaxModel: String = ""
+    @Published var routingChatProvider: String = "default"
+    @Published var routingChatModel: String = ""
 
     // MARK: - Defaults
     @Published var defaultPdfStyle: String = "Normal"
@@ -66,6 +68,9 @@ final class AppState: ObservableObject {
     @Published var advancedTocPrompt: String = ""
     @Published var advancedPageFindingPrompt: String = ""
     @Published var advancedFichePrompt: String = ""
+    @Published var advancedShowLogTab: Bool = false
+    @Published var chatModel: String = "gemini-2.5-pro"
+
 
     // MARK: - Appearance Settings
     @Published var uiLanguage: String = "fr"
@@ -430,6 +435,8 @@ final class AppState: ObservableObject {
         routingOffsetModel    = str("routing_offset_model", "")
         routingSyntaxProvider = str("routing_syntax_provider", "default")
         routingSyntaxModel    = str("routing_syntax_model", "")
+        routingChatProvider   = str("routing_chat_provider", "default")
+        routingChatModel      = str("routing_chat_model", "")
         defaultPdfStyle = str("default_pdf_style", "Normal")
         useTopExamples  = bool("use_top_examples", true)
         previewSource   = bool("preview_source", false)
@@ -441,6 +448,7 @@ final class AppState: ObservableObject {
         advancedTocPrompt  = str("advanced_toc_prompt", "")
         advancedPageFindingPrompt = str("advanced_page_finding_prompt", "")
         advancedFichePrompt = str("advanced_fiche_prompt", "")
+        chatModel       = str("chat_model", "gemini-2.5-pro")
         uiLanguage      = str("ui_language", "fr")
         uiCompactSidebar = bool("ui_compact_sidebar", false)
         uiShowEvalAdvancedControls = bool("ui_show_eval_advanced_controls", false)
@@ -491,13 +499,14 @@ final class AppState: ObservableObject {
             "routing_toc_provider": routingTocProvider,     "routing_toc_model": routingTocModel,
             "routing_offset_provider": routingOffsetProvider, "routing_offset_model": routingOffsetModel,
             "routing_syntax_provider": routingSyntaxProvider, "routing_syntax_model": routingSyntaxModel,
+            "routing_chat_provider": routingChatProvider, "routing_chat_model": routingChatModel,
             "default_pdf_style": defaultPdfStyle, "use_top_examples": useTopExamples,
             "preview_source": previewSource,  "save_logs": saveLogs,
             "updates_auto_check": autoUpdateChecks, "quit_on_close": quitOnClose,
             "special_instructions": specialInstructions,
             "advanced_enable_prompt_editing": advancedEnablePromptEditing,
             "advanced_toc_prompt": advancedTocPrompt, "advanced_page_finding_prompt": advancedPageFindingPrompt,
-            "advanced_fiche_prompt": advancedFichePrompt,
+            "advanced_fiche_prompt": advancedFichePrompt, "chat_model": chatModel,
             "ui_language": uiLanguage, "ui_compact_sidebar": uiCompactSidebar,
             "ui_show_eval_advanced_controls": uiShowEvalAdvancedControls, "pdf_show_meta": pdfShowMeta,
             "exp_streaming_response": expStreamingResponse, "exp_max_retries": expMaxRetries,
@@ -572,6 +581,10 @@ final class AppState: ObservableObject {
             if let val = value as? String { routingSyntaxProvider = val }
         case "routing_syntax_model":
             if let val = value as? String { routingSyntaxModel = val }
+        case "routing_chat_provider":
+            if let val = value as? String { routingChatProvider = val }
+        case "routing_chat_model":
+            if let val = value as? String { routingChatModel = val }
         case "default_pdf_style":
             if let val = value as? String { defaultPdfStyle = val }
         case "use_top_examples":
@@ -594,6 +607,8 @@ final class AppState: ObservableObject {
             if let val = value as? String { advancedPageFindingPrompt = val }
         case "advanced_fiche_prompt":
             if let val = value as? String { advancedFichePrompt = val }
+        case "chat_model":
+            if let val = value as? String { chatModel = val }
         case "ui_language":
             if let val = value as? String { uiLanguage = val }
         case "ui_compact_sidebar":

@@ -37,6 +37,8 @@ struct AIConfig: Sendable {
     let routingTocProvider: String;    let routingTocModel: String
     let routingOffsetProvider: String; let routingOffsetModel: String
     let routingSyntaxProvider: String; let routingSyntaxModel: String
+    let routingChatProvider: String;   let routingChatModel: String
+    let chatModel: String
     // Experimental
     let expMaxRetries: Int
     let expRequestTimeout: Int
@@ -69,6 +71,9 @@ struct AIConfig: Sendable {
         routingOffsetModel    = state.routingOffsetModel
         routingSyntaxProvider = state.routingSyntaxProvider
         routingSyntaxModel    = state.routingSyntaxModel
+        routingChatProvider   = state.routingChatProvider
+        routingChatModel      = state.routingChatModel
+        chatModel             = state.chatModel
         expMaxRetries       = state.expMaxRetries
         expRequestTimeout   = state.expRequestTimeout
         expMultiPassGen     = state.expMultiPassGen
@@ -217,6 +222,43 @@ actor GeminiClient {
         }
     }
 
+    // MARK: - Streaming Entry Point
+
+    func generateStream(
+        prompt: String,
+        purpose: String,
+        temperature: Double,
+        responseJSON: Bool = false,
+        config: AIConfig
+    ) -> AsyncThrowingStream<String, Error> {
+        let (provider, model) = resolveRouting(purpose: purpose, config: config)
+        
+        // For now, only Gemini API Studio supports SSE streaming in this client.
+        // Other providers will fallback to a single-chunk stream.
+        if provider == .gemini || (provider == .default && !config.proxyEnabled && !config.vercelEnabled && config.apiRoute != "vertex") {
+            return callGeminiAIStudioStream(
+                apiKey: config.geminiApiKey,
+                model: model ?? config.geminiModel,
+                prompt: prompt,
+                temperature: temperature,
+                responseJSON: responseJSON
+            )
+        } else {
+            // Fallback for non-streaming providers
+            return AsyncThrowingStream { continuation in
+                Task {
+                    do {
+                        let result = try await generate(prompt: prompt, purpose: purpose, temperature: temperature, responseJSON: responseJSON, config: config)
+                        continuation.yield(result)
+                        continuation.finish()
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Routing resolution
 
     private func resolveRouting(
@@ -232,7 +274,11 @@ actor GeminiClient {
         if let key = funcKey {
             perProvider = AIProvider(rawValue: providerForFunc(key, config: config)) ?? .default
             let m = modelForFunc(key, config: config)
-            perModel = m.isEmpty ? nil : m
+            if key == "chat" {
+                perModel = m.isEmpty ? config.chatModel : m
+            } else {
+                perModel = m.isEmpty ? nil : m
+            }
         }
 
         // Resolve .default → global setting
@@ -253,6 +299,7 @@ actor GeminiClient {
 
     private func funcKeyFor(purpose: String) -> String? {
         let p = purpose.lowercased()
+        if p.contains("chat")   { return "chat" }
         if p.contains("fiche")  { return "fiche" }
         if p.contains("eval")   { return "eval" }
         if p.contains("quiz")   { return "quiz" }
@@ -264,6 +311,7 @@ actor GeminiClient {
 
     private func providerForFunc(_ key: String, config: AIConfig) -> String {
         switch key {
+        case "chat":   return config.routingChatProvider
         case "fiche":  return config.routingFicheProvider
         case "eval":   return config.routingEvalProvider
         case "quiz":   return config.routingQuizProvider
@@ -276,6 +324,7 @@ actor GeminiClient {
 
     private func modelForFunc(_ key: String, config: AIConfig) -> String {
         switch key {
+        case "chat":   return config.routingChatModel
         case "fiche":  return config.routingFicheModel
         case "eval":   return config.routingEvalModel
         case "quiz":   return config.routingQuizModel
@@ -314,6 +363,54 @@ actor GeminiClient {
                     throw AIClientError.emptyResponse("Gemini returned no content (model: \(model)).")
                 }
                 return text
+            }
+        }
+    }
+
+    func callGeminiAIStudioStream(
+        apiKey: String,
+        model: String,
+        prompt: String,
+        temperature: Double,
+        responseJSON: Bool
+    ) -> AsyncThrowingStream<String, Error> {
+        return AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        throw AIClientError.missingAPIKey("Gemini API key is not configured.")
+                    }
+
+                    let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\\(model):streamGenerateContent?key=\\(apiKey)&alt=sse"
+                    guard let url = URL(string: urlStr) else { throw AIClientError.invalidURL(urlStr) }
+
+                    let body = makeGeminiBody(prompt: prompt, temperature: temperature, responseJSON: responseJSON, model: model)
+
+                    var req = URLRequest(url: url)
+                    req.httpMethod = "POST"
+                    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    req.httpBody = try JSONEncoder().encode(body)
+
+                    let (result, response) = try await session.bytes(for: req)
+                    if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                        throw AIClientError.httpError(http.statusCode, "Streaming failed.")
+                    }
+
+                    for try await line in result.lines {
+                        if line.hasPrefix("data: ") {
+                            let jsonStr = line.dropFirst(6)
+                            if jsonStr == "[DONE]" { break }
+                            if let data = jsonStr.data(using: .utf8),
+                               let decoded = try? JSONDecoder().decode(GeminiResponse.self, from: data),
+                               let text = decoded.candidates?.first?.content.parts.first?.text {
+                                continuation.yield(text)
+                            }
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
             }
         }
     }

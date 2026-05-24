@@ -110,16 +110,16 @@ final class GenerationEngine {
 
         onProgress(95)
 
-        // Parse JSON → render Markdown
+        // Parse JSON → render HTML
         let cleanedText = GenerationEngine.cleanJSONResponse(responseText)
         if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
-            var markdown = renderFicheMarkdown(json)
-            if !markdown.isEmpty {
+            var html = renderFicheHTML(json)
+            if !html.isEmpty {
                 if config.expMultiPassGen && config.expMultiPassIterations > 1 {
-                    markdown = try await performMultiPass(
-                        initialMarkdown: markdown,
+                    html = try await performMultiPass(
+                        initialHTML: html,
                         iterations: config.expMultiPassIterations,
                         config: config,
                         onLog: onLog,
@@ -129,7 +129,7 @@ final class GenerationEngine {
 
                 onLog("✅ Fiche générée.")
                 onProgress(100)
-                return markdown
+                return html
             }
         }
 
@@ -144,13 +144,13 @@ final class GenerationEngine {
     }
 
     private func performMultiPass(
-        initialMarkdown: String,
+        initialHTML: String,
         iterations: Int,
         config: AIConfig,
         onLog: @escaping (String) -> Void,
         onProgress: @escaping (Int) -> Void
     ) async throws -> String {
-        var currentMarkdown = initialMarkdown
+        var currentHTML = initialHTML
         let loops = max(1, iterations - 1)
         
         for i in 1...loops {
@@ -160,11 +160,11 @@ final class GenerationEngine {
             let prompt = """
             Tu es un expert en pédagogie. Analyse et améliore la fiche pédagogique suivante.
             Corrige les incohérences, améliore la formulation, assure-toi que les durées correspondent, et enrichis le contenu si nécessaire.
-            Ne retourne QUE le Markdown amélioré, sans texte introductif.
+            Ne retourne QUE le code HTML amélioré, sans texte introductif.
             
             FICHE ACTUELLE:
             ---
-            \(currentMarkdown)
+            \(currentHTML)
             ---
             """
             
@@ -177,10 +177,10 @@ final class GenerationEngine {
             )
             let refined = response.trimmingCharacters(in: .whitespacesAndNewlines)
             if !refined.isEmpty {
-                currentMarkdown = refined
+                currentHTML = refined
             }
         }
-        return currentMarkdown
+        return currentHTML
     }
 
     // MARK: - Evaluation Generation
@@ -228,11 +228,11 @@ final class GenerationEngine {
         if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
-            let markdown = renderEvaluationMarkdown(json)
-            if !markdown.isEmpty {
+            let html = renderEvaluationHTML(json)
+            if !html.isEmpty {
                 onLog("✅ Évaluation générée.")
                 onProgress(100)
-                return markdown
+                return html
             }
         }
 
@@ -287,11 +287,11 @@ final class GenerationEngine {
         if let data = cleanedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
-            let markdown = renderQuizMarkdown(json)
-            if !markdown.isEmpty {
+            let html = renderQuizHTML(json)
+            if !html.isEmpty {
                 onLog("✅ Quiz généré.")
                 onProgress(100)
-                return markdown
+                return html
             }
         }
 
@@ -307,7 +307,7 @@ final class GenerationEngine {
     // MARK: - AI Editor
 
     func editFiche(
-        currentMarkdown: String,
+        currentHTML: String,
         instructions: String,
         config: AIConfig,
         onLog: @escaping (String) -> Void,
@@ -318,24 +318,24 @@ final class GenerationEngine {
 
         let prompt = """
         Tu es un expert en pédagogie.
-        On t'a fourni une fiche pédagogique existante au format Markdown.
+        On t'a fourni une fiche pédagogique existante au format HTML.
         Le professeur demande les modifications suivantes :
         "\(instructions)"
 
         FICHE ACTUELLE:
         ---
-        \(currentMarkdown)
+        \(currentHTML)
         ---
 
         INSTRUCTIONS:
         Applique les modifications demandées à la fiche existante.
-        Retourne UNIQUEMENT le code Markdown mis à jour, sans aucun texte introductif ni balises markdown (```).
+        Retourne UNIQUEMENT le code HTML mis à jour, sans aucun texte introductif ni balises html (```).
         Ne modifie pas les éléments qui ne sont pas concernés par la demande.
         """
 
         let responseText = try await GeminiClient.shared.generate(
             prompt: prompt,
-            purpose: "fiche-edit",
+            purpose: "chat",
             temperature: 0.7,
             responseJSON: false,
             config: config
@@ -344,6 +344,50 @@ final class GenerationEngine {
         onProgress(100)
         onLog("✅ Fiche mise à jour.")
         return responseText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func editFicheStream(
+        currentHTML: String,
+        instructions: String,
+        config: AIConfig,
+        onLog: @escaping (String) -> Void,
+        onProgress: @escaping (Int) -> Void,
+        onDelta: @escaping (String) -> Void
+    ) async throws {
+        onLog("✨ Modification de la fiche en cours...")
+        onProgress(50)
+
+        let prompt = """
+        Tu es un expert en pédagogie.
+        On t'a fourni une fiche pédagogique existante au format HTML.
+        Le professeur demande les modifications suivantes :
+        "\(instructions)"
+
+        FICHE ACTUELLE:
+        ---
+        \(currentHTML)
+        ---
+
+        INSTRUCTIONS:
+        Applique les modifications demandées à la fiche existante.
+        Retourne UNIQUEMENT le code HTML mis à jour, sans aucun texte introductif ni balises html (```).
+        Ne modifie pas les éléments qui ne sont pas concernés par la demande.
+        """
+
+        let stream = await GeminiClient.shared.generateStream(
+            prompt: prompt,
+            purpose: "chat",
+            temperature: 0.7,
+            responseJSON: false,
+            config: config
+        )
+
+        for try await chunk in stream {
+            onDelta(chunk)
+        }
+
+        onProgress(100)
+        onLog("✅ Fiche mise à jour.")
     }
 
     // MARK: - Prompt Builders
@@ -588,10 +632,10 @@ final class GenerationEngine {
         """
     }
 
-    // MARK: - JSON → Markdown Renderers
+    // MARK: - JSON → HTML Renderers
     // Port of core/ai.py: _render_fiche_markdown, _render_evaluation_markdown, _render_quiz_markdown
 
-    func renderFicheMarkdown(_ data: [String: Any]) -> String {
+    func renderFicheHTML(_ data: [String: Any]) -> String {
         func cleanList(_ val: Any?) -> [String] {
             guard let val = val else { return [] }
             if let arr = val as? [Any] {
@@ -613,7 +657,7 @@ final class GenerationEngine {
         let objectives = cleanList(data["objectives"])
         let phases = data["phases"] as? [[String: Any]] ?? []
 
-        var lines: [String] = ["# \(title)"]
+        var lines: [String] = ["<h1>\(title)</h1>"]
 
         // Summary line
         var summaryParts: [String] = []
@@ -622,105 +666,111 @@ final class GenerationEngine {
         if let d = duration { summaryParts.append("\(d) min") }
         if let ch = chapterTitle, !ch.isEmpty { summaryParts.append("Ch: \(ch)") }
         if !summaryParts.isEmpty {
-            lines.append("")
-            lines.append("> **Fiche pédagogique** · \(summaryParts.joined(separator: " · "))")
+            lines.append("<blockquote><strong>Fiche pédagogique</strong> · \(summaryParts.joined(separator: " · "))</blockquote>")
         }
 
         if !materials.isEmpty {
-            lines.append("")
-            lines.append("**Matériel** : \(materials.joined(separator: ", "))")
+            lines.append("<p><strong>Matériel</strong> : \(materials.joined(separator: ", "))</p>")
         }
 
         if !objectives.isEmpty {
-            lines.append("")
-            lines.append("## Objectifs")
-            for (i, obj) in objectives.enumerated() {
-                lines.append("\(i + 1). \(obj)")
+            lines.append("<h2>Objectifs</h2>")
+            lines.append("<ul>")
+            for obj in objectives {
+                lines.append("<li>\(obj)</li>")
             }
+            lines.append("</ul>")
         }
 
         if !phases.isEmpty {
-            lines.append("")
-            lines.append("## Plan de séance")
+            lines.append("<h2>Plan de séance</h2>")
+            lines.append("<ul>")
             for (i, phase) in phases.enumerated() {
                 let name = (phase["name"] as? String) ?? "Phase \(i + 1)"
                 let goal = (phase["goal"] as? String ?? "").trimmingCharacters(in: .whitespaces)
                 let dur = GenerationEngine.safeInt(phase["duration_minutes"])
                 let durText = dur.map { "\($0) min" } ?? "à adapter"
                 if goal.isEmpty {
-                    lines.append("- **Bloc \(i + 1) (\(durText))**: \(name)")
+                    lines.append("<li><strong>Bloc \(i + 1) (\(durText))</strong>: \(name)</li>")
                 } else {
-                    lines.append("- **Bloc \(i + 1) (\(durText))**: \(name) - \(goal)")
+                    lines.append("<li><strong>Bloc \(i + 1) (\(durText))</strong>: \(name) - \(goal)</li>")
                 }
             }
+            lines.append("</ul>")
 
-            lines.append("")
-            lines.append("## Déroulement détaillé")
+            lines.append("<h2>Déroulement détaillé</h2>")
             for (i, phase) in phases.enumerated() {
                 let name = (phase["name"] as? String) ?? "Phase \(i + 1)"
                 let dur = GenerationEngine.safeInt(phase["duration_minutes"])
-                var header = "### Bloc \(i + 1) - \(name)"
+                var header = "Bloc \(i + 1) - \(name)"
                 if let d = dur { header += " (\(d) min)" }
-                lines.append(header)
+                lines.append("<h3>\(header)</h3>")
 
                 if let goal = phase["goal"] as? String, !goal.trimmingCharacters(in: .whitespaces).isEmpty {
-                    lines.append("**Objectif de la phase** : \(goal)")
+                    lines.append("<p><strong>Objectif de la phase</strong> : \(goal)</p>")
                 }
                 let teacherSteps = cleanList(phase["teacher_steps"])
                 if !teacherSteps.isEmpty {
-                    lines.append("**Actions de l'enseignant**")
-                    teacherSteps.forEach { lines.append("- \($0)") }
+                    lines.append("<p><strong>Actions de l'enseignant</strong></p>")
+                    lines.append("<ul>")
+                    teacherSteps.forEach { lines.append("<li>\($0)</li>") }
+                    lines.append("</ul>")
                 }
                 let studentSteps = cleanList(phase["student_steps"])
                 if !studentSteps.isEmpty {
-                    lines.append("**Actions des élèves**")
-                    studentSteps.forEach { lines.append("- \($0)") }
+                    lines.append("<p><strong>Actions des élèves</strong></p>")
+                    lines.append("<ul>")
+                    studentSteps.forEach { lines.append("<li>\($0)</li>") }
+                    lines.append("</ul>")
                 }
                 let phaseMaterials = cleanList(phase["materials"])
                 if !phaseMaterials.isEmpty {
-                    lines.append("**Supports** : \(phaseMaterials.joined(separator: ", "))")
+                    lines.append("<p><strong>Supports</strong> : \(phaseMaterials.joined(separator: ", "))</p>")
                 }
                 if let diff = phase["differentiation"] as? String, !diff.trimmingCharacters(in: .whitespaces).isEmpty {
-                    lines.append("**Différenciation** : \(diff)")
+                    lines.append("<p><strong>Différenciation</strong> : \(diff)</p>")
                 }
-                lines.append("")
             }
         }
 
         let evaluation = data["evaluation"] as? [String: Any] ?? [:]
         if !evaluation.isEmpty {
-            lines.append("## Évaluation")
+            lines.append("<h2>Évaluation</h2>")
             if let strategy = evaluation["strategy"] as? String, !strategy.isEmpty {
-                lines.append("**Modalité** : \(strategy)")
+                lines.append("<p><strong>Modalité</strong> : \(strategy)</p>")
             }
             let questions = cleanList(evaluation["questions"])
             if !questions.isEmpty {
-                lines.append("### Questions")
-                questions.enumerated().forEach { lines.append("\($0.offset + 1). \($0.element)") }
+                lines.append("<h3>Questions</h3>")
+                lines.append("<ol>")
+                questions.forEach { lines.append("<li>\($0)</li>") }
+                lines.append("</ol>")
             }
             let answers = cleanList(evaluation["answer_key"])
             if !answers.isEmpty {
-                lines.append("### Éléments de correction")
-                answers.enumerated().forEach { lines.append("\($0.offset + 1). \($0.element)") }
+                lines.append("<h3>Éléments de correction</h3>")
+                lines.append("<ol>")
+                answers.forEach { lines.append("<li>\($0)</li>") }
+                lines.append("</ol>")
             }
-            lines.append("")
         }
 
         if let reminders = data["reminders"] as? String, !reminders.trimmingCharacters(in: .whitespaces).isEmpty {
-            lines.append("## Remarques")
-            lines.append("- \(reminders)")
-            lines.append("")
+            lines.append("<h2>Remarques</h2>")
+            lines.append("<ul>")
+            lines.append("<li>\(reminders)</li>")
+            lines.append("</ul>")
         }
 
         if let conclusion = data["conclusion"] as? String, !conclusion.trimmingCharacters(in: .whitespaces).isEmpty {
-            lines.append("## Conclusion")
-            lines.append(conclusion)
+            lines.append("<h2>Conclusion</h2>")
+            lines.append("<p>\(conclusion)</p>")
         }
 
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func renderEvaluationMarkdown(_ data: [String: Any]) -> String {
+    func renderEvaluationHTML(_ data: [String: Any]) -> String {
         func cleanText(_ val: Any?, fallback: String = "") -> String {
             let s = (val as? String ?? "\(val ?? "")").trimmingCharacters(in: .whitespaces)
             return s.isEmpty ? fallback : s
@@ -748,130 +798,135 @@ final class GenerationEngine {
         }
 
         var lines: [String] = []
-        lines.append("# ÉPREUVE D'ÉVALUATION")
-        lines.append("")
-        lines.append("> **\(schoolName)**")
-        lines.append("> **Session** : \(sessionLabel)")
-        lines.append("> **Niveau** : \(classLevel)")
-        lines.append("> **Matière** : \(subject)")
-        lines.append("> **Durée** : \(duration) min")
-        lines.append("> **Total** : \(maxScore) points")
-        lines.append("")
-        lines.append("## Cadre élève")
-        lines.append("- Nom et prénom : ________________________________________________")
-        lines.append("- Date : ____________________")
-        lines.append("- Classe : __________________")
-        lines.append("- Note finale : ________ / \(maxScore)")
-        lines.append("")
-        lines.append("## Consignes générales")
-        lines.append("1. Lis chaque consigne avec attention et respecte la durée (\(duration) min).")
-        lines.append("2. Soigne la présentation et justifie quand la consigne l'exige.")
-        lines.append("3. Réponds directement dans les espaces prévus.")
-        lines.append("")
+        lines.append("<h1>ÉPREUVE D'ÉVALUATION</h1>")
+        lines.append("<blockquote>")
+        lines.append("<p><strong>\(schoolName)</strong><br>")
+        lines.append("<strong>Session</strong> : \(sessionLabel)<br>")
+        lines.append("<strong>Niveau</strong> : \(classLevel)<br>")
+        lines.append("<strong>Matière</strong> : \(subject)<br>")
+        lines.append("<strong>Durée</strong> : \(duration) min<br>")
+        lines.append("<strong>Total</strong> : \(maxScore) points</p>")
+        lines.append("</blockquote>")
+        
+        lines.append("<h2>Cadre élève</h2>")
+        lines.append("<ul>")
+        lines.append("<li>Nom et prénom : ________________________________________________</li>")
+        lines.append("<li>Date : ____________________</li>")
+        lines.append("<li>Classe : __________________</li>")
+        lines.append("<li>Note finale : ________ / \(maxScore)</li>")
+        lines.append("</ul>")
+        
+        lines.append("<h2>Consignes générales</h2>")
+        lines.append("<ol>")
+        lines.append("<li>Lis chaque consigne avec attention et respecte la durée (\(duration) min).</li>")
+        lines.append("<li>Soigne la présentation et justifie quand la consigne l'exige.</li>")
+        lines.append("<li>Réponds directement dans les espaces prévus.</li>")
+        lines.append("</ol>")
 
         let exercises = data["exercises"] as? [[String: Any]] ?? []
         if !exercises.isEmpty {
-            lines.append("## Barème de l'épreuve")
-            lines.append("| Exercice | Points |")
-            lines.append("|:---------|------:|")
+            lines.append("<h2>Barème de l'épreuve</h2>")
+            lines.append("<table>")
+            lines.append("<thead>")
+            lines.append("<tr><th>Exercice</th><th>Points</th></tr>")
+            lines.append("</thead>")
+            lines.append("<tbody>")
             for (i, ex) in exercises.enumerated() {
                 let label = cleanText(ex["title"], fallback: "Exercice \(i + 1)")
                 let pts = scoreText(ex["points"])
-                lines.append("| \(label) | \(pts) |")
+                lines.append("<tr><td>\(label)</td><td>\(pts)</td></tr>")
             }
-            lines.append("| **Total** | **\(maxScore)** |")
-            lines.append("")
+            lines.append("<tr><td><strong>Total</strong></td><td><strong>\(maxScore)</strong></td></tr>")
+            lines.append("</tbody>")
+            lines.append("</table>")
+            lines.append("<hr>")
         }
-
-        lines.append("---")
-        lines.append("")
 
         for (i, exercise) in exercises.enumerated() {
             let title = cleanText(exercise["title"], fallback: "Exercice \(i + 1)")
             let instructions = cleanText(exercise["instructions"])
             let points = scoreText(exercise["points"])
-            lines.append("## Exercice \(i + 1) - \(title)")
-            lines.append("**Points :** \(points)")
-            if !instructions.isEmpty { lines.append("**Consigne :** \(instructions)") }
-            lines.append("")
+            lines.append("<h2>Exercice \(i + 1) - \(title)</h2>")
+            lines.append("<p><strong>Points :</strong> \(points)</p>")
+            if !instructions.isEmpty { lines.append("<p><strong>Consigne :</strong> \(instructions)</p>") }
 
             let questions = exercise["questions"] as? [[String: Any]] ?? []
             for (j, question) in questions.enumerated() {
                 let prompt = cleanText(question["prompt"])
                 if !prompt.isEmpty {
                     let answerType = cleanText(question["answer_type"], fallback: "réponse ouverte")
-                    lines.append("### Q\(i + 1).\(j + 1) [\(answerType)]")
-                    lines.append(prompt)
-                    lines.append("")
-                    lines.append("Réponse : __________________________________________________________")
-                    lines.append("____________________________________________________________")
-                    lines.append("")
+                    lines.append("<h3>Q\(i + 1).\(j + 1) [\(answerType)]</h3>")
+                    lines.append("<p>\(prompt)</p>")
+                    lines.append("<p>Réponse : __________________________________________________________<br>")
+                    lines.append("____________________________________________________________</p>")
                 }
             }
-            lines.append("")
-            lines.append("---")
-            lines.append("")
+            lines.append("<hr>")
         }
 
         if let answerKey = data["answer_key"] as? [Any], !answerKey.isEmpty {
-            lines.append("## Corrigé enseignant")
-            lines.append("")
+            lines.append("<h2>Corrigé enseignant</h2>")
+            lines.append("<ul>")
             for answer in answerKey {
                 if let d = answer as? [String: Any] {
                     let ref = cleanText(d["reference"], fallback: "Question")
                     let val = cleanText(d["answer"])
-                    lines.append("- **\(ref)** : \(val)")
+                    lines.append("<li><strong>\(ref)</strong> : \(val)</li>")
                 } else {
-                    lines.append("- \(answer)")
+                    lines.append("<li>\(answer)</li>")
                 }
             }
-            lines.append("")
+            lines.append("</ul>")
         }
 
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func renderQuizMarkdown(_ data: [String: Any]) -> String {
+    func renderQuizHTML(_ data: [String: Any]) -> String {
         let title = (data["title"] as? String) ?? "Quiz: \(data["topic"] as? String ?? "Sujet")"
         let classLevel = data["class_level"] as? String ?? ""
         let duration = GenerationEngine.safeInt(data["duration_minutes"])
         let subject = data["subject"] as? String ?? ""
         let topic = data["topic"] as? String ?? ""
 
-        var lines: [String] = ["# \(title)", ""]
+        var lines: [String] = ["<h1>\(title)</h1>"]
         var meta: [String] = []
-        if !classLevel.isEmpty { meta.append("**Classe** : \(classLevel)") }
-        if !subject.isEmpty    { meta.append("**Matière** : \(subject)") }
-        if !topic.isEmpty      { meta.append("**Sujet** : \(topic)") }
-        if let d = duration    { meta.append("**Durée** : \(d) min") }
-        if !meta.isEmpty { lines.append(meta.joined(separator: " | ")); lines.append("") }
-
-        if let instructions = data["instructions"] as? [String], !instructions.isEmpty {
-            lines.append("## Consignes")
-            instructions.forEach { lines.append("- \($0)") }
-            lines.append("")
+        if !classLevel.isEmpty { meta.append("<strong>Classe</strong> : \(classLevel)") }
+        if !subject.isEmpty    { meta.append("<strong>Matière</strong> : \(subject)") }
+        if !topic.isEmpty      { meta.append("<strong>Sujet</strong> : \(topic)") }
+        if let d = duration    { meta.append("<strong>Durée</strong> : \(d) min") }
+        if !meta.isEmpty { 
+            lines.append("<p>" + meta.joined(separator: " | ") + "</p>")
         }
 
-        lines.append("## Questions")
-        lines.append("")
+        if let instructions = data["instructions"] as? [String], !instructions.isEmpty {
+            lines.append("<h2>Consignes</h2>")
+            lines.append("<ul>")
+            instructions.forEach { lines.append("<li>\($0)</li>") }
+            lines.append("</ul>")
+        }
+
+        lines.append("<h2>Questions</h2>")
         for q in data["questions"] as? [[String: Any]] ?? [] {
             let number = q["number"] as? Int ?? 0
             let type_ = q["type"] as? String ?? "question"
             let prompt = q["prompt"] as? String ?? ""
-            lines.append("### Question \(number) (\(type_))")
-            lines.append(prompt)
+            lines.append("<h3>Question \(number) (\(type_))</h3>")
+            lines.append("<p>\(prompt)</p>")
             if let options = q["options"] as? [String], !options.isEmpty {
+                lines.append("<ul>")
                 for (i, opt) in options.enumerated() {
-                    lines.append("- \(String(UnicodeScalar(65 + i)!)). \(opt)")
+                    lines.append("<li>\(String(UnicodeScalar(65 + i)!)). \(opt)</li>")
                 }
+                lines.append("</ul>")
             }
-            lines.append("")
         }
 
         if let answerKey = data["answer_key"] as? [String], !answerKey.isEmpty {
-            lines.append("## Corrigé")
-            lines.append("")
-            answerKey.forEach { lines.append("- \($0)") }
+            lines.append("<h2>Corrigé</h2>")
+            lines.append("<ul>")
+            answerKey.forEach { lines.append("<li>\($0)</li>") }
+            lines.append("</ul>")
         }
 
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)

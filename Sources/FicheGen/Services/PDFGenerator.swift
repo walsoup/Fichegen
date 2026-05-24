@@ -123,7 +123,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
     private var outputURL: URL?
     private var isRendering = false
     
-    public func generatePDF(from markdown: String, styleName: String, outputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
+    public func generatePDF(from htmlContent: String, styleName: String, outputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
         guard !isRendering else {
             completion(.failure(GeneratorError.printOperationFailed))
             return
@@ -136,29 +136,16 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
         let style = PDFStyle(rawValue: styleName) ?? .modern
         let css = style.css
         
-        let escapedMarkdown = markdown
+        let escapedHTML = htmlContent
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
             .replacingOccurrences(of: "$", with: "\\$")
-            
-        let markedJS: String
-        if let jsURL = Bundle.module.url(forResource: "marked.min", withExtension: "js"),
-           let jsContent = try? String(contentsOf: jsURL, encoding: .utf8) {
-            markedJS = jsContent
-        } else {
-            markedJS = ""
-        }
-        
-        let scriptTag = markedJS.isEmpty
-            ? "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>"
-            : "<script>\(markedJS)</script>"
         
         let htmlTemplate = """
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
-            \(scriptTag)
             <style>
                 \(css)
             </style>
@@ -167,8 +154,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             <div id="content"></div>
             <script>
                 document.addEventListener("DOMContentLoaded", () => {
-                    const markdown = `\(escapedMarkdown)`;
-                    document.getElementById('content').innerHTML = marked.parse(markdown);
+                    document.getElementById('content').innerHTML = `\(escapedHTML)`;
                     window.location.href = "pdfgenerator://ready";
                 });
             </script>
@@ -209,28 +195,20 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             return
         }
         
-        var printInfoDict = NSPrintInfo.shared.dictionary() as! [NSPrintInfo.AttributeKey: Any]
-        printInfoDict[.jobSavingURL] = outputURL
+        let config = WKPDFConfiguration()
         
-        let newPrintInfo = NSPrintInfo(dictionary: printInfoDict)
-        newPrintInfo.jobDisposition = .save
-        newPrintInfo.horizontalPagination = .fit
-        newPrintInfo.verticalPagination = .automatic
-        newPrintInfo.topMargin = 36
-        newPrintInfo.bottomMargin = 36
-        newPrintInfo.leftMargin = 36
-        newPrintInfo.rightMargin = 36
-        
-        let printOp = webView.printOperation(with: newPrintInfo)
-        printOp.showsPrintPanel = false
-        printOp.showsProgressPanel = false
-        
-        DispatchQueue.main.async {
-            let success = printOp.run()
-            if success {
-                self.finish(.success(outputURL))
-            } else {
-                self.finish(.failure(GeneratorError.printOperationFailed))
+        webView.createPDF(configuration: config) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let data):
+                do {
+                    try data.write(to: outputURL)
+                    self.finish(.success(outputURL))
+                } catch {
+                    self.finish(.failure(error))
+                }
+            case .failure(let error):
+                self.finish(.failure(error))
             }
         }
     }
