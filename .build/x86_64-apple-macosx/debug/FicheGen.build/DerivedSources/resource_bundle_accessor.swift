@@ -3,7 +3,7 @@ import Foundation
 extension Foundation.Bundle {
     static let module: Bundle = {
         let mainPath = Bundle.main.bundleURL.appendingPathComponent("FicheGen_FicheGen.bundle").path
-        let buildPath = "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen_FicheGen.bundle"
+        let buildPath = "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/.build/x86_64-apple-macosx/debug/FicheGen_FicheGen.bundle"
 
         let preferredBundle = Bundle(path: mainPath)
 

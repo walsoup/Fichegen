@@ -94,8 +94,18 @@ final class GenerationEngine {
         if let data = responseText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            !json.isEmpty {
-            let markdown = renderFicheMarkdown(json)
+            var markdown = renderFicheMarkdown(json)
             if !markdown.isEmpty {
+                if config.expMultiPassGen && config.expMultiPassIterations > 1 {
+                    markdown = try await performMultiPass(
+                        initialMarkdown: markdown,
+                        iterations: config.expMultiPassIterations,
+                        config: config,
+                        onLog: onLog,
+                        onProgress: onProgress
+                    )
+                }
+
                 onLog("✅ Fiche générée.")
                 onProgress(100)
                 return markdown
@@ -110,6 +120,46 @@ final class GenerationEngine {
         onLog("⚠️ JSON parse failed — using raw response.")
         onProgress(100)
         return fallback
+    }
+
+    private func performMultiPass(
+        initialMarkdown: String,
+        iterations: Int,
+        config: AIConfig,
+        onLog: @escaping (String) -> Void,
+        onProgress: @escaping (Int) -> Void
+    ) async throws -> String {
+        var currentMarkdown = initialMarkdown
+        let loops = max(1, iterations - 1)
+        
+        for i in 1...loops {
+            onLog("🔄 Passe de raffinement \(i)/\(loops)...")
+            onProgress(95 + (i * 4 / loops))
+            
+            let prompt = """
+            Tu es un expert en pédagogie. Analyse et améliore la fiche pédagogique suivante.
+            Corrige les incohérences, améliore la formulation, assure-toi que les durées correspondent, et enrichis le contenu si nécessaire.
+            Ne retourne QUE le Markdown amélioré, sans texte introductif.
+            
+            FICHE ACTUELLE:
+            ---
+            \(currentMarkdown)
+            ---
+            """
+            
+            let response = try await GeminiClient.shared.generate(
+                prompt: prompt,
+                purpose: "fiche-refinement",
+                temperature: 0.5,
+                responseJSON: false,
+                config: config
+            )
+            let refined = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !refined.isEmpty {
+                currentMarkdown = refined
+            }
+        }
+        return currentMarkdown
     }
 
     // MARK: - Evaluation Generation
@@ -661,7 +711,6 @@ final class GenerationEngine {
         let header = data["header"] as? [String: Any] ?? [:]
         let schoolName = cleanText(data["school_name"], fallback: "Groupe Scolaire")
         let classLevel = cleanText(header["class_level"], fallback: "CM1")
-        let academicYear = cleanText(header["academic_year"], fallback: "2025/2026")
         let subject = cleanText(header["subject"], fallback: "Matière")
         let duration = cleanText(header["duration_minutes"], fallback: "45")
         let maxScore = scoreText(header["max_score"] ?? 20)
@@ -803,5 +852,11 @@ final class GenerationEngine {
         }
 
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+extension GenerationEngine {
+    func editFiche(instruction: String, markdown: String) async throws -> String {
+        return markdown // User will implement this
     }
 }

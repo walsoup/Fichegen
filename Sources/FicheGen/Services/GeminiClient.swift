@@ -36,6 +36,8 @@ struct AIConfig: Sendable {
     // Experimental
     let expMaxRetries: Int
     let expRequestTimeout: Int
+    let expMultiPassGen: Bool
+    let expMultiPassIterations: Int
 
     /// Capture current AppState values — call from @MainActor context only.
     @MainActor
@@ -62,6 +64,8 @@ struct AIConfig: Sendable {
         routingSyntaxModel    = state.routingSyntaxModel
         expMaxRetries       = state.expMaxRetries
         expRequestTimeout   = state.expRequestTimeout
+        expMultiPassGen     = state.expMultiPassGen
+        expMultiPassIterations = state.expMultiPassIterations
     }
 }
 

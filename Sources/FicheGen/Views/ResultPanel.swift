@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 
 struct ResultPanel: View {
     @EnvironmentObject var state: AppState
+    @Binding var showChatInspector: Bool
     @State private var selectedTab: ResultTab = .preview
 
     enum ResultTab: String, CaseIterable, Identifiable {
@@ -33,6 +34,11 @@ struct ResultPanel: View {
 
                 if !state.generatedMarkdown.isEmpty {
                     HStack(spacing: 8) {
+                        Button(action: { showChatInspector.toggle() }) {
+                            Image(systemName: "wand.and.stars")
+                        }
+                        .help("Ouvrir l'assistant")
+                        
                         Button("Exporter PDF") {
                             let generator = PDFGenerator()
                             let panel = NSSavePanel()
@@ -101,11 +107,6 @@ struct ResultPanel: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .bottom) {
-                if selectedTab == .preview && !state.generatedMarkdown.isEmpty {
-                    floatingChatInput
-                }
-            }
         }
         .frame(minWidth: 400, minHeight: 400)
         .background(.ultraThinMaterial)
@@ -113,37 +114,6 @@ struct ResultPanel: View {
         .animation(.spring(), value: state.generatedMarkdown.isEmpty)
     }
     
-    @State private var chatInput: String = ""
-
-    private var floatingChatInput: some View {
-        HStack(spacing: 8) {
-            TextField("Demander une modification à l'IA (ex: Plus court)...", text: $chatInput)
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .default))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            
-            Button(action: {
-                if !chatInput.isEmpty {
-                    state.logMessages.append("Demande de modification: \(chatInput)")
-                    chatInput = ""
-                }
-            }) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(chatInput.isEmpty ? Color.secondary : Color.blue)
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 8)
-        }
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
-        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        .overlay(Capsule().stroke(Color.primary.opacity(0.1), lineWidth: 1))
-        .padding(20)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
-
     private func saveMarkdown(_ markdown: String) {
         let panel = NSSavePanel()
         panel.title = "Exporter la fiche"

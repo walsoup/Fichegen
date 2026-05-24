@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var state: AppState
     @State private var selectedTab: Tab = .fiche
+    @State private var showChatInspector: Bool = false
 
     enum Tab: String, CaseIterable, Identifiable {
         case fiche = "Fiches"
@@ -34,9 +35,12 @@ struct ContentView: View {
                     .frame(minWidth: 340, idealWidth: 380, maxWidth: 460)
 
                 // Result panel
-                ResultPanel()
+                ResultPanel(showChatInspector: $showChatInspector)
                     .frame(minWidth: 480)
             }
+        }
+        .inspector(isPresented: $showChatInspector) {
+            ChatPanelView()
         }
         .navigationTitle("FicheGen")
         .toolbar {

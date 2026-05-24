@@ -21,11 +21,13 @@
 		75CA2D116F2355BD7CF0D022 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E948796284C0D11F0F124DD8 /* PreferencesView.swift */; };
 		7A1443C064D365F5FA0262B5 /* ResultPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159BD0804B2C1006D0E3A347 /* ResultPanel.swift */; };
 		A5C0011641AB41B39E8312D7 /* GenerateButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593E0E64863017A449F2BE46 /* GenerateButton.swift */; };
+		AA938DAE8EB38B8FD9E48B19 /* icon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7489F769CF5A7E1185CD3819 /* icon.icns */; };
 		AADA715460D12CA7FE9FE5D8 /* marked.min.js in Resources */ = {isa = PBXBuildFile; fileRef = AEFFAD65A20DA86B03AC395F /* marked.min.js */; };
 		AB6C75BD889170305665D886 /* GenerationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1615EF469C0985B2EE04FC33 /* GenerationEngine.swift */; };
 		CAD9D93EEBC9232A3EB59C53 /* FicheGenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C77A9C14768C1181726946D5 /* FicheGenApp.swift */; };
 		CCABAA9BBAC2A1E31FD9EA98 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1908B370BAE639CA17DBAC59 /* AppState.swift */; };
 		DBEBD528BF22E986B5B402B9 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9B0A74F65CC903E93D4A58C /* APIClient.swift */; };
+		E520F4A2F993467D40496C63 /* ChatPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F629C198A6161B9C2C0FF07D /* ChatPanelView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +40,7 @@
 		4E8BAE7EC60953497BEBD445 /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
 		50A7C5E54D776B7975F8B0CA /* StyleBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleBuilderView.swift; sourceTree = "<group>"; };
 		593E0E64863017A449F2BE46 /* GenerateButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateButton.swift; sourceTree = "<group>"; };
+		7489F769CF5A7E1185CD3819 /* icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = icon.icns; sourceTree = "<group>"; };
 		90EC98794B6A3F493D81ABD7 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		963B653F4CA185FA3FE7A50B /* QuizFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizFormView.swift; sourceTree = "<group>"; };
 		A68E8157D905C2517037F2A0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -49,6 +52,7 @@
 		E948796284C0D11F0F124DD8 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		E9B0A74F65CC903E93D4A58C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		EC09A577F8A37C84D15D0A2A /* EvaluationFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationFormView.swift; sourceTree = "<group>"; };
+		F629C198A6161B9C2C0FF07D /* ChatPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPanelView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -80,6 +84,7 @@
 		82AD5CACD5315EAB7FD2526A /* FicheGen */ = {
 			isa = PBXGroup;
 			children = (
+				7489F769CF5A7E1185CD3819 /* icon.icns */,
 				0679FBABE1FF508B5DCAF22E /* App */,
 				47F66BDF7F3492B623A3E013 /* Models */,
 				7A402887072E37B580FC8695 /* Resources */,
@@ -93,6 +98,7 @@
 		8DF151D33DBB47F96ED5DD6D /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				F629C198A6161B9C2C0FF07D /* ChatPanelView.swift */,
 				A68E8157D905C2517037F2A0 /* ContentView.swift */,
 				EC09A577F8A37C84D15D0A2A /* EvaluationFormView.swift */,
 				CAF6DD9DC8879B438293CACF /* FicheFormView.swift */,
@@ -194,6 +200,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA938DAE8EB38B8FD9E48B19 /* icon.icns in Resources */,
 				AADA715460D12CA7FE9FE5D8 /* marked.min.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -207,6 +214,7 @@
 			files = (
 				DBEBD528BF22E986B5B402B9 /* APIClient.swift in Sources */,
 				CCABAA9BBAC2A1E31FD9EA98 /* AppState.swift in Sources */,
+				E520F4A2F993467D40496C63 /* ChatPanelView.swift in Sources */,
 				620468D52C1E8B6E86693936 /* ContentView.swift in Sources */,
 				5B8114460ADC481C91180B60 /* EvaluationFormView.swift in Sources */,
 				5E63508402492B101A5F4CEC /* FicheFormView.swift in Sources */,

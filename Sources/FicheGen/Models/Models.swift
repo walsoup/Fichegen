@@ -118,3 +118,12 @@ struct RatingRecord: Encodable {
         case rating, content, timestamp
     }
 }
+
+// MARK: - Chat Message
+
+struct ChatMessage: Identifiable, Equatable {
+    let id = UUID()
+    let role: String // "user" or "assistant"
+    let text: String
+    let timestamp = Date()
+}

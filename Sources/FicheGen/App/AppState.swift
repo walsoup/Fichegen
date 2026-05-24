@@ -12,6 +12,7 @@ final class AppState: ObservableObject {
     @Published var isGenerating = false
     @Published var progress: Int = 0
     @Published var logMessages: [String] = []
+    @Published var chatHistory: [ChatMessage] = []
     @Published var generatedMarkdown: String = ""
 
     // MARK: - Preferences Settings
@@ -77,6 +78,7 @@ final class AppState: ObservableObject {
 
     // MARK: - Highly Experimental Settings
     @Published var expMultiPassGen: Bool = false
+    @Published var expMultiPassIterations: Int = 2
     @Published var expStyleTransfer: Bool = false
     @Published var expAutoGradeDifficulty: Bool = false
     @Published var expChainOfThought: Bool = false
@@ -382,6 +384,7 @@ final class AppState: ObservableObject {
         expEnableCache  = bool("exp_enable_cache", true)
         expParallelToc  = bool("exp_parallel_toc", false)
         expMultiPassGen = bool("exp_multi_pass_gen", false)
+        expMultiPassIterations = int_("exp_multi_pass_iterations", 2)
         expStyleTransfer = bool("exp_style_transfer", false)
         expAutoGradeDifficulty = bool("exp_auto_grade_difficulty", false)
         expChainOfThought = bool("exp_chain_of_thought", false)
@@ -431,6 +434,7 @@ final class AppState: ObservableObject {
             "exp_streaming_response": expStreamingResponse, "exp_max_retries": expMaxRetries,
             "exp_request_timeout": expRequestTimeout, "exp_enable_cache": expEnableCache,
             "exp_parallel_toc": expParallelToc, "exp_multi_pass_gen": expMultiPassGen,
+            "exp_multi_pass_iterations": expMultiPassIterations,
             "exp_style_transfer": expStyleTransfer, "exp_auto_grade_difficulty": expAutoGradeDifficulty,
             "exp_chain_of_thought": expChainOfThought, "exp_json_validation": expJsonValidation,
             "exp_speculative_decoding": expSpeculativeDecoding, "exp_agentic_loop": expAgenticLoop
@@ -539,6 +543,8 @@ final class AppState: ObservableObject {
             if let val = value as? Bool { expParallelToc = val }
         case "exp_multi_pass_gen":
             if let val = value as? Bool { expMultiPassGen = val }
+        case "exp_multi_pass_iterations":
+            if let val = value as? Int { expMultiPassIterations = val }
         case "exp_style_transfer":
             if let val = value as? Bool { expStyleTransfer = val }
         case "exp_auto_grade_difficulty":

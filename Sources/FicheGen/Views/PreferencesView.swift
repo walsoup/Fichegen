@@ -375,6 +375,12 @@ struct AdvancedPrefsTab: View {
                         set: { state.updateSetting(key: "exp_multi_pass_gen", value: $0) }
                     ))
                     
+                    Stepper("Itérations multi-passes : \(state.expMultiPassIterations)", value: Binding(
+                        get: { state.expMultiPassIterations },
+                        set: { state.updateSetting(key: "exp_multi_pass_iterations", value: $0) }
+                    ), in: 2...5)
+                    
+                    
                     Toggle("Transfert de style à partir de fiches existantes", isOn: Binding(
                         get: { state.expStyleTransfer },
                         set: { state.updateSetting(key: "exp_style_transfer", value: $0) }
