@@ -1,92 +1,57 @@
-# FicheGen
+# FicheGen Native for macOS
 
-FicheGen is an intelligent pedagogical content generator designed for teachers. It uses Google's Gemini AI to analyze educational guides (PDFs) and generate structured lesson plans (fiches), evaluations, and quizzes.
+FicheGen is a modern, native macOS application designed to revolutionize lesson planning for educators. Built entirely in Swift, FicheGen leverages the power of Google's Gemini API to instantly generate structured, comprehensive, and perfectly formatted lesson plans ("fiches pédagogiques") directly from your curriculum documents.
 
-## Features
+Gone are the days of tedious copying, formatting, and manual layout adjustments. FicheGen handles the heavy lifting, allowing educators to focus on what matters most: teaching.
 
-*   **Intelligent Analysis**: Extracts and analyzes content from PDF teacher guides.
-*   **Automatic Generation**: Creates structured pedagogical fiches, evaluations, and quizzes.
-*   **Multiple Formats**: Exports to PDF and DOCX.
-*   **Customizable**: Supports various PDF templates and formatting options.
-*   **Multi-language Support**: Interface available in English and French.
-*   **Provider Visibility Toggle**: OpenRouter references can be shown/hidden from the UI in Preferences.
-*   **Built-in Updater**: Manual update manager (Help/About) can fetch latest source from GitHub and rebuild the macOS app.
+## Key Features
 
-## Prerequisites
+✨ **Native macOS Experience**
+Built from the ground up in Swift, FicheGen is blazingly fast and incredibly lightweight. It embraces modern macOS design paradigms, featuring beautiful `.ultraThinMaterial` glassmorphism, fluid spring animations, and a seamless native interface.
 
-*   Python 3.9+
-*   Gemini access via either:
-    * Gemini API key (from [Google AI Studio](https://ai.google.dev/)), or
-    * Vertex AI (Google Cloud project credentials + `GOOGLE_CLOUD_PROJECT`, optional `GOOGLE_CLOUD_LOCATION`, and `GOOGLE_GENAI_USE_VERTEXAI=true`)
-*   macOS 12 users: install the pinned dependencies from `requirements.txt` so Qt stays on a compatible release line
+🤖 **AI-Powered Lesson Generation**
+Provide the app with your class level, subject, lesson topic, and any extracted text or instructions. FicheGen's secure integration with the Gemini API instantly drafts a robust lesson plan tailored to your exact specifications.
 
-## Installation
+🎨 **Graphic Style Builder**
+Make your Fiches your own. With the built-in Style Builder, you can customize the primary and secondary colors, choose your preferred typography (Avenir, Helvetica, Georgia, etc.), and adjust global margins. See your changes instantly in a live interactive preview.
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/fichegen.git
-    cd fichegen
-    ```
+📑 **Template Engine**
+Not a fan of the default layout? FicheGen allows you to upload custom Markdown (`.md`) structural templates. The AI will adopt your uploaded structure for all future generations, ensuring your lesson plans always match your school's official format.
 
-2.  Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+💬 **Interactive AI Editor**
+Need a quick tweak? Use the integrated AI chat command bar at the bottom of the result preview. Simply type *"Make the introduction shorter"* or *"Rewrite the conclusion to be more engaging"* and watch the document update natively on the fly.
 
-    If you already installed a newer `PyQt6`, reinstall the pinned version:
-    ```bash
-    pip install --upgrade --force-reinstall "PyQt6>=6.7,<6.8"
-    ```
+📄 **Flawless Native PDF Export**
+FicheGen features a robust, invisible WebKit engine that seamlessly renders your Markdown into HTML using your selected custom CSS styles, and leverages macOS `NSPrintOperation` to generate pixel-perfect PDFs directly to your drive. No Python dependencies, no external services required.
 
-## Usage
+## Building from Source
 
-1.  Run the application:
-    ```bash
-    python main.py
-    ```
+FicheGen uses `XcodeGen` for project management, ensuring a clean and reproducible build environment.
 
-2.  **Configuration**:
-    *   Go to **Preferences** (Cmd+, or File > Preferences).
-    *   Configure Gemini access in the "AI & Models" tab (API key) or via Vertex AI environment variables.
-    *   Optionally enable OpenRouter UI references from the same tab if you want provider-related guidance visible.
-    *   Set the **Input Guides** folder (where your PDF guides are stored).
-    *   Set the **Output Folder** (where generated files will be saved).
-    *   Optional: enable/disable automatic update checks in **Preferences > General**.
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/fichegen.git
+cd fichegen
+```
 
-## Updates
+2. **Generate the Xcode Project**
+```bash
+xcodegen generate
+```
 
-FicheGen now includes a user-friendly update flow:
+3. **Build the App**
+Open `FicheGen.xcodeproj` in Xcode and hit **Run** (⌘R), or build it directly from the command line:
+```bash
+xcodebuild -project FicheGen.xcodeproj -scheme FicheGen -configuration Release
+```
 
-1. Open **Help > Check for Updates…** or use the **Check for Updates…** button in **About**.
-2. Click **Check Now**.
-3. If an update is available, click **Build & Update**.
-4. The updater pulls from `https://github.com/walsoup/Fichegen`, installs dependencies, rebuilds the app, and replaces `/Applications/FicheGen.app` automatically.
+## Requirements
+- **macOS:** 14.0 or later
+- **Xcode:** 15.0 or later (for building)
+- **API Key:** A valid Google Gemini API key (can be securely configured in the app's Preferences).
 
-Notes:
+## Privacy & Security
+FicheGen communicates directly with the Gemini API via native Swift `URLSession`. Your API keys are securely stored in the macOS Keychain. No intermediate servers or analytics trackers are used.
 
-* Updates are always manual to avoid surprise installs.
-* Automatic mode only checks availability at startup (can be turned off).
-* If needed, macOS will ask for admin privileges during installation to `/Applications`.
-
-## Security Notes
-
-*   On macOS, API keys are stored in Keychain via the Python `keyring` backend.
-*   Legacy plaintext settings and `keys.txt` values are still read for compatibility and migrated when possible.
-
-3.  **Generating Content**:
-    *   Select the **Class Level** and **Subject**.
-    *   Enter a **Lesson Topic** (e.g., "Le cycle de l'eau").
-    *   Click **Generate Fiche**.
-
-## File Structure
-
-*   `core/`: Core logic for AI interaction and processing.
-*   `document/`: PDF and DOCX generation logic.
-*   `ui/`: PyQt6 user interface.
-*   `utils/`: Helper functions.
-*   `guides/`: Default directory for input PDF guides.
-*   `fiches/`: Default directory for output files.
-
-## License
-
-[License Name]
+---
+*FicheGen: Empowering educators, one lesson plan at a time.*

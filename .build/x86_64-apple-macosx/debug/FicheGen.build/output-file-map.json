@@ -1,0 +1,89 @@
+{
+  "": {
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/master.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/App/AppState.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/AppState.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/AppState.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/AppState~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/AppState.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/App/FicheGenApp.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheGenApp.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheGenApp.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheGenApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheGenApp.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Models/Models.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/Models.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/Models.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/Models.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Services/APIClient.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/APIClient.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/APIClient.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/APIClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/APIClient.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Services/KeychainHelper.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/KeychainHelper.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/KeychainHelper.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/KeychainHelper~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/KeychainHelper.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Services/PDFProcessor.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PDFProcessor.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PDFProcessor.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PDFProcessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PDFProcessor.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/ContentView.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ContentView.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ContentView.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ContentView.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/EvaluationFormView.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/EvaluationFormView.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/EvaluationFormView.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/EvaluationFormView~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/EvaluationFormView.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/FicheFormView.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheFormView.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheFormView.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheFormView~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/FicheFormView.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/GenerateButton.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/GenerateButton.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/GenerateButton.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/GenerateButton~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/GenerateButton.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/PreferencesView.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PreferencesView.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PreferencesView.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PreferencesView~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/PreferencesView.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/QuizFormView.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/QuizFormView.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/QuizFormView.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/QuizFormView~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/QuizFormView.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/Sources/FicheGen/Views/ResultPanel.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ResultPanel.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ResultPanel.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ResultPanel~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/ResultPanel.swiftdeps"
+  },
+  "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/resource_bundle_accessor.d",
+    "object": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/wal/.gemini/antigravity/worktrees/Fichegen/resume-fichegen-main-work/FicheGen-macOS/.build/x86_64-apple-macosx/debug/FicheGen.build/resource_bundle_accessor.swiftdeps"
+  }
+}

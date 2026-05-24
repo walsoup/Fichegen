@@ -1,0 +1,26 @@
+name: FicheGen
+options:
+  bundleIdPrefix: com.fichegen
+  postGenCommand: |
+    sed -i '' 's/objectVersion = [0-9]*/objectVersion = 56/g' FicheGen.xcodeproj/project.pbxproj
+    sed -i '' 's/preferredProjectObjectVersion = [0-9]*/preferredProjectObjectVersion = 56/g' FicheGen.xcodeproj/project.pbxproj
+targets:
+  FicheGen:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Sources/FicheGen
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.fichegen.app
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      DEVELOPMENT_TEAM: ""
+    info:
+      path: Info.plist
+      properties:
+        CFBundleIdentifier: com.fichegen.app
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        NSPrincipalClass: NSApplication
+        CFBundleIconFile: icon.icns
