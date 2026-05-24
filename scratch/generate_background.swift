@@ -11,8 +11,8 @@ guard let context = NSGraphicsContext.current?.cgContext else {
 // 1. Draw background gradient
 let colorSpace = CGColorSpaceCreateDeviceRGB()
 let colors = [
-    NSColor(red: 15.0/255.0, green: 23.0/255.0, blue: 42.0/255.0, alpha: 1.0).cgColor, // #0f172a (Deep Slate)
-    NSColor(red: 30.0/255.0, green: 27.0/255.0, blue: 75.0/255.0, alpha: 1.0).cgColor   // #1e1b4b (Deep Indigo)
+    NSColor(red: 12.0/255.0, green: 16.0/255.0, blue: 32.0/255.0, alpha: 1.0).cgColor, // #0c1020 (Dark Navy)
+    NSColor(red: 29.0/255.0, green: 78.0/255.0, blue: 216.0/255.0, alpha: 1.0).cgColor  // #1d4ed8 (Blue 700)
 ] as CFArray
 let locations: [CGFloat] = [0.0, 1.0]
 guard let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: locations) else {
@@ -57,7 +57,7 @@ arrowPath.move(to: arrowStart)
 arrowPath.addQuadCurve(to: arrowEnd, control: controlPoint)
 
 // Set arrow style: wide gradient stroke
-context.setStrokeColor(NSColor(red: 147.0/255.0, green: 51.0/255.0, blue: 234.0/255.0, alpha: 0.7).cgColor) // Purple 600
+context.setStrokeColor(NSColor(red: 59.0/255.0, green: 130.0/255.0, blue: 246.0/255.0, alpha: 0.8).cgColor) // Blue 500
 context.setLineWidth(4)
 context.setLineCap(.round)
 context.addPath(arrowPath)
@@ -85,7 +85,7 @@ context.move(to: arrowEnd)
 context.addLine(to: p1)
 context.addLine(to: p2)
 context.closePath()
-context.setFillColor(NSColor(red: 147.0/255.0, green: 51.0/255.0, blue: 234.0/255.0, alpha: 0.9).cgColor)
+context.setFillColor(NSColor(red: 59.0/255.0, green: 130.0/255.0, blue: 246.0/255.0, alpha: 0.95).cgColor)
 context.fillPath()
 context.restoreGState()
 
