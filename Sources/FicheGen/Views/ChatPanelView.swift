@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ChatPanelView: View {
@@ -6,173 +7,246 @@ struct ChatPanelView: View {
     @State private var inputText: String = ""
     @State private var isProcessing: Bool = false
 
+    private let quickSuggestions = [
+        "💡 Rendre plus simple",
+        "📝 Ajouter des exercices",
+        "🇬🇧 Traduire en anglais",
+        "🎨 Surligner les mots-clés"
+    ]
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header with title and Close button
-            HStack {
-                Spacer()
+            headerView
+            Divider()
+
+            if state.chatHistory.isEmpty {
+                emptyStateView
+            } else {
+                messageListView
+            }
+
+            Divider()
+            composerView
+        }
+        .frame(minWidth: 380, minHeight: 520)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var headerView: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Assistant Pédagogique")
                     .font(.headline)
-                    .padding(.leading, 32)
-                Spacer()
-                Button(action: { isPresented = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                        .font(.title3)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, 12)
+                Text("Entrée envoie, Maj+Entrée ajoute une ligne")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .frame(height: 48)
-            .background(Color(nsColor: .windowBackgroundColor))
-            
-            Divider()
-            
-            // Message Area / Empty State
-            if state.chatHistory.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color.accentColor)
-                    Text("Modifier la fiche avec l'IA")
-                        .font(.headline)
-                    Text("Demandez des ajustements ou des ajouts (ex: 'Rends le texte plus simple', 'Ajoute des exercices sur le vocabulaire').")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Suggestions :")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 24)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                suggestionChip("💡 Rendre plus simple")
-                                suggestionChip("📝 Ajouter des exercices")
-                                suggestionChip("🇬🇧 Traduire en anglais")
-                                suggestionChip("🎨 Surligner les mots-clés")
-                            }
-                            .padding(.horizontal, 24)
-                        }
-                    }
-                    .padding(.top, 8)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            ForEach(state.chatHistory) { message in
-                                HStack(alignment: .top) {
-                                    if message.role == "user" {
-                                        Spacer()
-                                        Text(message.text)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(Color.accentColor)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(12)
-                                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                                            .textSelection(.enabled)
-                                            .transition(.scale.combined(with: .opacity))
-                                    } else {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text(message.text)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 8)
-                                                .background(.ultraThinMaterial)
-                                                .cornerRadius(12)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                                                )
-                                                .textSelection(.enabled)
-                                            
-                                            if let diff = message.diffLines {
-                                                DiffView(diffLines: diff)
-                                                    .frame(maxWidth: 380)
-                                            }
-                                        }
-                                        .transition(.slide.combined(with: .opacity))
-                                        Spacer()
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .id(message.id)
-                            }
-                        }
-                        .padding(.vertical)
-                    }
-                    .onChange(of: state.chatHistory.count) { _, _ in
-                        if let lastMessage = state.chatHistory.last {
-                            withAnimation(.spring()) {
-                                scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
+
+            Spacer()
+
+            Button(action: { isPresented = false }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
             }
-            
-            Divider()
-                       VStack {
-                HStack(alignment: .bottom, spacing: 8) {
-                    ZStack(alignment: .topLeading) {
-                        if inputText.isEmpty {
-                            Text("Demander des modifications...")
-                                .foregroundColor(.gray.opacity(0.7))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                                .allowsHitTesting(false)
-                        }
-                        TextEditor(text: $inputText)
-                            .padding(4)
-                            .scrollContentBackground(.hidden)
-                            .font(.system(.body))
-                    }
-                    .frame(minHeight: 60, maxHeight: 120)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                    )
-                    .disabled(isProcessing)
-                    
-                    if isProcessing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(width: 28, height: 28)
-                            .padding(.bottom, 6)
-                    } else {
-                        Button(action: sendMessage) {
-                            Image(systemName: "paperplane.fill")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .accentColor)
-                                .frame(width: 28, height: 28)
-                                .background(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.clear : Color.accentColor.opacity(0.1))
-                                .cornerRadius(6)
-                        }
-                        .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .buttonStyle(.plain)
-                        .padding(.bottom, 6)
-                    }
-                }
-                .padding()
-            }
-            .background(Color(nsColor: .windowBackgroundColor))
+            .buttonStyle(.plain)
         }
-        .frame(minWidth: 320)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .padding(.horizontal, 16)
+        .frame(height: 56)
+        .background(Material.bar)
+    }
+
+    private var messageListView: some View {
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    ForEach(state.chatHistory) { message in
+                        messageRow(message)
+                            .id(message.id)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+            }
+            .background(Color(nsColor: .textBackgroundColor))
+            .onChange(of: state.chatHistory.count) { _, _ in
+                guard let lastMessage = state.chatHistory.last else { return }
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                }
+            }
+        }
+    }
+
+    private func messageRow(_ message: ChatMessage) -> some View {
+        let isUser = message.role == "user"
+
+        return HStack(alignment: .top, spacing: 12) {
+            if isUser { Spacer(minLength: 28) }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: isUser ? "person.fill" : "sparkles")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(isUser ? "Vous" : "Assistant")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                }
+
+                Text(message.text)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let diff = message.diffLines {
+                    DiffView(diffLines: diff)
+                        .frame(maxWidth: 520, alignment: .leading)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: 520, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isUser ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .textBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+
+            if !isUser { Spacer(minLength: 28) }
+        }
+        .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 18) {
+            Spacer(minLength: 12)
+
+            ZStack {
+                Circle()
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .frame(width: 84, height: 84)
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .overlay(
+                Circle()
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+
+            VStack(spacing: 8) {
+                Text("Modifier la fiche avec l'IA")
+                    .font(.title3.weight(.semibold))
+                Text("Expliquez le changement voulu. Entrée envoie, Maj+Entrée insère une nouvelle ligne.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 380)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Suggestions rapides")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 160), spacing: 8, alignment: .leading)],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    ForEach(quickSuggestions, id: \.self) { suggestion in
+                        suggestionChip(suggestion)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 560)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.thinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+
+            Spacer(minLength: 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private var composerView: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(nsColor: .textBackgroundColor))
+
+                ChatComposerTextView(
+                    text: $inputText,
+                    isEnabled: !isProcessing,
+                    onSubmit: sendMessage
+                )
+                .padding(6)
+
+                if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Demander des modifications...")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(minHeight: 64, maxHeight: 132)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            )
+
+            if isProcessing {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 34, height: 34)
+                    .padding(.bottom, 4)
+            } else {
+                Button(action: sendMessage) {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(canSend ? Color.white : .secondary)
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Circle()
+                                .fill(canSend ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
+                        )
+                }
+                .disabled(!canSend)
+                .buttonStyle(.plain)
+                .padding(.bottom, 4)
+            }
+        }
+        .padding(14)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var trimmedInput: String {
+        inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSend: Bool {
+        !trimmedInput.isEmpty && !isProcessing
     }
     
     private func sendMessage() {
-        guard !inputText.isEmpty else { return }
+        guard canSend else { return }
         
-        let instruction = inputText
+        let instruction = trimmedInput
         inputText = ""
         isProcessing = true
         
@@ -188,26 +262,20 @@ struct ChatPanelView: View {
         
         Task {
             do {
-                await MainActor.run { state.generatedMarkdown = "" }
-                try await GenerationEngine.shared.editFicheStream(
+                let updatedHTML = try await GenerationEngine.shared.editFiche(
                     currentHTML: originalHTML,
                     instructions: instruction,
                     config: cfg,
                     onLog: { msg in state.appendLog(msg) },
-                    onProgress: { p in state.progress = p },
-                    onDelta: { chunk in
-                        Task { @MainActor in
-                            state.generatedMarkdown += chunk
-                        }
-                    }
+                    onProgress: { p in state.progress = p }
                 )
                 
-                let updatedHTML = state.generatedMarkdown
                 let diff = await Task.detached(priority: .userInitiated) {
                     computeDisplayDiff(old: originalHTML, new: updatedHTML)
                 }.value
                 
                 await MainActor.run {
+                    state.generatedMarkdown = updatedHTML
                     if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
                         state.chatHistory[index] = ChatMessage(role: "assistant", text: "Modification appliquée avec succès !", diffLines: diff)
                     }
@@ -228,21 +296,108 @@ struct ChatPanelView: View {
     @ViewBuilder
     private func suggestionChip(_ text: String) -> some View {
         Button(action: {
+            guard !isProcessing else { return }
             inputText = String(text.dropFirst(2))
             sendMessage()
         }) {
             Text(text)
                 .font(.subheadline)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial)
-                .cornerRadius(16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
+        .disabled(isProcessing)
+    }
+}
+
+struct ChatComposerTextView: NSViewRepresentable {
+    @Binding var text: String
+    var isEnabled: Bool
+    var onSubmit: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.backgroundColor = .clear
+        scrollView.documentView = makeTextView(context: context)
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? ComposerTextView else { return }
+
+        if textView.string != text {
+            textView.string = text
+        }
+        textView.isEditable = isEnabled
+        textView.isSelectable = isEnabled
+        textView.onSubmit = onSubmit
+        textView.textColor = isEnabled ? .labelColor : .tertiaryLabelColor
+    }
+
+    private func makeTextView(context: Context) -> ComposerTextView {
+        let textView = ComposerTextView()
+        textView.delegate = context.coordinator
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.allowsUndo = true
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.minSize = .zero
+        textView.textContainerInset = NSSize(width: 8, height: 10)
+        textView.textContainer?.containerSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = true
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        textView.string = text
+        textView.isEditable = isEnabled
+        textView.isSelectable = isEnabled
+        textView.onSubmit = onSubmit
+        return textView
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: ChatComposerTextView
+
+        init(parent: ChatComposerTextView) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+        }
+    }
+
+    final class ComposerTextView: NSTextView {
+        var onSubmit: (() -> Void)?
+
+        override func keyDown(with event: NSEvent) {
+            if (event.keyCode == 36 || event.keyCode == 76) && !event.modifierFlags.contains(.shift) {
+                onSubmit?()
+                return
+            }
+            super.keyDown(with: event)
+        }
     }
 }
 
@@ -264,7 +419,7 @@ struct DiffView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "doc.text.fill.viewfinder")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.secondary)
                 Text("Modification du document")
                     .font(.subheadline)
                     .fontWeight(.semibold)

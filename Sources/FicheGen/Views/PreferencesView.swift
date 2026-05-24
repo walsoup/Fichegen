@@ -121,13 +121,15 @@ struct AIModelsPrefsTab: View {
     @State private var showVercelKey = false
     
     let geminiModels = [
+        "gemini-27b-e4b-it",
+        "gemini-pro-latest",
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
         "gemini-3.5-flash",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
-        "gemma-4-31b-it",
-        "gemma-4-27b-e4b-it",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash"
+        "gemma-27b-a4b-it",
+        "gemma-4-27b-e4b-it"
     ]
     
     var body: some View {
@@ -254,9 +256,9 @@ struct AIModelsPrefsTab: View {
                     }
                     .pickerStyle(.menu)
                     
-                    Picker("Modèle de Chat par défaut", selection: Binding(
-                        get: { state.chatModel },
-                        set: { state.updateSetting(key: "chat_model", value: $0) }
+                    Picker("Modèle des tâches auxiliaires", selection: Binding(
+                        get: { state.auxiliaryTasksModel },
+                        set: { state.updateSetting(key: "auxiliary_tasks_model", value: $0) }
                     )) {
                         ForEach(geminiModels, id: \.self) { model in
                             Text(model).tag(model)
@@ -552,6 +554,10 @@ struct AdvancedPrefsTab: View {
                 .textFieldStyle(.roundedBorder)
                 
                 Menu {
+                    Button("gemini-27b-e4b-it") {
+                        model.wrappedValue = "gemini-27b-e4b-it"
+                        state.updateSetting(key: modelKey, value: "gemini-27b-e4b-it")
+                    }
                     Button("gemini-3.5-flash") {
                         model.wrappedValue = "gemini-3.5-flash"
                         state.updateSetting(key: modelKey, value: "gemini-3.5-flash")
@@ -564,10 +570,10 @@ struct AdvancedPrefsTab: View {
                         model.wrappedValue = "gemini-2.5-flash"
                         state.updateSetting(key: modelKey, value: "gemini-2.5-flash")
                     }
-                    Button("gemma-4-31b-it") {
-                        model.wrappedValue = "gemma-4-31b-it"
-                        state.updateSetting(key: modelKey, value: "gemma-4-31b-it")
-                    }
+                                    Button("gemma-27b-a4b-it") {
+                                        model.wrappedValue = "gemma-27b-a4b-it"
+                                        state.updateSetting(key: modelKey, value: "gemma-27b-a4b-it")
+                                    }
                     Button("gemma-4-27b-e4b-it") {
                         model.wrappedValue = "gemma-4-27b-e4b-it"
                         state.updateSetting(key: modelKey, value: "gemma-4-27b-e4b-it")

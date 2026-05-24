@@ -39,7 +39,7 @@ struct ResultPanel: View {
                             Label("Assistant", systemImage: "wand.and.stars")
                         }
                         .buttonStyle(.bordered)
-                        .tint(.blue)
+                        .tint(.accentColor)
                         .help("Ouvrir l'assistant IA")
                         
                         Button(action: {
@@ -147,7 +147,7 @@ struct PulsingProgressView: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(Color.blue)
+                .fill(Color.accentColor)
                 .frame(width: 8, height: 8)
                 .scaleEffect(isPulsing ? 1.2 : 0.8)
                 .opacity(isPulsing ? 0.5 : 1.0)
@@ -182,7 +182,7 @@ struct EmptyStateView: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            LinearGradient(colors: [Color.accentColor, Color.secondary], startPoint: .topLeading, endPoint: .bottomTrailing),
                             lineWidth: 3
                         )
                         .frame(width: 64, height: 64)
@@ -191,9 +191,7 @@ struct EmptyStateView: View {
                     
                     Image(systemName: "sparkles")
                         .font(.system(size: 28))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
-                        )
+                        .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(isAnimating ? 360 : 0))
                 }
                 .frame(width: 80, height: 80)
@@ -232,15 +230,13 @@ struct EmptyStateView: View {
                     
                     Image(systemName: "doc.text.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.blue, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
+                        .foregroundStyle(Color.accentColor)
                         .opacity(0.8)
                         .offset(x: -4, y: -4)
 
                     Image(systemName: "wand.and.stars")
                         .font(.system(size: 24))
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.secondary)
                         .offset(x: 18, y: 18)
                 }
                 .padding(.bottom, 8)

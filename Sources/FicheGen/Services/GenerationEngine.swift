@@ -29,6 +29,27 @@ final class GenerationEngine {
         return nil
     }
 
+    static func compactHTMLForPrompt(_ html: String) -> String {
+        let trimmed = html.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        let collapsedTagSpacing = trimmed.replacingOccurrences(
+            of: ">\\s+<",
+            with: "><",
+            options: .regularExpression
+        )
+        let collapsedWhitespace = collapsedTagSpacing.replacingOccurrences(
+            of: "[\\t ]{2,}",
+            with: " ",
+            options: .regularExpression
+        )
+        return collapsedWhitespace.replacingOccurrences(
+            of: "\\n{3,}",
+            with: "\\n\\n",
+            options: .regularExpression
+        )
+    }
+
     private let defaultFicheStructure = """
     **Titre du chapitre** : (à déduire du manuel)
     **Titre de la leçon** : (à déduire de la leçon)
@@ -164,7 +185,7 @@ final class GenerationEngine {
             
             FICHE ACTUELLE:
             ---
-            \(currentHTML)
+            \(GenerationEngine.compactHTMLForPrompt(currentHTML))
             ---
             """
             
@@ -324,7 +345,7 @@ final class GenerationEngine {
 
         FICHE ACTUELLE:
         ---
-        \(currentHTML)
+        \(GenerationEngine.compactHTMLForPrompt(currentHTML))
         ---
 
         INSTRUCTIONS:
@@ -365,7 +386,7 @@ final class GenerationEngine {
 
         FICHE ACTUELLE:
         ---
-        \(currentHTML)
+        \(GenerationEngine.compactHTMLForPrompt(currentHTML))
         ---
 
         INSTRUCTIONS:

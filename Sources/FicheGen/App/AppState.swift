@@ -5,6 +5,9 @@ import Combine
 @MainActor
 final class AppState: ObservableObject {
 
+    private static let mainContentDefaultModel = "gemma-27b-a4b-it"
+    private static let auxiliaryTasksDefaultModel = "gemma-27b-a4b-it"
+
     // MARK: - Server
 
     // MARK: - Generation state
@@ -23,7 +26,7 @@ final class AppState: ObservableObject {
     @Published var temperatureSetting: Double = 0.5
     @Published var defaultDuration: Int = 45
     @Published var defaultSubject: String = ""
-    @Published var geminiModel: String = "gemini-2.5-pro"
+    @Published var geminiModel: String = Self.mainContentDefaultModel
 
     // MARK: - Advanced API & Routing Settings
     @Published var apiRoute: String = "aistudio"
@@ -54,6 +57,7 @@ final class AppState: ObservableObject {
 
     // MARK: - Defaults
     @Published var defaultPdfStyle: String = "Normal"
+    @Published var auxiliaryTasksModel: String = Self.auxiliaryTasksDefaultModel
 
     // MARK: - General Settings
     @Published var useTopExamples: Bool = true
@@ -69,7 +73,7 @@ final class AppState: ObservableObject {
     @Published var advancedPageFindingPrompt: String = ""
     @Published var advancedFichePrompt: String = ""
     @Published var advancedShowLogTab: Bool = false
-    @Published var chatModel: String = "gemini-2.5-pro"
+    @Published var chatModel: String = Self.auxiliaryTasksDefaultModel
 
 
     // MARK: - Appearance Settings
@@ -150,6 +154,24 @@ final class AppState: ObservableObject {
 
     let classLevels = ["CP", "CE1", "CE2", "CM1", "CM2", "6e", "5e", "4e", "3e"]
     let difficulties = ["easy", "medium", "hard"]
+
+    private static func normalizedMainModel(_ model: String) -> String {
+        switch model {
+        case "gemini-1.5-pro", "gemini-1.5-flash":
+            return mainContentDefaultModel
+        default:
+            return model
+        }
+    }
+
+    private static func normalizedAuxiliaryModel(_ model: String) -> String {
+        switch model {
+        case "gemini-1.5-pro", "gemini-1.5-flash":
+            return auxiliaryTasksDefaultModel
+        default:
+            return model
+        }
+    }
 
     private var cancellables = Set<AnyCancellable>()
     private var generationTask: Task<Void, Never>?
@@ -414,7 +436,7 @@ final class AppState: ObservableObject {
         temperatureSetting = dbl("temperature", 0.5)
         defaultDuration = int_("default_duration", 45)
         defaultSubject  = str("default_subject", "")
-        geminiModel     = str("gemini_model", "gemini-2.5-pro")
+        geminiModel     = Self.normalizedMainModel(str("gemini_model", Self.mainContentDefaultModel))
         apiRoute        = str("api_route", "aistudio")
         vertexProject   = str("vertex_project", "")
         vertexLocation  = str("vertex_location", "us-central1")
@@ -424,20 +446,21 @@ final class AppState: ObservableObject {
         vercelBaseURL   = str("vercel_base_url", "https://api.vercel.ai/v1")
         vercelApiKey    = str("vercel_api_key", "")
         routingFicheProvider  = str("routing_fiche_provider", "default")
-        routingFicheModel     = str("routing_fiche_model", "")
+        routingFicheModel     = Self.normalizedMainModel(str("routing_fiche_model", ""))
         routingEvalProvider   = str("routing_eval_provider", "default")
-        routingEvalModel      = str("routing_eval_model", "")
+        routingEvalModel      = Self.normalizedAuxiliaryModel(str("routing_eval_model", ""))
         routingQuizProvider   = str("routing_quiz_provider", "default")
-        routingQuizModel      = str("routing_quiz_model", "")
+        routingQuizModel      = Self.normalizedAuxiliaryModel(str("routing_quiz_model", ""))
         routingTocProvider    = str("routing_toc_provider", "default")
-        routingTocModel       = str("routing_toc_model", "")
+        routingTocModel       = Self.normalizedAuxiliaryModel(str("routing_toc_model", ""))
         routingOffsetProvider = str("routing_offset_provider", "default")
-        routingOffsetModel    = str("routing_offset_model", "")
+        routingOffsetModel    = Self.normalizedAuxiliaryModel(str("routing_offset_model", ""))
         routingSyntaxProvider = str("routing_syntax_provider", "default")
-        routingSyntaxModel    = str("routing_syntax_model", "")
+        routingSyntaxModel    = Self.normalizedAuxiliaryModel(str("routing_syntax_model", ""))
         routingChatProvider   = str("routing_chat_provider", "default")
-        routingChatModel      = str("routing_chat_model", "")
+        routingChatModel      = Self.normalizedAuxiliaryModel(str("routing_chat_model", ""))
         defaultPdfStyle = str("default_pdf_style", "Normal")
+        auxiliaryTasksModel = Self.normalizedAuxiliaryModel(str("auxiliary_tasks_model", str("chat_model", Self.auxiliaryTasksDefaultModel)))
         useTopExamples  = bool("use_top_examples", true)
         previewSource   = bool("preview_source", false)
         saveLogs        = bool("save_logs", false)
@@ -448,7 +471,7 @@ final class AppState: ObservableObject {
         advancedTocPrompt  = str("advanced_toc_prompt", "")
         advancedPageFindingPrompt = str("advanced_page_finding_prompt", "")
         advancedFichePrompt = str("advanced_fiche_prompt", "")
-        chatModel       = str("chat_model", "gemini-2.5-pro")
+        chatModel       = auxiliaryTasksModel
         uiLanguage      = str("ui_language", "fr")
         uiCompactSidebar = bool("ui_compact_sidebar", false)
         uiShowEvalAdvancedControls = bool("ui_show_eval_advanced_controls", false)
@@ -490,6 +513,7 @@ final class AppState: ObservableObject {
             "guides_dir": guidesDir,   "textbook_dir": textbookDir,  "output_dir": outputDir,
             "temperature": temperatureSetting, "default_duration": defaultDuration,
             "default_subject": defaultSubject, "gemini_model": geminiModel,
+            "auxiliary_tasks_model": auxiliaryTasksModel, "chat_model": auxiliaryTasksModel,
             "api_route": apiRoute,  "vertex_project": vertexProject, "vertex_location": vertexLocation,
             "proxy_enabled": proxyEnabled,  "proxy_base_url": proxyBaseURL,
             "vercel_enabled": vercelEnabled, "vercel_base_url": vercelBaseURL, "vercel_api_key": vercelApiKey,
@@ -540,7 +564,7 @@ final class AppState: ObservableObject {
         case "default_subject":
             if let val = value as? String { defaultSubject = val }
         case "gemini_model":
-            if let val = value as? String { geminiModel = val }
+            if let val = value as? String { geminiModel = Self.normalizedMainModel(val) }
         case "api_route":
             if let val = value as? String { apiRoute = val }
         case "vertex_project":
@@ -560,31 +584,36 @@ final class AppState: ObservableObject {
         case "routing_fiche_provider":
             if let val = value as? String { routingFicheProvider = val }
         case "routing_fiche_model":
-            if let val = value as? String { routingFicheModel = val }
+            if let val = value as? String { routingFicheModel = Self.normalizedMainModel(val) }
         case "routing_eval_provider":
             if let val = value as? String { routingEvalProvider = val }
         case "routing_eval_model":
-            if let val = value as? String { routingEvalModel = val }
+            if let val = value as? String { routingEvalModel = Self.normalizedAuxiliaryModel(val) }
         case "routing_quiz_provider":
             if let val = value as? String { routingQuizProvider = val }
         case "routing_quiz_model":
-            if let val = value as? String { routingQuizModel = val }
+            if let val = value as? String { routingQuizModel = Self.normalizedAuxiliaryModel(val) }
         case "routing_toc_provider":
             if let val = value as? String { routingTocProvider = val }
         case "routing_toc_model":
-            if let val = value as? String { routingTocModel = val }
+            if let val = value as? String { routingTocModel = Self.normalizedAuxiliaryModel(val) }
         case "routing_offset_provider":
             if let val = value as? String { routingOffsetProvider = val }
         case "routing_offset_model":
-            if let val = value as? String { routingOffsetModel = val }
+            if let val = value as? String { routingOffsetModel = Self.normalizedAuxiliaryModel(val) }
         case "routing_syntax_provider":
             if let val = value as? String { routingSyntaxProvider = val }
         case "routing_syntax_model":
-            if let val = value as? String { routingSyntaxModel = val }
+            if let val = value as? String { routingSyntaxModel = Self.normalizedAuxiliaryModel(val) }
         case "routing_chat_provider":
             if let val = value as? String { routingChatProvider = val }
         case "routing_chat_model":
-            if let val = value as? String { routingChatModel = val }
+            if let val = value as? String { routingChatModel = Self.normalizedAuxiliaryModel(val) }
+        case "auxiliary_tasks_model":
+            if let val = value as? String {
+                auxiliaryTasksModel = Self.normalizedAuxiliaryModel(val)
+                chatModel = auxiliaryTasksModel
+            }
         case "default_pdf_style":
             if let val = value as? String { defaultPdfStyle = val }
         case "use_top_examples":
@@ -608,7 +637,10 @@ final class AppState: ObservableObject {
         case "advanced_fiche_prompt":
             if let val = value as? String { advancedFichePrompt = val }
         case "chat_model":
-            if let val = value as? String { chatModel = val }
+            if let val = value as? String {
+                auxiliaryTasksModel = Self.normalizedAuxiliaryModel(val)
+                chatModel = auxiliaryTasksModel
+            }
         case "ui_language":
             if let val = value as? String { uiLanguage = val }
         case "ui_compact_sidebar":

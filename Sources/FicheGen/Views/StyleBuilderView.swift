@@ -23,10 +23,11 @@ extension Color: RawRepresentable {
 }
 
 struct StyleBuilderSections: View {
-    @AppStorage("customPdfPrimaryColor") private var primaryColor: Color = .blue
-    @AppStorage("customPdfSecondaryColor") private var secondaryColor: Color = .gray
+    @AppStorage("customPdfPrimaryColor") private var primaryColor: Color = Color.accentColor
+    @AppStorage("customPdfSecondaryColor") private var secondaryColor: Color = Color(nsColor: .secondaryLabelColor)
     @AppStorage("customPdfFont") private var fontName: String = "Helvetica"
     @AppStorage("customPdfMargin") private var margin: Double = 20.0
+    @State private var didMigrateLegacyColors = false
     
     let availableFonts = ["Helvetica", "Times New Roman", "Courier", "Avenir", "Georgia", "San Francisco"]
 
@@ -75,6 +76,20 @@ struct StyleBuilderSections: View {
                 .cornerRadius(8)
                 .shadow(radius: 2)
             }
+        }
+        .onAppear(perform: migrateLegacyColorDefaultsIfNeeded)
+    }
+
+    private func migrateLegacyColorDefaultsIfNeeded() {
+        guard !didMigrateLegacyColors else { return }
+        didMigrateLegacyColors = true
+
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: "customPdfPrimaryColor") == Color.blue.rawValue {
+            defaults.set(Color(nsColor: .controlAccentColor).rawValue, forKey: "customPdfPrimaryColor")
+        }
+        if defaults.string(forKey: "customPdfSecondaryColor") == Color.gray.rawValue {
+            defaults.set(Color(nsColor: .secondaryLabelColor).rawValue, forKey: "customPdfSecondaryColor")
         }
     }
 }

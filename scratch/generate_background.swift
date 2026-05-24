@@ -70,7 +70,7 @@ func drawText(_ text: String, point: CGPoint, fontSize: CGFloat, isBold: Bool, c
 
 // Title
 drawText("FicheGen", point: CGPoint(x: 300, y: 340), fontSize: 28, isBold: true, color: NSColor(white: 0.1, alpha: 1.0))
-drawText("v3.3.8", point: CGPoint(x: 300, y: 310), fontSize: 16, isBold: false, color: NSColor(white: 0.4, alpha: 1.0))
+drawText("v3.3.9", point: CGPoint(x: 300, y: 310), fontSize: 16, isBold: false, color: NSColor(white: 0.4, alpha: 1.0))
 
 // Instruction Text
 drawText("Glissez FicheGen pour installer", point: CGPoint(x: 300, y: 80), fontSize: 14, isBold: true, color: NSColor(white: 0.3, alpha: 1.0))

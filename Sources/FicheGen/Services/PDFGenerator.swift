@@ -19,8 +19,10 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
 
         var css: String {
             let baseCSS = """
+                @page { size: A4 portrait; margin: 16mm 18mm; }
+                html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 :root { --accent-color: #2c3e50; --bg-color: #ffffff; --text-color: #333333; }
-                body { margin: 0; padding: 2cm 2.5cm; color: var(--text-color); background: var(--bg-color); }
+                body { margin: 0; padding: 2cm 2.5cm; color: var(--text-color); background: var(--bg-color); box-sizing: border-box; }
                 h1 { font-size: 2.2em; font-weight: 700; color: var(--accent-color); margin-top: 0; padding-bottom: 0.3em; border-bottom: 2px solid var(--accent-color); }
                 h2 { font-size: 1.6em; font-weight: 600; color: var(--accent-color); margin-top: 1.5em; }
                 h3 { font-size: 1.3em; font-weight: 500; color: var(--text-color); margin-top: 1.2em; }
@@ -35,6 +37,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
                 table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
                 th, td { border: 1px solid #dee2e6; padding: 0.75em; text-align: left; }
                 th { background-color: #f8f9fa; font-weight: 600; color: var(--accent-color); }
+                h1, h2, h3, p, li, blockquote, table, pre { break-inside: avoid; page-break-inside: avoid; }
             """
             
             switch self {
@@ -72,15 +75,23 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
                 th { background-color: #f3f4f6; color: #db2777; }
                 """
             case .custom:
-                let primaryHex = PDFGenerator.getCustomColor(forKey: "customPdfPrimaryColor", defaultHex: "#0056b3")
-                let secondaryHex = PDFGenerator.getCustomColor(forKey: "customPdfSecondaryColor", defaultHex: "#6c757d")
+                let primaryHex = PDFGenerator.getCustomColor(
+                    forKey: "customPdfPrimaryColor",
+                    defaultHex: PDFGenerator.hexString(for: .controlAccentColor, fallbackHex: "#0A84FF")
+                )
+                let secondaryHex = PDFGenerator.getCustomColor(
+                    forKey: "customPdfSecondaryColor",
+                    defaultHex: PDFGenerator.hexString(for: .secondaryLabelColor, fallbackHex: "#6E6E73")
+                )
                 let font = UserDefaults.standard.string(forKey: "customPdfFont") ?? "Helvetica"
                 let marginVal = UserDefaults.standard.double(forKey: "customPdfMargin")
                 let marginPx = marginVal > 0 ? marginVal : 20.0
                 
                 return """
+                @page { size: A4 portrait; margin: 16mm 18mm; }
+                html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 :root { --accent-color: \(primaryHex); --bg-color: #ffffff; --text-color: #333333; --secondary-color: \(secondaryHex); }
-                body { font-family: '\(font)', system-ui, -apple-system, sans-serif; margin: 0; padding: \(marginPx)mm; color: var(--text-color); background: var(--bg-color); }
+                body { font-family: '\(font)', system-ui, -apple-system, sans-serif; margin: 0; padding: \(marginPx)mm; color: var(--text-color); background: var(--bg-color); box-sizing: border-box; }
                 h1 { font-size: 2.2em; font-weight: 700; color: var(--accent-color); margin-top: 0; padding-bottom: 0.3em; border-bottom: 2px solid var(--accent-color); }
                 h2 { font-size: 1.6em; font-weight: 600; color: var(--accent-color); margin-top: 1.5em; }
                 h3 { font-size: 1.3em; font-weight: 500; color: var(--text-color); margin-top: 1.2em; }
@@ -95,6 +106,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
                 table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
                 th, td { border: 1px solid #dee2e6; padding: 0.75em; text-align: left; }
                 th { background-color: #f8f9fa; font-weight: 600; color: var(--accent-color); }
+                h1, h2, h3, p, li, blockquote, table, pre { break-inside: avoid; page-break-inside: avoid; }
                 """
             }
         }
@@ -116,6 +128,14 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             }
         } catch {}
         return defaultHex
+    }
+
+    private static func hexString(for color: NSColor, fallbackHex: String) -> String {
+        guard let rgbColor = color.usingColorSpace(.sRGB) else { return fallbackHex }
+        let r = Int(rgbColor.redComponent * 255)
+        let g = Int(rgbColor.greenComponent * 255)
+        let b = Int(rgbColor.blueComponent * 255)
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
     
     private var webView: WKWebView?

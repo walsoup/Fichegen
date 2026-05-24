@@ -144,6 +144,9 @@ struct FicheFormView: View {
                                 .textFieldStyle(.roundedBorder)
                                 
                                 Menu {
+                                    Button("gemini-27b-e4b-it") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemini-27b-e4b-it")
+                                    }
                                     Button("gemini-3.5-flash") {
                                         state.updateSetting(key: "routing_fiche_model", value: "gemini-3.5-flash")
                                     }
@@ -153,8 +156,8 @@ struct FicheFormView: View {
                                     Button("gemini-2.5-flash") {
                                         state.updateSetting(key: "routing_fiche_model", value: "gemini-2.5-flash")
                                     }
-                                    Button("gemma-4-31b-it") {
-                                        state.updateSetting(key: "routing_fiche_model", value: "gemma-4-31b-it")
+                                    Button("gemma-27b-a4b-it") {
+                                        state.updateSetting(key: "routing_fiche_model", value: "gemma-27b-a4b-it")
                                     }
                                     Button("gemma-4-27b-e4b-it") {
                                         state.updateSetting(key: "routing_fiche_model", value: "gemma-4-27b-e4b-it")

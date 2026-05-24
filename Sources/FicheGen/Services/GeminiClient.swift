@@ -38,6 +38,7 @@ struct AIConfig: Sendable {
     let routingOffsetProvider: String; let routingOffsetModel: String
     let routingSyntaxProvider: String; let routingSyntaxModel: String
     let routingChatProvider: String;   let routingChatModel: String
+    let auxiliaryTasksModel: String
     let chatModel: String
     // Experimental
     let expMaxRetries: Int
@@ -73,6 +74,7 @@ struct AIConfig: Sendable {
         routingSyntaxModel    = state.routingSyntaxModel
         routingChatProvider   = state.routingChatProvider
         routingChatModel      = state.routingChatModel
+        auxiliaryTasksModel   = state.auxiliaryTasksModel
         chatModel             = state.chatModel
         expMaxRetries       = state.expMaxRetries
         expRequestTimeout   = state.expRequestTimeout
@@ -274,10 +276,10 @@ actor GeminiClient {
         if let key = funcKey {
             perProvider = AIProvider(rawValue: providerForFunc(key, config: config)) ?? .default
             let m = modelForFunc(key, config: config)
-            if key == "chat" {
-                perModel = m.isEmpty ? config.chatModel : m
+            if key == "fiche" {
+                perModel = m.isEmpty ? config.geminiModel : m
             } else {
-                perModel = m.isEmpty ? nil : m
+                perModel = m.isEmpty ? config.auxiliaryTasksModel : m
             }
         }
 
