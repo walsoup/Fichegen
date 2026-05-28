@@ -195,20 +195,26 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             return
         }
         
-        let config = WKPDFConfiguration()
+        let printInfo = NSPrintInfo.shared.dictionary().mutableCopy() as! NSMutableDictionary
+        printInfo[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
+        printInfo[NSPrintInfo.AttributeKey.jobSavingURL] = outputURL
         
-        webView.createPDF(configuration: config) { [weak self] result in
-            guard let self = self else { return }
-            switch result {
-            case .success(let data):
-                do {
-                    try data.write(to: outputURL)
-                    self.finish(.success(outputURL))
-                } catch {
-                    self.finish(.failure(error))
-                }
-            case .failure(let error):
-                self.finish(.failure(error))
+        let customPrintInfo = NSPrintInfo(dictionary: printInfo as! [NSPrintInfo.AttributeKey: Any])
+        customPrintInfo.paperSize = NSSize(width: 595.2, height: 841.8) // A4
+        customPrintInfo.topMargin = 0
+        customPrintInfo.bottomMargin = 0
+        customPrintInfo.leftMargin = 0
+        customPrintInfo.rightMargin = 0
+        
+        let printOp = webView.printOperation(with: customPrintInfo)
+        printOp.showsPrintPanel = false
+        printOp.showsProgressPanel = false
+        
+        DispatchQueue.main.async {
+            if printOp.run() {
+                self.finish(.success(outputURL))
+            } else {
+                self.finish(.failure(GeneratorError.printOperationFailed))
             }
         }
     }
