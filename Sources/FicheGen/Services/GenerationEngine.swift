@@ -329,7 +329,7 @@ final class GenerationEngine {
 
         INSTRUCTIONS:
         Applique les modifications demandées à la fiche existante.
-        Retourne UNIQUEMENT le code HTML mis à jour, sans aucun texte introductif ni balises html (```).
+        RÈGLE ABSOLUE : Retourne UNIQUEMENT le code HTML brut. N'inclus JAMAIS de blocs markdown (comme ```html ou ```). Ton retour doit commencer directement par les balises HTML.
         Ne modifie pas les éléments qui ne sont pas concernés par la demande.
         """
 
@@ -344,6 +344,45 @@ final class GenerationEngine {
         onProgress(100)
         onLog("✅ Fiche mise à jour.")
         return responseText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    struct AgentIntentResponse: Codable {
+        let intent: String
+        let classLevel: String?
+        let topic: String?
+    }
+
+    func analyzeIntent(prompt: String, hasFiche: Bool, config: AIConfig) async throws -> AgentIntentResponse {
+        let systemPrompt = """
+        Tu es un agent assistant pédagogique intelligent. Analyse la demande de l'utilisateur.
+        L'utilisateur a actuellement une fiche générée : \(hasFiche ? "Oui" : "Non").
+        Détermine si l'utilisateur veut modifier la fiche existante ("edit") ou s'il te demande de générer/créer une toute nouvelle leçon ("generate").
+        Si la demande ressemble à "génère une leçon sur...", "crée une fiche pour...", c'est "generate".
+        Si la demande ressemble à "ajoute un exercice", "corrige la faute", ou n'est qu'une conversation, c'est "edit".
+        Si "generate", extrais le niveau de classe (ex: "CM1", "6ème") et le sujet de la leçon.
+        Retourne UNIQUEMENT un objet JSON valide avec ce format:
+        { "intent": "edit" | "generate", "classLevel": "...", "topic": "..." }
+        """
+
+        let jsonString = try await GeminiClient.shared.generate(
+            prompt: systemPrompt + "\n\nDemande utilisateur: " + prompt,
+            purpose: "chat",
+            temperature: 0.1,
+            responseJSON: true,
+            config: config
+        )
+
+        // Parse JSON (strip possible markdown wrappers first)
+        var cleanedJSON = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanedJSON.hasPrefix("```json\n") { cleanedJSON.removeFirst(8) }
+        else if cleanedJSON.hasPrefix("```\n") { cleanedJSON.removeFirst(4) }
+        if cleanedJSON.hasSuffix("\n```") { cleanedJSON.removeLast(4) }
+        else if cleanedJSON.hasSuffix("```") { cleanedJSON.removeLast(3) }
+        
+        guard let data = cleanedJSON.data(using: .utf8) else {
+            return AgentIntentResponse(intent: "edit", classLevel: nil, topic: nil)
+        }
+        return try JSONDecoder().decode(AgentIntentResponse.self, from: data)
     }
 
     func editFicheStream(
@@ -370,7 +409,7 @@ final class GenerationEngine {
 
         INSTRUCTIONS:
         Applique les modifications demandées à la fiche existante.
-        Retourne UNIQUEMENT le code HTML mis à jour, sans aucun texte introductif ni balises html (```).
+        RÈGLE ABSOLUE : Retourne UNIQUEMENT le code HTML brut. N'inclus JAMAIS de blocs markdown (comme ```html ou ```). Ton retour doit commencer directement par les balises HTML.
         Ne modifie pas les éléments qui ne sont pas concernés par la demande.
         """
 

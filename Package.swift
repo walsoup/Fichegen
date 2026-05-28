@@ -12,6 +12,11 @@ let package = Package(
                 .process("Resources"),
                 .process("icon.icns")
             ]
+        ),
+        .testTarget(
+            name: "FicheGenTests",
+            dependencies: ["FicheGen"],
+            path: "Tests/FicheGenTests"
         )
     ]
 )

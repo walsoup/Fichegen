@@ -148,11 +148,11 @@ struct PDFProcessor {
         
         // Define patterns
         // Pattern 1: Topic ............ 23
-        let pattern1 = try? NSRegularExpression(pattern: "^\\s*([^\\d\\r\\n]{4,150}?)\\s*(?:\\.{2,}|\\s{2,})\\s*(\\d{1,4})\\s*$", options: [])
+        let pattern1 = try? NSRegularExpression(pattern: "^\\s*(.{4,150}?)\\s*(?:\\.{2,}|\\s{2,})\\s*(\\d{1,4})\\s*$", options: [])
         // Pattern 2: Topic 23 (loose)
-        let pattern2 = try? NSRegularExpression(pattern: "^\\s*([^\\d\\r\\n]{6,150}?)\\s+(\\d{1,4})\\s*$", options: [])
+        let pattern2 = try? NSRegularExpression(pattern: "^\\s*(.{6,150}?)\\s+(\\d{1,4})\\s*$", options: [])
         // Pattern 3: 23 Topic
-        let pattern3 = try? NSRegularExpression(pattern: "^\\s*(\\d{1,4})\\s+([^\\d\\r\\n].{4,150})\\s*$", options: [])
+        let pattern3 = try? NSRegularExpression(pattern: "^\\s*(\\d{1,4})\\s+(.{4,150})\\s*$", options: [])
         
         let lines = tocText.components(separatedBy: .newlines)
         

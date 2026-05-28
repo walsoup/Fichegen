@@ -9,6 +9,8 @@ struct ResultPanel: View {
     @Binding var showChatInspector: Bool
     @State private var selectedTab: ResultTab = .preview
     @State private var pdfGenerator = PDFGenerator()
+    @State private var showToast = false
+    @State private var toastMessage = ""
 
     enum ResultTab: String, CaseIterable, Identifiable {
         case preview = "Preview"
@@ -18,7 +20,8 @@ struct ResultPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            VStack(spacing: 0) {
             // ── Toolbar ───────────────────────────────────────────────
             HStack(spacing: 0) {
                 Picker("", selection: $selectedTab) {
@@ -33,59 +36,16 @@ struct ResultPanel: View {
 
                 Spacer()
 
-                if !state.generatedMarkdown.isEmpty {
-                    HStack(spacing: 6) {
-                        Button(action: { showChatInspector.toggle() }) {
-                            Label("Assistant", systemImage: "wand.and.stars")
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.blue)
-                        .help("Ouvrir l'assistant IA")
-                        
-                        Button(action: {
-                            let panel = NSSavePanel()
-                            panel.title = "Exporter en PDF"
-                            panel.allowedContentTypes = [.pdf]
-                            panel.nameFieldStringValue = "\(!state.ficheLessonTopic.isEmpty ? state.ficheLessonTopic : "Fiche")-\(Int(Date().timeIntervalSince1970)).pdf"
-                            panel.canCreateDirectories = true
-                            if panel.runModal() == .OK, let url = panel.url {
-                                pdfGenerator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
-                                    DispatchQueue.main.async {
-                                        switch result {
-                                        case .success(let savedURL):
-                                            NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
-                                        case .failure(let error):
-                                            print("Erreur d'export PDF: \(error)")
-                                        }
-                                    }
-                                }
-                            }
-                        }) {
-                            Label("PDF", systemImage: "doc.plaintext")
-                        }
-                        .buttonStyle(.bordered)
-                        .help("Exporter au format PDF")
-                        
-                        Button(action: {
-                            saveHTML(state.generatedMarkdown)
-                        }) {
-                            Label("HTML", systemImage: "doc.text")
-                        }
-                        .buttonStyle(.bordered)
-                        .help("Exporter au format HTML")
-                        
-                        Button(action: {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(state.generatedMarkdown, forType: .string)
-                        }) {
-                            Label("Copier", systemImage: "doc.on.doc")
-                        }
-                        .buttonStyle(.bordered)
-                        .help("Copier le texte dans le presse-papiers")
+                HStack(spacing: 6) {
+                    Button(action: { showChatInspector.toggle() }) {
+                        Label("Assistant", systemImage: "wand.and.stars")
                     }
-                    .padding(.trailing, 12)
-                    .controlSize(.small)
+                    .buttonStyle(.bordered)
+                    .tint(.accentColor)
+                    .help("Ouvrir l'assistant IA")
                 }
+                .padding(.trailing, 12)
+                .controlSize(.small)
 
                 if state.isGenerating {
                     ProgressView()
@@ -118,22 +78,115 @@ struct ResultPanel: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // ── Floating Action Bar ──────────────────────────────────────────
+            if !state.generatedMarkdown.isEmpty && selectedTab == .preview {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 12) {
+                        Spacer()
+                        
+                        // Floating Export Group
+                        HStack(spacing: 8) {
+                            Button(action: {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(state.generatedMarkdown, forType: .string)
+                                showToastMessage("Copié dans le presse-papiers")
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                            }
+                            .help("Copier")
+                            
+                            Button(action: { saveHTML(state.generatedMarkdown) }) {
+                                Image(systemName: "doc.text")
+                            }
+                            .help("Exporter HTML")
+                            
+                            Button(action: { exportPDF() }) {
+                                Image(systemName: "doc.plaintext")
+                            }
+                            .help("Exporter PDF")
+                        }
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+                        .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+                        .controlSize(.large)
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 24)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            
+            // ── Toast Notification ───────────────────────────────────────────
+            if showToast {
+                VStack {
+                    Spacer()
+                    Text(toastMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(20)
+                        .padding(.bottom, 40)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
         }
         .frame(minWidth: 400, minHeight: 400)
         .background(.ultraThinMaterial)
         .animation(.spring(), value: selectedTab)
         .animation(.spring(), value: state.generatedMarkdown.isEmpty)
+        .animation(.spring(), value: showToast)
+    }
+    
+    private func showToastMessage(_ msg: String) {
+        toastMessage = msg
+        withAnimation { showToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation { showToast = false }
+        }
+    }
+    
+    private func getOutputURL(extension ext: String) -> URL {
+        let filename = "\(!state.ficheLessonTopic.isEmpty ? state.ficheLessonTopic : "Fiche")-\(Int(Date().timeIntervalSince1970)).\(ext)"
+        let dirPath = state.outputDir.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !dirPath.isEmpty {
+            let fm = FileManager.default
+            let url = URL(fileURLWithPath: dirPath)
+            if fm.fileExists(atPath: url.path) {
+                return url.appendingPathComponent(filename)
+            }
+        }
+        return FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0].appendingPathComponent(filename)
+    }
+
+    private func exportPDF() {
+        let url = getOutputURL(extension: "pdf")
+        pdfGenerator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedURL):
+                    showToastMessage("PDF sauvé: \(savedURL.lastPathComponent)")
+                case .failure(let error):
+                    showToastMessage("Erreur: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     private func saveHTML(_ html: String) {
-        let panel = NSSavePanel()
-        panel.title = "Exporter la fiche"
-        panel.allowedContentTypes = [.init(filenameExtension: "html")!]
-        panel.nameFieldStringValue = "\(!state.ficheLessonTopic.isEmpty ? state.ficheLessonTopic : "Fiche")-\(Int(Date().timeIntervalSince1970)).html"
-        panel.canCreateDirectories = true
-        if panel.runModal() == .OK, let url = panel.url {
-            try? html.write(to: url, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+        let url = getOutputURL(extension: "html")
+        do {
+            try html.write(to: url, atomically: true, encoding: .utf8)
+            showToastMessage("HTML sauvé: \(url.lastPathComponent)")
+        } catch {
+            showToastMessage("Erreur: \(error.localizedDescription)")
         }
     }
 }
@@ -147,7 +200,7 @@ struct PulsingProgressView: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(Color.blue)
+                .fill(Color.accentColor)
                 .frame(width: 8, height: 8)
                 .scaleEffect(isPulsing ? 1.2 : 0.8)
                 .opacity(isPulsing ? 0.5 : 1.0)
@@ -182,7 +235,7 @@ struct EmptyStateView: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            LinearGradient(colors: [.accentColor, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
                             lineWidth: 3
                         )
                         .frame(width: 64, height: 64)
@@ -192,7 +245,7 @@ struct EmptyStateView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 28))
                         .foregroundStyle(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
+                            LinearGradient(colors: [.accentColor, .purple], startPoint: .top, endPoint: .bottom)
                         )
                         .rotationEffect(.degrees(isAnimating ? 360 : 0))
                 }
@@ -233,7 +286,7 @@ struct EmptyStateView: View {
                     Image(systemName: "doc.text.fill")
                         .font(.system(size: 40))
                         .foregroundStyle(
-                            LinearGradient(colors: [.blue, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            LinearGradient(colors: [.accentColor, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
                         .opacity(0.8)
                         .offset(x: -4, y: -4)
@@ -272,27 +325,19 @@ struct MarkdownWebView: NSViewRepresentable {
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.setValue(false, forKey: "drawsBackground")
         
-        let escapedHTML = htmlContent
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "`", with: "\\`")
-            .replacingOccurrences(of: "$", with: "\\$")
-        
-        let initialHTML = getScaffolding(content: htmlContent.isEmpty ? "" : escapedHTML)
+        let base64Content = htmlContent.data(using: .utf8)?.base64EncodedString() ?? ""
+        let initialHTML = getScaffolding(contentBase64: base64Content)
         wv.loadHTMLString(initialHTML, baseURL: nil)
         return wv
     }
 
     func updateNSView(_ wv: WKWebView, context: Context) {
-        let escapedHTML = htmlContent
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "`", with: "\\`")
-            .replacingOccurrences(of: "$", with: "\\$")
-        
-        let js = "document.getElementById('content').innerHTML = `\(escapedHTML)`;"
+        let base64Content = htmlContent.data(using: .utf8)?.base64EncodedString() ?? ""
+        let js = "window.updateContent('\(base64Content)');"
         wv.evaluateJavaScript(js, completionHandler: nil)
     }
 
-    private func getScaffolding(content: String) -> String {
+    private func getScaffolding(contentBase64: String) -> String {
         return """
         <!DOCTYPE html>
         <html>
@@ -312,12 +357,16 @@ struct MarkdownWebView: NSViewRepresentable {
           @media (prefers-color-scheme: dark) {
             body { background: #1e1e1e; color: #ececec; }
             code { background: #2d2d2d; }
+            th { background: #2d2d2d; color: #ececec; }
+            td, th { border: 1px solid #444; }
           }
           h1 { font-size: 1.5em; font-weight: 700; margin-bottom: 4px; }
           h2 { font-size: 1.15em; font-weight: 600; margin-top: 24px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+          @media (prefers-color-scheme: dark) { h2 { border-bottom: 1px solid #444; } }
           h3 { font-size: 1em; font-weight: 600; margin-top: 16px; }
           code { background: #f4f4f4; border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
           blockquote { border-left: 3px solid #007aff; margin-left: 0; padding-left: 14px; color: #555; }
+          @media (prefers-color-scheme: dark) { blockquote { color: #aaa; } }
           table { border-collapse: collapse; width: 100%; }
           td, th { border: 1px solid #ddd; padding: 6px 10px; }
           th { background: #f8f8f8; font-weight: 600; }
@@ -326,9 +375,22 @@ struct MarkdownWebView: NSViewRepresentable {
         <body>
         <div id="content"></div>
         <script>
-          if (`\(content)` !== '') {
-            document.getElementById('content').innerHTML = `\(content)`;
-          }
+          window.updateContent = function(base64Str) {
+            if (!base64Str) {
+              document.getElementById('content').innerHTML = '';
+              return;
+            }
+            try {
+              const decoded = decodeURIComponent(escape(atob(base64Str)));
+              document.getElementById('content').innerHTML = decoded;
+            } catch (e) {
+              console.error('Decoding error:', e);
+            }
+          };
+          
+          window.addEventListener('DOMContentLoaded', () => {
+             window.updateContent('\(contentBase64)');
+          });
         </script>
         </body>
         </html>

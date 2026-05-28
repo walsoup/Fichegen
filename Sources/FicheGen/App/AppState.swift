@@ -398,7 +398,9 @@ final class AppState: ObservableObject {
     // MARK: - Settings: fetch on startup from Keychain + UserDefaults
 
     func fetchSettingsFromServer() async {
-        let settings = PreferencesStorage.load()
+        let settings = await Task.detached(priority: .userInitiated) {
+            PreferencesStorage.load()
+        }.value
         
         func str(_ key: String, _ fallback: String) -> String { settings[key] as? String ?? fallback }
         func bool(_ key: String, _ fallback: Bool) -> Bool { settings[key] as? Bool ?? fallback }
@@ -518,7 +520,9 @@ final class AppState: ObservableObject {
             "exp_chain_of_thought": expChainOfThought, "exp_json_validation": expJsonValidation,
             "exp_speculative_decoding": expSpeculativeDecoding, "exp_agentic_loop": expAgenticLoop
         ]
-        PreferencesStorage.save(settings)
+        Task.detached(priority: .utility) {
+            PreferencesStorage.save(settings)
+        }
     }
 
     func updateSetting(key: String, value: Any) {

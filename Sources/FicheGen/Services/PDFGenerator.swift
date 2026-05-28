@@ -119,6 +119,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
     }
     
     private var webView: WKWebView?
+    private var hiddenWindow: NSWindow?
     private var completion: ((Result<URL, Error>) -> Void)?
     private var outputURL: URL?
     private var isRendering = false
@@ -136,10 +137,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
         let style = PDFStyle(rawValue: styleName) ?? .modern
         let css = style.css
         
-        let escapedHTML = htmlContent
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "`", with: "\\`")
-            .replacingOccurrences(of: "$", with: "\\$")
+        let base64Content = htmlContent.data(using: .utf8)?.base64EncodedString() ?? ""
         
         let htmlTemplate = """
         <!DOCTYPE html>
@@ -154,7 +152,15 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             <div id="content"></div>
             <script>
                 document.addEventListener("DOMContentLoaded", () => {
-                    document.getElementById('content').innerHTML = `\(escapedHTML)`;
+                    const base64Str = '\(base64Content)';
+                    if (base64Str) {
+                        try {
+                            const decoded = decodeURIComponent(escape(atob(base64Str)));
+                            document.getElementById('content').innerHTML = decoded;
+                        } catch (e) {
+                            console.error('Decoding error:', e);
+                        }
+                    }
                     window.location.href = "pdfgenerator://ready";
                 });
             </script>
@@ -166,6 +172,14 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             let config = WKWebViewConfiguration()
             let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 1100), configuration: config)
             webView.navigationDelegate = self
+            
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 1100), styleMask: .borderless, backing: .buffered, defer: false)
+            window.contentView = webView
+            window.isReleasedWhenClosed = false
+            window.alphaValue = 0 // Invisible window
+            window.makeKeyAndOrderFront(nil)
+            
+            self.hiddenWindow = window
             self.webView = webView
             
             webView.loadHTMLString(htmlTemplate, baseURL: URL(string: "https://localhost"))
@@ -225,6 +239,9 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
         self.outputURL = nil
         self.isRendering = false
         self.webView = nil
+        
+        self.hiddenWindow?.close()
+        self.hiddenWindow = nil
         
         currentCompletion?(result)
     }

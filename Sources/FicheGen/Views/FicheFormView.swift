@@ -73,10 +73,20 @@ struct FicheFormView: View {
                             .textFieldStyle(.roundedBorder)
                         
                         if state.availableLessons.isEmpty {
-                            Text("Aucune leçon en cache. Générez une Fiche d'abord pour ce niveau pour analyser le guide pédagogique.")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Aucune leçon en cache pour ce niveau.")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Button {
+                                    state.loadAvailableLessons(classLevel: state.ficheClassLevel)
+                                } label: {
+                                    Label("Scanner le manuel pédagogique", systemImage: "magnifyingglass")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                            .padding(.top, 2)
                         }
                         
                         Text("Pages spécifiques (ex: 12, 13-15) :")

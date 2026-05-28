@@ -44,11 +44,6 @@ struct ContentView: View {
                 .inspectorColumnWidth(min: 280, ideal: 360, max: 600)
         }
         .navigationTitle("FicheGen")
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                serverStatusIndicator
-            }
-        }
         .presentationBackground(.ultraThinMaterial)
         .background(.ultraThinMaterial)
         .animation(.spring(), value: selectedTab)
@@ -63,27 +58,4 @@ struct ContentView: View {
         }
     }
 
-    private var serverStatusIndicator: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(isConfigured ? Color.green : Color.orange)
-                .frame(width: 8, height: 8)
-            Text(isConfigured ? "Configuration active" : "Configuration requise")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .help(configHelpText)
-    }
-
-    private var isConfigured: Bool {
-        state.isConfigured
-    }
-
-    private var configHelpText: String {
-        if isConfigured {
-            return "Le service \(state.apiRoute.uppercased()) est prêt."
-        } else {
-            return "Configuration incomplète pour la route active (\(state.apiRoute.uppercased()))."
-        }
-    }
 }

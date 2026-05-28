@@ -180,14 +180,50 @@ struct ChatPanelView: View {
         state.chatHistory.append(ChatMessage(role: "user", text: instruction))
         
         // Append placeholder assistant message
-        let placeholderMessage = ChatMessage(role: "assistant", text: "Application des modifications...")
+        let placeholderMessage = ChatMessage(role: "assistant", text: "Analyse de la demande...")
         state.chatHistory.append(placeholderMessage)
         
         let cfg = AIConfig(from: state)
         let originalHTML = state.generatedMarkdown
+        let hasFiche = !originalHTML.isEmpty
         
         Task {
             do {
+                // 1. Analyze Intent
+                let intentResp = try await GenerationEngine.shared.analyzeIntent(prompt: instruction, hasFiche: hasFiche, config: cfg)
+                
+                if intentResp.intent == "generate" {
+                    await MainActor.run {
+                        let topicMsg = intentResp.topic ?? "ce sujet"
+                        let levelMsg = intentResp.classLevel ?? "la classe"
+                        if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
+                            state.chatHistory[index] = ChatMessage(role: "assistant", text: "Je lance la génération de la leçon sur **\(topicMsg)** pour **\(levelMsg)**...")
+                        }
+                        if let cl = intentResp.classLevel, !cl.isEmpty { state.ficheClassLevel = cl }
+                        if let t = intentResp.topic, !t.isEmpty { state.ficheLessonTopic = t }
+                        isProcessing = false
+                        state.generateFiche() // Trigger generation loop
+                    }
+                    return
+                }
+                
+                // 2. Edit Mode
+                await MainActor.run {
+                    if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
+                        state.chatHistory[index] = ChatMessage(role: "assistant", text: "Application des modifications...")
+                    }
+                }
+                
+                if !hasFiche {
+                    await MainActor.run {
+                        if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
+                            state.chatHistory[index] = ChatMessage(role: "assistant", text: "Aucune fiche n'est actuellement chargée. Demandez-moi d'en générer une !")
+                        }
+                        isProcessing = false
+                    }
+                    return
+                }
+
                 await MainActor.run { state.generatedMarkdown = "" }
                 try await GenerationEngine.shared.editFicheStream(
                     currentHTML: originalHTML,
@@ -202,12 +238,21 @@ struct ChatPanelView: View {
                     }
                 )
                 
-                let updatedHTML = state.generatedMarkdown
+                var updatedHTML = state.generatedMarkdown
+                // Strip markdown wrappers if the LLM hallucinated them
+                if updatedHTML.hasPrefix("```html\n") { updatedHTML.removeFirst(8) }
+                else if updatedHTML.hasPrefix("```\n") { updatedHTML.removeFirst(4) }
+                if updatedHTML.hasSuffix("\n```") { updatedHTML.removeLast(4) }
+                else if updatedHTML.hasSuffix("```") { updatedHTML.removeLast(3) }
+                
+                let finalHTML = updatedHTML.trimmingCharacters(in: .whitespacesAndNewlines)
+                
                 let diff = await Task.detached(priority: .userInitiated) {
-                    computeDisplayDiff(old: originalHTML, new: updatedHTML)
+                    computeDisplayDiff(old: originalHTML, new: finalHTML)
                 }.value
                 
                 await MainActor.run {
+                    state.generatedMarkdown = finalHTML
                     if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
                         state.chatHistory[index] = ChatMessage(role: "assistant", text: "Modification appliquée avec succès !", diffLines: diff)
                     }
