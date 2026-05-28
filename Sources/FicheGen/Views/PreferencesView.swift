@@ -397,8 +397,10 @@ struct AdvancedPrefsTab: View {
                 }
                 
                 Section("Paramètres Expérimentaux") {
-                    Toggle("Afficher l'onglet des journaux (Logs)", isOn: $state.advancedShowLogTab)
-
+                    Toggle("Afficher l'onglet des journaux (Logs)", isOn: Binding(
+                        get: { state.advancedShowLogTab },
+                        set: { state.updateSetting(key: "advanced_show_log_tab", value: $0) }
+                    ))
                     Toggle("Aperçu de la réponse en streaming", isOn: Binding(
                         get: { state.expStreamingResponse },
                         set: { state.updateSetting(key: "exp_streaming_response", value: $0) }

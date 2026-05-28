@@ -176,7 +176,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 1100), styleMask: .borderless, backing: .buffered, defer: false)
             window.contentView = webView
             window.isReleasedWhenClosed = false
-            window.alphaValue = 0 // Invisible window
+            window.alphaValue = 0.01 // Nearly invisible to avoid macOS rasterizing the PDF
             window.makeKeyAndOrderFront(nil)
             
             self.hiddenWindow = window
@@ -209,27 +209,26 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
             return
         }
         
-        let printInfo = NSPrintInfo.shared.dictionary().mutableCopy() as! NSMutableDictionary
-        printInfo[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
-        printInfo[NSPrintInfo.AttributeKey.jobSavingURL] = outputURL
-        
-        let customPrintInfo = NSPrintInfo(dictionary: printInfo as! [NSPrintInfo.AttributeKey: Any])
-        customPrintInfo.paperSize = NSSize(width: 595.2, height: 841.8) // A4
-        customPrintInfo.topMargin = 0
-        customPrintInfo.bottomMargin = 0
-        customPrintInfo.leftMargin = 0
-        customPrintInfo.rightMargin = 0
-        
-        let printOp = webView.printOperation(with: customPrintInfo)
-        printOp.showsPrintPanel = false
-        printOp.showsProgressPanel = false
-        
-        DispatchQueue.main.async {
-            if printOp.run() {
-                self.finish(.success(outputURL))
-            } else {
-                self.finish(.failure(GeneratorError.printOperationFailed))
+        if #available(macOS 11.0, *) {
+            let pdfConfiguration = WKPDFConfiguration()
+            webView.createPDF(configuration: pdfConfiguration) { [weak self] result in
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let data):
+                        do {
+                            try data.write(to: outputURL)
+                            self.finish(.success(outputURL))
+                        } catch {
+                            self.finish(.failure(error))
+                        }
+                    case .failure(let error):
+                        self.finish(.failure(error))
+                    }
+                }
             }
+        } else {
+            self.finish(.failure(GeneratorError.printOperationFailed))
         }
     }
     

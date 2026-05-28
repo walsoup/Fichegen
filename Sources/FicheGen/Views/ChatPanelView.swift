@@ -5,6 +5,7 @@ struct ChatPanelView: View {
     @Binding var isPresented: Bool
     @State private var inputText: String = ""
     @State private var isProcessing: Bool = false
+    @State private var selectedMode: String = "auto"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,6 +15,15 @@ struct ChatPanelView: View {
                 Text("Assistant Pédagogique")
                     .font(.headline)
                     .padding(.leading, 32)
+                Spacer()
+                Picker("", selection: $selectedMode) {
+                    Text("Auto").tag("auto")
+                    Text("Générer").tag("generate")
+                    Text("Éditer").tag("edit")
+                    Text("Question").tag("question")
+                }
+                .pickerStyle(.menu)
+                .frame(width: 120)
                 Spacer()
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark.circle.fill")
@@ -49,15 +59,13 @@ struct ChatPanelView: View {
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 24)
                         
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                suggestionChip("💡 Rendre plus simple")
-                                suggestionChip("📝 Ajouter des exercices")
-                                suggestionChip("🇬🇧 Traduire en anglais")
-                                suggestionChip("🎨 Surligner les mots-clés")
-                            }
-                            .padding(.horizontal, 24)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160))], alignment: .leading, spacing: 8) {
+                            suggestionChip("💡 Rendre plus simple")
+                            suggestionChip("📝 Ajouter des exercices")
+                            suggestionChip("🇬🇧 Traduire en anglais")
+                            suggestionChip("🎨 Surligner les mots-clés")
                         }
+                        .padding(.horizontal, 24)
                     }
                     .padding(.top, 8)
                 }
@@ -133,7 +141,7 @@ struct ChatPanelView: View {
                             .scrollContentBackground(.hidden)
                             .font(.system(.body))
                     }
-                    .frame(minHeight: 60, maxHeight: 120)
+                    .frame(minHeight: 40, maxHeight: 100)
                     .background(Color(nsColor: .controlBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
@@ -189,21 +197,56 @@ struct ChatPanelView: View {
         
         Task {
             do {
-                // 1. Analyze Intent
-                let intentResp = try await GenerationEngine.shared.analyzeIntent(prompt: instruction, hasFiche: hasFiche, config: cfg)
+                var finalIntent = "edit"
+                var intentTopic: String? = nil
+                var intentLevel: String? = nil
                 
-                if intentResp.intent == "generate" {
+                if selectedMode != "auto" {
+                    finalIntent = selectedMode
+                } else {
+                    // 1. Analyze Intent
+                    let intentResp = try await GenerationEngine.shared.analyzeIntent(prompt: instruction, hasFiche: hasFiche, config: cfg)
+                    finalIntent = intentResp.intent
+                    intentTopic = intentResp.topic
+                    intentLevel = intentResp.classLevel
+                }
+                
+                if finalIntent == "generate" {
                     await MainActor.run {
-                        let topicMsg = intentResp.topic ?? "ce sujet"
-                        let levelMsg = intentResp.classLevel ?? "la classe"
+                        let topicMsg = intentTopic ?? "ce sujet"
+                        let levelMsg = intentLevel ?? "la classe"
                         if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
                             state.chatHistory[index] = ChatMessage(role: "assistant", text: "Je lance la génération de la leçon sur **\(topicMsg)** pour **\(levelMsg)**...")
                         }
-                        if let cl = intentResp.classLevel, !cl.isEmpty { state.ficheClassLevel = cl }
-                        if let t = intentResp.topic, !t.isEmpty { state.ficheLessonTopic = t }
+                        if let cl = intentLevel, !cl.isEmpty { state.ficheClassLevel = cl }
+                        if let t = intentTopic, !t.isEmpty { state.ficheLessonTopic = t }
                         isProcessing = false
                         state.generateFiche() // Trigger generation loop
                     }
+                    return
+                }
+                
+                if finalIntent == "question" {
+                    await MainActor.run {
+                        if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
+                            state.chatHistory[index].text = "" // Clear placeholder
+                        }
+                    }
+                    try await GenerationEngine.shared.askQuestionStream(
+                        currentHTML: originalHTML,
+                        question: instruction,
+                        config: cfg,
+                        onLog: { msg in state.appendLog(msg) },
+                        onProgress: { p in state.progress = p },
+                        onDelta: { chunk in
+                            Task { @MainActor in
+                                if let index = state.chatHistory.firstIndex(where: { $0.id == placeholderMessage.id }) {
+                                    state.chatHistory[index].text += chunk
+                                }
+                            }
+                        }
+                    )
+                    await MainActor.run { isProcessing = false }
                     return
                 }
                 

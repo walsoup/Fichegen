@@ -36,16 +36,7 @@ struct ResultPanel: View {
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Button(action: { showChatInspector.toggle() }) {
-                        Label("Assistant", systemImage: "wand.and.stars")
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.accentColor)
-                    .help("Ouvrir l'assistant IA")
-                }
-                .padding(.trailing, 12)
-                .controlSize(.small)
+
 
                 if state.isGenerating {
                     ProgressView()
@@ -81,6 +72,26 @@ struct ResultPanel: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
+            // ── Floating Assistant Bar (Top) ───────────────────────────────
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: { showChatInspector.toggle() }) {
+                        Label("Assistant", systemImage: "wand.and.stars")
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderless)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+                    .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+                    .padding(.trailing, 24)
+                    .padding(.top, 24)
+                }
+                Spacer()
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+
             // ── Floating Action Bar ──────────────────────────────────────────
             if !state.generatedMarkdown.isEmpty && selectedTab == .preview {
                 VStack {
@@ -88,33 +99,33 @@ struct ResultPanel: View {
                     HStack(spacing: 12) {
                         Spacer()
                         
-                        // Floating Export Group
-                        HStack(spacing: 8) {
+                        Menu {
                             Button(action: {
                                 NSPasteboard.general.clearContents()
                                 NSPasteboard.general.setString(state.generatedMarkdown, forType: .string)
                                 showToastMessage("Copié dans le presse-papiers")
                             }) {
-                                Image(systemName: "doc.on.doc")
+                                Label("Copier le texte", systemImage: "doc.on.doc")
                             }
-                            .help("Copier")
                             
                             Button(action: { saveHTML(state.generatedMarkdown) }) {
-                                Image(systemName: "doc.text")
+                                Label("Exporter en HTML", systemImage: "doc.text")
                             }
-                            .help("Exporter HTML")
                             
                             Button(action: { exportPDF() }) {
-                                Image(systemName: "doc.plaintext")
+                                Label("Exporter en PDF", systemImage: "doc.plaintext")
                             }
-                            .help("Exporter PDF")
+                        } label: {
+                            Label("Exporter", systemImage: "square.and.arrow.up")
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
                         }
-                        .padding(12)
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                        .padding(8)
                         .background(.ultraThinMaterial)
                         .cornerRadius(12)
                         .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
-                        .controlSize(.large)
-                        .buttonStyle(.plain)
                         .padding(.trailing, 24)
                         .padding(.bottom, 24)
                     }

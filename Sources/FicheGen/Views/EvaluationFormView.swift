@@ -3,6 +3,7 @@ import SwiftUI
 struct EvaluationFormView: View {
     @EnvironmentObject var state: AppState
     @State private var selectedLessons = Set<String>()
+    @State private var showManualTopics = false
 
     var body: some View {
         ScrollView {
@@ -45,34 +46,63 @@ struct EvaluationFormView: View {
                     }
                 }
 
+                // ── Header Metadata ──────────────────────────────────────
+                GroupBox(label: Label("Informations de l'En-tête", systemImage: "doc.text")) {
+                    Form {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Nom de l'école")
+                            TextField("ex: Groupe Scolaire X", text: $state.evalSchoolName)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Session")
+                            TextField("ex: 1er contrôle du 1er semestre", text: $state.evalSession)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                        
+                        Stepper("Points totaux: \(state.evalTotalPoints)",
+                                value: $state.evalTotalPoints,
+                                in: 10...100, step: 5)
+                    }
+                }
+
                 // ── Lessons Topics ───────────────────────────────────────
                 GroupBox(label: Label("Sujets de leçons", systemImage: "checklist")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Un sujet par ligne")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        
-                        TextEditor(text: $state.evalTopics)
-                            .font(.body)
-                            .frame(minHeight: 80, maxHeight: 120)
-                            .scrollContentBackground(.hidden)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                            )
                         
                         // Lesson Suggestions List
                         if state.availableLessons.isEmpty {
-                            Text("Aucune leçon en cache. Générez une Fiche d'abord pour ce niveau pour analyser le guide pédagogique.")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Aucune leçon en cache pour ce niveau.")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Button {
+                                    state.loadAvailableLessons(classLevel: state.evalClassLevel)
+                                } label: {
+                                    Label("Scanner le manuel pédagogique", systemImage: "magnifyingglass")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                            .padding(.top, 2)
                         } else {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Sélectionner des leçons à ajouter :")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.secondary)
+                                HStack {
+                                    Text("Sélectionner des leçons à évaluer :")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button {
+                                        state.loadAvailableLessons(classLevel: state.evalClassLevel)
+                                    } label: {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Mettre à jour la table des matières")
+                                }
                                 
                                 ScrollView(.vertical) {
                                     VStack(alignment: .leading, spacing: 4) {
@@ -85,6 +115,8 @@ struct EvaluationFormView: View {
                                                     } else {
                                                         selectedLessons.remove(lesson)
                                                     }
+                                                    // Sync with evalTopics
+                                                    state.evalTopics = selectedLessons.joined(separator: "\n")
                                                 }
                                             ))
                                             .toggleStyle(.checkbox)
@@ -92,33 +124,36 @@ struct EvaluationFormView: View {
                                     }
                                     .padding(6)
                                 }
-                                .frame(height: 100)
+                                .frame(height: 120)
                                 .background(Color(nsColor: .controlBackgroundColor))
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                                 )
+                            }
+                            .padding(.top, 4)
+                        }
+                        
+                        DisclosureGroup("Saisie manuelle des sujets", isExpanded: $showManualTopics) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Un sujet par ligne")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                                 
-                                Button("Ajouter les leçons sélectionnées") {
-                                    let currentLines = state.evalTopics
-                                        .split(separator: "\n")
-                                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                                        .filter { !$0.isEmpty }
-                                    
-                                    var newLines = currentLines
-                                    for lesson in selectedLessons {
-                                        if !newLines.contains(lesson) {
-                                            newLines.append(lesson)
-                                        }
+                                TextEditor(text: $state.evalTopics)
+                                    .font(.body)
+                                    .frame(minHeight: 80, maxHeight: 120)
+                                    .scrollContentBackground(.hidden)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                                    )
+                                    .onChange(of: state.evalTopics) { _, newValue in
+                                        // Update selectedLessons based on text
+                                        let lines = newValue.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }
+                                        selectedLessons = Set(lines.filter { !$0.isEmpty })
                                     }
-                                    
-                                    state.evalTopics = newLines.joined(separator: "\n")
-                                    selectedLessons.removeAll()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
-                                .disabled(selectedLessons.isEmpty)
                             }
                             .padding(.top, 4)
                         }

@@ -351,7 +351,8 @@ actor GeminiClient {
             )
         }
 
-        let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)"
+        let cleanModel = model.hasPrefix("models/") ? String(model.dropFirst(7)) : model
+        let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\(cleanModel):generateContent?key=\(apiKey)"
         guard let url = URL(string: urlStr) else { throw AIClientError.invalidURL(urlStr) }
 
         let body = makeGeminiBody(prompt: prompt, temperature: temperature, responseJSON: responseJSON, model: model)
@@ -381,7 +382,8 @@ actor GeminiClient {
                         throw AIClientError.missingAPIKey("Gemini API key is not configured.")
                     }
 
-                    let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\\(model):streamGenerateContent?key=\\(apiKey)&alt=sse"
+                    let cleanModel = model.hasPrefix("models/") ? String(model.dropFirst(7)) : model
+                    let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\(cleanModel):streamGenerateContent?key=\(apiKey)&alt=sse"
                     guard let url = URL(string: urlStr) else { throw AIClientError.invalidURL(urlStr) }
 
                     let body = makeGeminiBody(prompt: prompt, temperature: temperature, responseJSON: responseJSON, model: model)

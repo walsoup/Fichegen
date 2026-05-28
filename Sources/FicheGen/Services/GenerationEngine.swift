@@ -192,6 +192,9 @@ final class GenerationEngine {
         durationMinutes: Int,
         difficulty: String,
         temperature: Double,
+        schoolName: String,
+        sessionLabel: String,
+        totalPoints: Int,
         extraInstructions: String,
         lessonText: String,
         config: AIConfig,
@@ -210,6 +213,9 @@ final class GenerationEngine {
             subject: subject,
             durationMinutes: durationMinutes,
             difficulty: difficulty,
+            schoolName: schoolName,
+            sessionLabel: sessionLabel,
+            totalPoints: totalPoints,
             extraInstructions: extraInstructions,
             extractedContent: lessonText
         )
@@ -254,6 +260,9 @@ final class GenerationEngine {
         durationMinutes: Int,
         numQuestions: Int,
         difficulty: String,
+        schoolName: String,
+        session: String,
+        totalPoints: Int,
         temperature: Double,
         config: AIConfig,
         onLog: @escaping (String) -> Void,
@@ -270,7 +279,10 @@ final class GenerationEngine {
             subject: subject,
             durationMinutes: durationMinutes,
             numQuestions: numQuestions,
-            difficulty: difficulty
+            difficulty: difficulty,
+            schoolName: schoolName,
+            session: session,
+            totalPoints: totalPoints
         )
 
         let responseText = try await GeminiClient.shared.generate(
@@ -429,6 +441,50 @@ final class GenerationEngine {
         onLog("✅ Fiche mise à jour.")
     }
 
+    func askQuestionStream(
+        currentHTML: String,
+        question: String,
+        config: AIConfig,
+        onLog: @escaping (String) -> Void,
+        onProgress: @escaping (Int) -> Void,
+        onDelta: @escaping (String) -> Void
+    ) async throws {
+        onLog("💬 Réponse à la question en cours...")
+        onProgress(50)
+
+        let prompt = """
+        Tu es un expert en pédagogie et assistant du professeur.
+        On t'a fourni la fiche pédagogique actuelle au format HTML comme contexte.
+        Le professeur te pose la question suivante ou demande le conseil suivant :
+        "\(question)"
+
+        FICHE ACTUELLE:
+        ---
+        \(currentHTML)
+        ---
+
+        INSTRUCTIONS:
+        Réponds directement à la question du professeur de manière concise et utile.
+        Utilise le format Markdown pour formater ta réponse (gras, listes, etc.).
+        Ne réécris pas le code HTML de la fiche, donne juste ta réponse textuelle ou tes conseils.
+        """
+
+        let stream = await GeminiClient.shared.generateStream(
+            prompt: prompt,
+            purpose: "chat",
+            temperature: 0.7,
+            responseJSON: false,
+            config: config
+        )
+
+        for try await chunk in stream {
+            onDelta(chunk)
+        }
+
+        onProgress(100)
+        onLog("✅ Réponse terminée.")
+    }
+
     // MARK: - Prompt Builders
 
     private func buildFichePrompt(
@@ -533,6 +589,9 @@ final class GenerationEngine {
         subject: String,
         durationMinutes: Int,
         difficulty: String,
+        schoolName: String,
+        sessionLabel: String,
+        totalPoints: Int,
         extraInstructions: String,
         extractedContent: String
     ) -> String {
@@ -589,15 +648,15 @@ final class GenerationEngine {
 
         FORMAT DE SORTIE (JSON UNIQUEMENT):
         {
-          "school_name": "Groupe Scolaire",
+          "school_name": "\(schoolName.isEmpty ? "Groupe Scolaire" : schoolName)",
           "header": {
             "class_level": "\(classLevel.uppercased())",
             "academic_year": "2025/2026",
             "evaluation_number": 1,
             "semester": "1",
-            "session_label": "1er contrôle du 1er semestre",
+            "session_label": "\(sessionLabel.isEmpty ? "Évaluation" : sessionLabel)",
             "duration_minutes": \(durationMinutes),
-            "max_score": 20,
+            "max_score": \(totalPoints),
             "subject": "\(subject.isEmpty ? "Sciences" : subject)"
           },
           "exercises": [
@@ -625,7 +684,10 @@ final class GenerationEngine {
         subject: String,
         durationMinutes: Int,
         numQuestions: Int,
-        difficulty: String
+        difficulty: String,
+        schoolName: String,
+        session: String,
+        totalPoints: Int
     ) -> String {
         let difficultyNote: String
         switch difficulty {
@@ -641,6 +703,9 @@ final class GenerationEngine {
         - Niveau: \(classLevel.uppercased())
         - Sujet: \(topic)
         - Matière: \(subject.isEmpty ? "(à adapter)" : subject)
+        - École: \(schoolName.isEmpty ? "(Non spécifié)" : schoolName)
+        - Session: \(session.isEmpty ? "(Non spécifié)" : session)
+        - Points totaux: \(totalPoints)
         - Durée: \(durationMinutes) minutes
         - Difficulté: \(difficultyNote)
 
@@ -655,6 +720,9 @@ final class GenerationEngine {
           "class_level": "\(classLevel)",
           "topic": "\(topic)",
           "subject": "\(subject)",
+          "school": "\(schoolName)",
+          "session": "\(session)",
+          "total_points": \(totalPoints),
           "duration_minutes": \(durationMinutes),
           "instructions": ["Lis chaque question attentivement.", "Réponds directement sur la feuille."],
           "questions": [

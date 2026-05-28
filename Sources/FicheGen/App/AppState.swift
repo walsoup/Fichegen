@@ -119,6 +119,9 @@ final class AppState: ObservableObject {
     @Published var evalDuration: Int = 45
     @Published var evalDifficulty: String = "medium"
     @Published var evalTemperature: Double = 0.5
+    @Published var evalSchoolName: String = ""
+    @Published var evalSession: String = ""
+    @Published var evalTotalPoints: Int = 20
 
     // MARK: - Form — Quiz
 
@@ -128,7 +131,9 @@ final class AppState: ObservableObject {
     @Published var quizDuration: Int = 20
     @Published var quizNumQuestions: Int = 10
     @Published var quizDifficulty: String = "medium"
-
+    @Published var quizSchoolName: String = ""
+    @Published var quizSession: String = ""
+    @Published var quizTotalPoints: Int = 20
     var isConfigured: Bool {
         switch apiRoute {
         case "aistudio":
@@ -292,6 +297,9 @@ final class AppState: ObservableObject {
         let duration = evalDuration
         let difficulty = evalDifficulty
         let temperature = evalTemperature
+        let schoolName = evalSchoolName
+        let session = evalSession
+        let totalPoints = evalTotalPoints
 
         generationTask = Task {
             do {
@@ -302,6 +310,9 @@ final class AppState: ObservableObject {
                     durationMinutes: duration,
                     difficulty: difficulty,
                     temperature: temperature,
+                    schoolName: schoolName,
+                    sessionLabel: session,
+                    totalPoints: totalPoints,
                     extraInstructions: "",
                     lessonText: "",
                     config: cfg,
@@ -345,6 +356,9 @@ final class AppState: ObservableObject {
         let duration = quizDuration
         let numQuestions = quizNumQuestions
         let difficulty = quizDifficulty
+        let school = quizSchoolName
+        let session = quizSession
+        let total = quizTotalPoints
         let temperature = ficheTemperature
 
         generationTask = Task {
@@ -356,6 +370,9 @@ final class AppState: ObservableObject {
                     durationMinutes: duration,
                     numQuestions: numQuestions,
                     difficulty: difficulty,
+                    schoolName: school,
+                    session: session,
+                    totalPoints: total,
                     temperature: temperature,
                     config: cfg,
                     onLog: { [weak self] msg in
@@ -390,7 +407,12 @@ final class AppState: ObservableObject {
     }
 
     func appendLog(_ message: String) {
-        logMessages.append(message)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        let timestamp = formatter.string(from: Date())
+        let formatted = "[\(timestamp)] \(message)"
+        logMessages.append(formatted)
+        print(formatted) // Print to console for maximum verbosity
     }
 
     // MARK: - Settings Operations
@@ -450,6 +472,7 @@ final class AppState: ObservableObject {
         advancedTocPrompt  = str("advanced_toc_prompt", "")
         advancedPageFindingPrompt = str("advanced_page_finding_prompt", "")
         advancedFichePrompt = str("advanced_fiche_prompt", "")
+        advancedShowLogTab = bool("advanced_show_log_tab", false)
         chatModel       = str("chat_model", "gemini-2.5-pro")
         uiLanguage      = str("ui_language", "fr")
         uiCompactSidebar = bool("ui_compact_sidebar", false)
@@ -508,7 +531,7 @@ final class AppState: ObservableObject {
             "special_instructions": specialInstructions,
             "advanced_enable_prompt_editing": advancedEnablePromptEditing,
             "advanced_toc_prompt": advancedTocPrompt, "advanced_page_finding_prompt": advancedPageFindingPrompt,
-            "advanced_fiche_prompt": advancedFichePrompt, "chat_model": chatModel,
+            "advanced_fiche_prompt": advancedFichePrompt, "advanced_show_log_tab": advancedShowLogTab, "chat_model": chatModel,
             "ui_language": uiLanguage, "ui_compact_sidebar": uiCompactSidebar,
             "ui_show_eval_advanced_controls": uiShowEvalAdvancedControls, "pdf_show_meta": pdfShowMeta,
             "exp_streaming_response": expStreamingResponse, "exp_max_retries": expMaxRetries,
@@ -611,6 +634,8 @@ final class AppState: ObservableObject {
             if let val = value as? String { advancedPageFindingPrompt = val }
         case "advanced_fiche_prompt":
             if let val = value as? String { advancedFichePrompt = val }
+        case "advanced_show_log_tab":
+            if let val = value as? Bool { advancedShowLogTab = val }
         case "chat_model":
             if let val = value as? String { chatModel = val }
         case "ui_language":

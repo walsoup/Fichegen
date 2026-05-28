@@ -49,10 +49,20 @@ struct QuizFormView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         if !state.availableLessons.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("📚 Sélectionner une leçon suggérée :")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
+                                HStack {
+                                    Text("📚 Sélectionner une leçon suggérée :")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button {
+                                        state.loadAvailableLessons(classLevel: state.quizClassLevel)
+                                    } label: {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Mettre à jour la table des matières")
+                                }
                                 Picker("", selection: $state.quizTopic) {
                                     Text("Saisir un sujet personnalisé...").tag("")
                                     ForEach(state.availableLessons, id: \.self) { lesson in
@@ -73,13 +83,44 @@ struct QuizFormView: View {
                             .textFieldStyle(.roundedBorder)
                         
                         if state.availableLessons.isEmpty {
-                            Text("Aucune leçon en cache. Générez une Fiche d'abord pour ce niveau pour analyser le guide pédagogique.")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Aucune leçon en cache pour ce niveau.")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Button {
+                                    state.loadAvailableLessons(classLevel: state.quizClassLevel)
+                                } label: {
+                                    Label("Scanner le manuel pédagogique", systemImage: "magnifyingglass")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                            .padding(.top, 2)
                         }
                     }
                     .padding(.vertical, 2)
+                }
+
+                // ── Header Metadata ──────────────────────────────────────
+                GroupBox(label: Label("Informations de l'En-tête", systemImage: "doc.text")) {
+                    Form {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Nom de l'école")
+                            TextField("ex: Groupe Scolaire X", text: $state.quizSchoolName)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Session")
+                            TextField("ex: Quiz 1", text: $state.quizSession)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                        
+                        Stepper("Points totaux: \(state.quizTotalPoints)",
+                                value: $state.quizTotalPoints,
+                                in: 10...100, step: 5)
+                    }
                 }
 
                 // ── Parameters ───────────────────────────────────────────

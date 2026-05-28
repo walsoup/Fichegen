@@ -49,10 +49,20 @@ struct FicheFormView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         if !state.availableLessons.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("📚 Sélectionner une leçon suggérée :")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
+                                HStack {
+                                    Text("📚 Sélectionner une leçon suggérée :")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button {
+                                        state.loadAvailableLessons(classLevel: state.ficheClassLevel)
+                                    } label: {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Mettre à jour la table des matières")
+                                }
                                 Picker("", selection: $state.ficheLessonTopic) {
                                     Text("Saisir un titre personnalisé...").tag("")
                                     ForEach(state.availableLessons, id: \.self) { lesson in

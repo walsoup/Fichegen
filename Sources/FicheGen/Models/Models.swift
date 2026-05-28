@@ -135,7 +135,7 @@ struct DiffLine: Identifiable, Equatable {
 struct ChatMessage: Identifiable, Equatable {
     let id = UUID()
     let role: String // "user" or "assistant"
-    let text: String
+    var text: String
     let timestamp = Date()
     var diffLines: [DiffLine]? = nil
 }
