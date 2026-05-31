@@ -124,7 +124,7 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
     private var outputURL: URL?
     private var isRendering = false
     
-    public func generatePDF(from htmlContent: String, styleName: String, outputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
+    public func generatePDF(from htmlContent: String, css: String, outputURL: URL, completion: @escaping (Result<URL, Error>) -> Void) {
         guard !isRendering else {
             completion(.failure(GeneratorError.printOperationFailed))
             return
@@ -133,9 +133,6 @@ public class PDFGenerator: NSObject, WKNavigationDelegate {
         self.isRendering = true
         self.completion = completion
         self.outputURL = outputURL
-        
-        let style = PDFStyle(rawValue: styleName) ?? .modern
-        let css = style.css
         
         let base64Content = htmlContent.data(using: .utf8)?.base64EncodedString() ?? ""
         

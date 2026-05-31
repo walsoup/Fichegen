@@ -2,21 +2,22 @@ import SwiftUI
 
 struct QuizFormView: View {
     @EnvironmentObject var state: AppState
+    @State private var showBatchSheet = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // ── API Key Warning Banner ──────────────────────────────
-                if state.geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if !state.isConfigured {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "exclamationmark.shield.fill")
                             .font(.title2)
                             .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Clé API Google AI Studio manquante")
+                            Text("Configuration API manquante")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text("Veuillez configurer votre clé dans les Préférences (Cmd + ,) pour pouvoir générer des quiz.")
+                            Text("Veuillez configurer votre clé API (Gemini, Proxy, etc.) dans les Préférences (Cmd + ,) pour pouvoir générer des quiz.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -204,18 +205,33 @@ struct QuizFormView: View {
                 }
 
                 // ── Action ───────────────────────────────────────────────
-                GenerateButton(
-                    label: "Générer le Quiz",
-                    isEnabled: !state.quizSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               !state.quizTopic.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               state.isConfigured
-                ) {
-                    state.generateQuiz()
+                HStack {
+                    GenerateButton(
+                        label: "Générer le Quiz",
+                        isEnabled: !state.quizSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   !state.quizTopic.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   state.isConfigured
+                    ) {
+                        state.generateQuiz()
+                    }
+                    
+                    if state.expEnableBatch {
+                        Button {
+                            showBatchSheet = true
+                        } label: {
+                            Label("Générer en Lot (Batch)", systemImage: "square.grid.2x2.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    }
                 }
             }
             .padding(16)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $showBatchSheet) {
+            BatchSelectionView(generationType: "quiz")
+        }
         .onChange(of: state.quizClassLevel) { _, newValue in
             state.loadAvailableLessons(classLevel: newValue)
         }

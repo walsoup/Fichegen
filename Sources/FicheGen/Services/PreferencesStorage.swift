@@ -25,22 +25,31 @@ public final class PreferencesStorage {
     // MARK: - Keychain
     
     private static func saveToKeychain(key: String, value: String) {
-        let tag = "\(bundleId).\(key)".data(using: .utf8)!
         let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tag,
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: bundleId,
+            kSecAttrAccount as String: key,
             kSecValueData as String: value.data(using: .utf8)!
         ]
         
-        SecItemDelete(addQuery as CFDictionary)
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: bundleId,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        if status != errSecSuccess {
+            print("Keychain Save Error: \\(status) for key: \\(key)")
+        }
     }
     
     private static func loadFromKeychain(key: String) -> String? {
-        let tag = "\(bundleId).\(key)".data(using: .utf8)!
         let getQuery: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tag,
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: bundleId,
+            kSecAttrAccount as String: key,
             kSecReturnData as String: true
         ]
         

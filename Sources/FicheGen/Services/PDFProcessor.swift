@@ -330,12 +330,15 @@ struct PDFProcessor {
 
     // MARK: - Text Extraction
 
-    /// Extract concatenated text from the given 1-based page numbers in a PDF document.
-    static func extractText(from pdfURL: URL, pages: [Int]) -> String {
-        guard !pages.isEmpty, let document = PDFDocument(url: pdfURL) else { return "" }
+    static func extractText(from pdfURL: URL, pages: [Int]?) -> String {
+        guard let document = PDFDocument(url: pdfURL) else { return "" }
         var parts: [String] = []
         let pageCount = document.pageCount
-        for pageNumber in pages {
+        
+        let targetPages = pages ?? Array(1...min(pageCount, 50)) // limit to 50 pages if nil
+        guard !targetPages.isEmpty else { return "" }
+        
+        for pageNumber in targetPages {
             let index = pageNumber - 1   // PDFDocument is 0-indexed
             guard index >= 0 && index < pageCount else { continue }
             if let page = document.page(at: index), let text = page.string, !text.isEmpty {

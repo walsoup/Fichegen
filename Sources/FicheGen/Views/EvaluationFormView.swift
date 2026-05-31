@@ -4,21 +4,22 @@ struct EvaluationFormView: View {
     @EnvironmentObject var state: AppState
     @State private var selectedLessons = Set<String>()
     @State private var showManualTopics = false
+    @State private var showBatchSheet = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // ── API Key Warning Banner ──────────────────────────────
-                if state.geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if !state.isConfigured {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "exclamationmark.shield.fill")
                             .font(.title2)
                             .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Clé API Google AI Studio manquante")
+                            Text("Configuration API manquante")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text("Veuillez configurer votre clé dans les Préférences (Cmd + ,) pour pouvoir générer des évaluations.")
+                            Text("Veuillez configurer votre clé API (Gemini, Proxy, etc.) dans les Préférences (Cmd + ,) pour pouvoir générer des évaluations.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -249,18 +250,33 @@ struct EvaluationFormView: View {
                 }
 
                 // ── Action ───────────────────────────────────────────────
-                GenerateButton(
-                    label: "Générer l'Évaluation",
-                    isEnabled: !state.evalSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               !state.evalTopics.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               state.isConfigured
-                ) {
-                    state.generateEvaluation()
+                HStack {
+                    GenerateButton(
+                        label: "Générer l'Évaluation",
+                        isEnabled: !state.evalSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   !state.evalTopics.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   state.isConfigured
+                    ) {
+                        state.generateEvaluation()
+                    }
+                    
+                    if state.expEnableBatch {
+                        Button {
+                            showBatchSheet = true
+                        } label: {
+                            Label("Générer en Lot (Batch)", systemImage: "square.grid.2x2.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    }
                 }
             }
             .padding(16)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $showBatchSheet) {
+            BatchSelectionView(generationType: "eval")
+        }
         .onChange(of: state.evalClassLevel) { _, newValue in
             state.loadAvailableLessons(classLevel: newValue)
         }

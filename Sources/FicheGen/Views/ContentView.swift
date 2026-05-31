@@ -9,12 +9,14 @@ struct ContentView: View {
         case fiche = "Fiches"
         case evaluation = "Évaluations"
         case quiz = "Quiz"
+        case history = "Historique"
         var id: String { rawValue }
         var icon: String {
             switch self {
             case .fiche:       return "doc.text"
             case .evaluation:  return "checkmark.square"
             case .quiz:        return "questionmark.circle"
+            case .history:     return "clock"
             }
         }
     }
@@ -55,6 +57,7 @@ struct ContentView: View {
         case .fiche:       FicheFormView()
         case .evaluation:  EvaluationFormView()
         case .quiz:        QuizFormView()
+        case .history:     HistoryView()
         }
     }
 

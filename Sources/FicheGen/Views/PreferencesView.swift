@@ -53,7 +53,11 @@ struct PreferencesView: View {
 struct GeneralPrefsTab: View {
     @EnvironmentObject var state: AppState
     
-    let pdfStyles = ["Modern", "Classic", "Minimal", "Academic", "Playful", "Custom"]
+    var pdfStyles: [String] {
+        let defaultStyles = ["Modern", "Classic", "Minimal", "Academic", "Playful", "Custom"]
+        let customStyles = state.stylePresets.map { $0.name }
+        return defaultStyles + customStyles
+    }
     
     var body: some View {
         Form {
@@ -472,6 +476,11 @@ struct AdvancedPrefsTab: View {
                     Toggle("Activer le mode boucle agentique autonome", isOn: Binding(
                         get: { state.expAgenticLoop },
                         set: { state.updateSetting(key: "exp_agentic_loop", value: $0) }
+                    ))
+                    
+                    Toggle("Activer le mode de traitement par lot (Batch)", isOn: Binding(
+                        get: { state.expEnableBatch },
+                        set: { state.updateSetting(key: "exp_enable_batch", value: $0) }
                     ))
                 }
                 

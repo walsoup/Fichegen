@@ -11,14 +11,22 @@ final class GenerationEngine {
 
     static func cleanJSONResponse(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("```") else { return trimmed }
         
-        let pattern = "^```(?:json)?\\s*(.*?)\\s*```$"
+        let pattern = "```(?:json)?\\s*(.*?)\\s*```"
         if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]),
            let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
            let range = Range(match.range(at: 1), in: trimmed) {
             return String(trimmed[range])
         }
+        
+        // Fallback: extract substring between first '{' and last '}' or first '[' and last ']'
+        let startIndexObject = trimmed.firstIndex(of: "{")
+        let endIndexObject = trimmed.lastIndex(of: "}")
+        
+        if let start = startIndexObject, let end = endIndexObject, start < end {
+            return String(trimmed[start...end])
+        }
+        
         return trimmed
     }
 
@@ -27,6 +35,50 @@ final class GenerationEngine {
         if let s = val as? String { return Int(s.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)) }
         if let d = val as? Double { return Int(d) }
         return nil
+    }
+
+    // MARK: - Markdown Fallback
+
+    static func fallbackMarkdownToHTML(_ markdown: String) -> String {
+        var html = markdown
+        
+        // Basic escaping of HTML characters to avoid conflicts
+        html = html.replacingOccurrences(of: "<", with: "&lt;")
+        html = html.replacingOccurrences(of: ">", with: "&gt;")
+        
+        // Headers
+        html = html.replacingOccurrences(of: "(?m)^### (.*)$", with: "<h3>$1</h3>", options: .regularExpression)
+        html = html.replacingOccurrences(of: "(?m)^## (.*)$", with: "<h2>$1</h2>", options: .regularExpression)
+        html = html.replacingOccurrences(of: "(?m)^# (.*)$", with: "<h1>$1</h1>", options: .regularExpression)
+        
+        // Bold and Italic
+        html = html.replacingOccurrences(of: "\\*\\*(.*?)\\*\\*", with: "<strong>$1</strong>", options: .regularExpression)
+        html = html.replacingOccurrences(of: "\\*(.*?)\\*", with: "<em>$1</em>", options: .regularExpression)
+        
+        // Lists (Very basic list handling)
+        html = html.replacingOccurrences(of: "(?m)^[\\*\\-] (.*)$", with: "<li>$1</li>", options: .regularExpression)
+        
+        // Wrap contiguous list items in <ul>
+        html = html.replacingOccurrences(of: "(?m)(<li>.*</li>(?:\n<li>.*</li>)*)", with: "<ul>\n$1\n</ul>", options: .regularExpression)
+        
+        // Newlines to <br> for regular text (excluding block elements)
+        // A more robust implementation would parse blocks properly, but this is a lightweight fallback.
+        let paragraphs = html.components(separatedBy: "\n\n")
+        let formattedParagraphs = paragraphs.map { p -> String in
+            let trimmed = p.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("<h") || trimmed.hasPrefix("<ul") || trimmed.hasPrefix("<li") {
+                return trimmed
+            } else if !trimmed.isEmpty {
+                return "<p>" + trimmed.replacingOccurrences(of: "\n", with: "<br>") + "</p>"
+            }
+            return ""
+        }
+        
+        let finalHTML = formattedParagraphs.joined(separator: "\n")
+        
+        let warningBadge = "<blockquote>⚠️ <strong>Format de réponse inattendu.</strong> Le modèle a généré un format non standard. Affichage en mode brut de secours.</blockquote>"
+        
+        return warningBadge + "\n" + finalHTML
     }
 
     private let defaultFicheStructure = """
@@ -133,14 +185,14 @@ final class GenerationEngine {
             }
         }
 
-        // Fallback: return raw text if JSON parsing fails
+        // Fallback: return raw text if JSON parsing fails, but rendered as HTML
         let fallback = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !fallback.isEmpty else {
             throw AIClientError.emptyResponse("Le modèle a renvoyé une réponse vide pour la fiche.")
         }
-        onLog("⚠️ JSON parse failed — using raw response.")
+        onLog("⚠️ JSON parse failed — falling back to Markdown rendering.")
         onProgress(100)
-        return fallback
+        return GenerationEngine.fallbackMarkdownToHTML(fallback)
     }
 
     private func performMultiPass(
@@ -246,9 +298,9 @@ final class GenerationEngine {
         guard !fallback.isEmpty else {
             throw AIClientError.emptyResponse("Le modèle a renvoyé une réponse vide pour l'évaluation.")
         }
-        onLog("⚠️ JSON parse failed — using raw response.")
+        onLog("⚠️ JSON parse failed — falling back to Markdown rendering.")
         onProgress(100)
-        return fallback
+        return GenerationEngine.fallbackMarkdownToHTML(fallback)
     }
 
     // MARK: - Quiz Generation
@@ -311,9 +363,9 @@ final class GenerationEngine {
         guard !fallback.isEmpty else {
             throw AIClientError.emptyResponse("Le modèle a renvoyé une réponse vide pour le quiz.")
         }
-        onLog("⚠️ JSON parse failed — using raw response.")
+        onLog("⚠️ JSON parse failed — falling back to Markdown rendering.")
         onProgress(100)
-        return fallback
+        return GenerationEngine.fallbackMarkdownToHTML(fallback)
     }
 
     // MARK: - AI Editor
@@ -385,11 +437,7 @@ final class GenerationEngine {
         )
 
         // Parse JSON (strip possible markdown wrappers first)
-        var cleanedJSON = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanedJSON.hasPrefix("```json\n") { cleanedJSON.removeFirst(8) }
-        else if cleanedJSON.hasPrefix("```\n") { cleanedJSON.removeFirst(4) }
-        if cleanedJSON.hasSuffix("\n```") { cleanedJSON.removeLast(4) }
-        else if cleanedJSON.hasSuffix("```") { cleanedJSON.removeLast(3) }
+        let cleanedJSON = GenerationEngine.cleanJSONResponse(jsonString)
         
         guard let data = cleanedJSON.data(using: .utf8) else {
             return AgentIntentResponse(intent: "edit", classLevel: nil, topic: nil)
@@ -487,7 +535,7 @@ final class GenerationEngine {
 
     // MARK: - Prompt Builders
 
-    private func buildFichePrompt(
+    func buildFichePrompt(
         lessonTopic: String,
         classLevel: String,
         subject: String,
@@ -550,6 +598,8 @@ final class GenerationEngine {
         5. Si pertinent pour l'exercice, ajoute un tag image: <generateimage:"description précise">
 
         FORMAT DE SORTIE (JSON UNIQUEMENT, aucun texte autour):
+        RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
+        N'ajoute AUCUN texte avant ou après le JSON. N'utilise PAS de balises markdown comme ```json. Assure-toi d'échapper correctement les guillemets.
         {
           "title": "Titre de la fiche",
           "metadata": {
@@ -583,7 +633,7 @@ final class GenerationEngine {
         """
     }
 
-    private func buildEvaluationPrompt(
+    func buildEvaluationPrompt(
         classLevel: String,
         topics: [String],
         subject: String,
@@ -647,6 +697,8 @@ final class GenerationEngine {
         5. Total des points: exactement 20 points.
 
         FORMAT DE SORTIE (JSON UNIQUEMENT):
+        RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
+        N'ajoute AUCUN texte avant ou après le JSON. N'utilise PAS de balises markdown comme ```json. Assure-toi d'échapper correctement les guillemets.
         {
           "school_name": "\(schoolName.isEmpty ? "Groupe Scolaire" : schoolName)",
           "header": {
@@ -678,7 +730,7 @@ final class GenerationEngine {
         """
     }
 
-    private func buildQuizPrompt(
+    func buildQuizPrompt(
         classLevel: String,
         topic: String,
         subject: String,
@@ -715,6 +767,8 @@ final class GenerationEngine {
         3. Fournir un corrigé complet.
 
         FORMAT DE SORTIE (JSON UNIQUEMENT):
+        RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
+        N'ajoute AUCUN texte avant ou après le JSON. N'utilise PAS de balises markdown comme ```json. Assure-toi d'échapper correctement les guillemets.
         {
           "title": "Quiz: \(topic)",
           "class_level": "\(classLevel)",
@@ -1041,3 +1095,144 @@ final class GenerationEngine {
 }
 
 // Extension with redundant editFiche placeholder removed
+
+struct BatchRequestItem: Codable {
+    let custom_id: String
+    let method: String
+    let url: String
+    let body: ChatCompletionBody
+}
+
+struct ChatCompletionBody: Codable {
+    let model: String
+    let messages: [ChatMessagePayload]
+    let temperature: Double
+    let max_tokens: Int?
+}
+
+struct ChatMessagePayload: Codable {
+    let role: String
+    let content: String
+}
+
+class BatchService {
+    static let shared = BatchService()
+    
+    enum BatchError: Error, LocalizedError {
+        case missingURL
+        case missingApiKey
+        case uploadFailed(String)
+        case batchCreateFailed(String)
+        
+        var errorDescription: String? {
+            switch self {
+            case .missingURL: return "L'URL de base du proxy n'est pas configurée."
+            case .missingApiKey: return "La clé API du proxy n'est pas configurée."
+            case .uploadFailed(let msg): return "Erreur d'upload du fichier : \\(msg)"
+            case .batchCreateFailed(let msg): return "Erreur de création du batch : \\(msg)"
+            }
+        }
+    }
+    
+    func runBatch(items: [BatchRequestItem], baseURL: String, apiKey: String) async throws -> String {
+        guard !baseURL.isEmpty else { throw BatchError.missingURL }
+        guard !apiKey.isEmpty else { throw BatchError.missingApiKey }
+        
+        // 1. Create JSONL string
+        let encoder = JSONEncoder()
+        var jsonlString = ""
+        for item in items {
+            let data = try encoder.encode(item)
+            if let str = String(data: data, encoding: .utf8) {
+                jsonlString += str + "\n"
+            }
+        }
+        
+        guard let fileData = jsonlString.data(using: .utf8) else {
+            throw BatchError.uploadFailed("Impossible de créer les données JSONL")
+        }
+        
+        // 2. Upload file
+        let fileId = try await uploadFile(fileData: fileData, baseURL: baseURL, apiKey: apiKey)
+        
+        // 3. Create batch
+        let batchId = try await createBatch(fileId: fileId, baseURL: baseURL, apiKey: apiKey)
+        
+        return batchId
+    }
+    
+    private func uploadFile(fileData: Data, baseURL: String, apiKey: String) async throws -> String {
+        let urlString = baseURL.hasSuffix("/v1") ? baseURL.replacingOccurrences(of: "/v1", with: "/v1/files") : baseURL + "/files"
+        guard let url = URL(string: urlString) else { throw BatchError.missingURL }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \\(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        let boundary = "Boundary-\\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // purpose
+        body.append("--\\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"purpose\"\r\n\r\n".data(using: .utf8)!)
+        body.append("batch\r\n".data(using: .utf8)!)
+        
+        // file
+        body.append("--\\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"batch_requests.jsonl\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let errStr = String(data: data, encoding: .utf8) ?? "Inconnu"
+            throw BatchError.uploadFailed(errStr)
+        }
+        
+        struct FileResponse: Decodable {
+            let id: String
+        }
+        
+        let fileResp = try JSONDecoder().decode(FileResponse.self, from: data)
+        return fileResp.id
+    }
+    
+    private func createBatch(fileId: String, baseURL: String, apiKey: String) async throws -> String {
+        let urlString = baseURL.hasSuffix("/v1") ? baseURL.replacingOccurrences(of: "/v1", with: "/v1/batches") : baseURL + "/batches"
+        guard let url = URL(string: urlString) else { throw BatchError.missingURL }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \\(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let bodyPayload: [String: Any] = [
+            "input_file_id": fileId,
+            "endpoint": "/v1/chat/completions",
+            "completion_window": "24h"
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: bodyPayload)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let errStr = String(data: data, encoding: .utf8) ?? "Inconnu"
+            throw BatchError.batchCreateFailed(errStr)
+        }
+        
+        struct BatchResponse: Decodable {
+            let id: String
+        }
+        
+        let batchResp = try JSONDecoder().decode(BatchResponse.self, from: data)
+        return batchResp.id
+    }
+}

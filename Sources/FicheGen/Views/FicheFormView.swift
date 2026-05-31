@@ -1,22 +1,25 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct FicheFormView: View {
     @EnvironmentObject var state: AppState
+    @State private var showBatchSheet = false
+    @State private var isTargeted = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // ── API Key Warning Banner ──────────────────────────────
-                if state.geminiApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if !state.isConfigured {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "exclamationmark.shield.fill")
                             .font(.title2)
                             .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Clé API Google AI Studio manquante")
+                            Text("Configuration API manquante")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text("Veuillez configurer votre clé dans les Préférences (Cmd + ,) pour pouvoir générer des fiches.")
+                            Text("Veuillez configurer votre clé API (Gemini, Proxy, etc.) dans les Préférences (Cmd + ,) pour pouvoir générer des fiches.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -107,6 +110,43 @@ struct FicheFormView: View {
                             .textFieldStyle(.roundedBorder)
                     }
                     .padding(.vertical, 2)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isTargeted ? Color.accentColor : Color.clear, lineWidth: 3)
+                )
+                .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
+                    if let provider = providers.first {
+                        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                            if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
+                                if url.pathExtension.lowercased() == "pdf" {
+                                    DispatchQueue.main.async { state.droppedPDFURL = url }
+                                }
+                            } else if let url = item as? URL, url.pathExtension.lowercased() == "pdf" {
+                                DispatchQueue.main.async { state.droppedPDFURL = url }
+                            }
+                        }
+                        return true
+                    }
+                    return false
+                }
+                
+                if let dropped = state.droppedPDFURL {
+                    HStack {
+                        Image(systemName: "doc.text.fill")
+                            .foregroundColor(.blue)
+                        Text("PDF Source : \(dropped.lastPathComponent)")
+                            .font(.subheadline)
+                        Spacer()
+                        Button(action: { state.droppedPDFURL = nil }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(10)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
                 }
 
                 // ── Parameters ───────────────────────────────────────────
@@ -201,20 +241,192 @@ struct FicheFormView: View {
                 }
 
                 // ── Action ───────────────────────────────────────────────
-                GenerateButton(
-                    label: "Générer la Fiche",
-                    isEnabled: !state.ficheSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               !state.ficheLessonTopic.trimmingCharacters(in: .whitespaces).isEmpty &&
-                               state.isConfigured
-                ) {
-                    state.generateFiche()
+                HStack {
+                    GenerateButton(
+                        label: "Générer la Fiche",
+                        isEnabled: !state.ficheSubject.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   !state.ficheLessonTopic.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                   state.isConfigured
+                    ) {
+                        state.generateFiche()
+                    }
+                    
+                    if state.expEnableBatch {
+                        Button {
+                            showBatchSheet = true
+                        } label: {
+                            Label("Générer en Lot (Batch)", systemImage: "square.grid.2x2.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    }
                 }
             }
             .padding(16)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $showBatchSheet) {
+            BatchSelectionView(generationType: "fiche")
+        }
         .onChange(of: state.ficheClassLevel) { _, newValue in
             state.loadAvailableLessons(classLevel: newValue)
+        }
+    }
+}
+
+struct BatchSelectionView: View {
+    @EnvironmentObject var state: AppState
+    let generationType: String // "fiche", "eval", "quiz"
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var selectedLessons = Set<String>()
+    @State private var customTopics: String = ""
+    @State private var isProcessing = false
+    @State private var batchId: String? = nil
+    @State private var errorMessage: String? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Génération par Lot (\(generationType.capitalized))")
+                .font(.title2)
+                .bold()
+            
+            if !state.availableLessons.isEmpty {
+                GroupBox("Leçons Suggérées") {
+                    ScrollView {
+                        VStack(alignment: .leading) {
+                            ForEach(state.availableLessons, id: \.self) { lesson in
+                                Toggle(lesson, isOn: Binding(
+                                    get: { selectedLessons.contains(lesson) },
+                                    set: { isOn in
+                                        if isOn { selectedLessons.insert(lesson) }
+                                        else { selectedLessons.remove(lesson) }
+                                    }
+                                ))
+                            }
+                        }
+                    }
+                    .frame(minHeight: 100, maxHeight: 200)
+                }
+            }
+            
+            GroupBox("Sujets personnalisés (un par ligne)") {
+                TextEditor(text: $customTopics)
+                    .frame(height: 100)
+                    .scrollContentBackground(.hidden)
+            }
+            
+            if let batchId = batchId {
+                Text("Batch créé avec succès ! ID: \(batchId)")
+                    .foregroundColor(.green)
+            }
+            if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+            }
+            
+            HStack {
+                Button("Annuler") { dismiss() }
+                Spacer()
+                Button(isProcessing ? "Traitement..." : "Lancer le Batch") {
+                    runBatch()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isProcessing || (selectedLessons.isEmpty && customTopics.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+            }
+        }
+        .padding(20)
+        .frame(width: 500)
+    }
+    
+    private func runBatch() {
+        isProcessing = true
+        errorMessage = nil
+        batchId = nil
+        
+        Task {
+            do {
+                var allTopics = Array(selectedLessons)
+                let custom = customTopics.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                allTopics.append(contentsOf: custom)
+                
+                var items: [BatchRequestItem] = []
+                for (index, topic) in allTopics.enumerated() {
+                    let prompt: String
+                    switch generationType {
+                    case "fiche":
+                        prompt = GenerationEngine.shared.buildFichePrompt(
+                            lessonTopic: topic,
+                            classLevel: state.ficheClassLevel,
+                            subject: state.ficheSubject,
+                            lessonText: "", 
+                            customTemplate: "",
+                            durationMinutes: state.ficheDurationMinutes,
+                            specialInstructions: state.ficheSpecialInstructions,
+                            useTopRatedExamples: state.ficheUseTopRated
+                        )
+                    case "eval":
+                        prompt = GenerationEngine.shared.buildEvaluationPrompt(
+                            classLevel: state.evalClassLevel,
+                            topics: [topic],
+                            subject: state.evalSubject,
+                            durationMinutes: state.evalDuration,
+                            difficulty: state.evalDifficulty,
+                            schoolName: state.evalSchoolName,
+                            sessionLabel: state.evalSession,
+                            totalPoints: state.evalTotalPoints,
+                            extraInstructions: "",
+                            extractedContent: ""
+                        )
+                    case "quiz":
+                        prompt = GenerationEngine.shared.buildQuizPrompt(
+                            classLevel: state.quizClassLevel,
+                            topic: topic,
+                            subject: state.quizSubject,
+                            durationMinutes: state.quizDuration,
+                            numQuestions: state.quizNumQuestions,
+                            difficulty: state.quizDifficulty,
+                            schoolName: state.quizSchoolName,
+                            session: state.quizSession,
+                            totalPoints: state.quizTotalPoints
+                        )
+                    default:
+                        prompt = ""
+                    }
+                    
+                    let model = state.chatModel.isEmpty ? "gemini-2.5-pro" : state.chatModel
+                    let body = ChatCompletionBody(
+                        model: model,
+                        messages: [ChatMessagePayload(role: "user", content: prompt)],
+                        temperature: 0.5,
+                        max_tokens: 8000
+                    )
+                    
+                    items.append(BatchRequestItem(
+                        custom_id: "req-\(index)-\(generationType)",
+                        method: "POST",
+                        url: "/v1/chat/completions",
+                        body: body
+                    ))
+                }
+                
+                let resultId = try await BatchService.shared.runBatch(
+                    items: items,
+                    baseURL: state.proxyBaseURL,
+                    apiKey: state.proxyApiKey
+                )
+                
+                batchId = resultId
+                state.appendLog("✅ Batch \(generationType) soumis avec succès : \(resultId)")
+                
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+                dismiss()
+                
+            } catch {
+                errorMessage = error.localizedDescription
+                state.appendLog("❌ Erreur Batch : \(error.localizedDescription)")
+            }
+            isProcessing = false
         }
     }
 }

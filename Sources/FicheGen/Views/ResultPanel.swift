@@ -13,9 +13,9 @@ struct ResultPanel: View {
     @State private var toastMessage = ""
 
     enum ResultTab: String, CaseIterable, Identifiable {
-        case preview = "Preview"
-        case source  = "HTML"
-        case log     = "Log"
+        case preview = "Aperçu Visuel"
+        case source  = "Code HTML"
+        case log     = "Journal"
         var id: String { rawValue }
     }
 
@@ -50,7 +50,7 @@ struct ResultPanel: View {
 
             // ── Progress indicator ──────────────────────────────────────
             if state.isGenerating {
-                PulsingProgressView(message: state.logMessages.last ?? "Génération en cours...")
+                PulsingProgressView(message: state.logMessages.last ?? "Génération en cours...", detail: state.currentProgressDetail)
             }
 
             // ── Content ───────────────────────────────────────────────
@@ -99,6 +99,25 @@ struct ResultPanel: View {
                     HStack(spacing: 12) {
                         Spacer()
                         
+                        if !state.markdownHistory.isEmpty {
+                            Button(action: {
+                                withAnimation {
+                                    state.undoMarkdown()
+                                }
+                                showToastMessage("Modification annulée")
+                            }) {
+                                Label("Annuler", systemImage: "arrow.uturn.backward")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+                            .padding(.bottom, 24)
+                            .keyboardShortcut("z", modifiers: [.command])
+                        }
+                        
                         Menu {
                             Button(action: {
                                 NSPasteboard.general.clearContents()
@@ -112,9 +131,14 @@ struct ResultPanel: View {
                                 Label("Exporter en HTML", systemImage: "doc.text")
                             }
                             
+                            Button(action: { exportRTF() }) {
+                                Label("Exporter pour Word (RTF)", systemImage: "doc.text.fill")
+                            }
+                            
                             Button(action: { exportPDF() }) {
                                 Label("Exporter en PDF", systemImage: "doc.plaintext")
                             }
+                            .keyboardShortcut("e", modifiers: [.command])
                         } label: {
                             Label("Exporter", systemImage: "square.and.arrow.up")
                                 .padding(.horizontal, 8)
@@ -179,7 +203,15 @@ struct ResultPanel: View {
 
     private func exportPDF() {
         let url = getOutputURL(extension: "pdf")
-        pdfGenerator.generatePDF(from: state.generatedMarkdown, styleName: state.defaultPdfStyle, outputURL: url) { result in
+        
+        var css = PDFGenerator.PDFStyle.modern.css
+        if let defaultStyle = PDFGenerator.PDFStyle(rawValue: state.defaultPdfStyle) {
+            css = defaultStyle.css
+        } else if let preset = state.stylePresets.first(where: { $0.name == state.defaultPdfStyle }) {
+            css = preset.css
+        }
+        
+        pdfGenerator.generatePDF(from: state.generatedMarkdown, css: css, outputURL: url) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let savedURL):
@@ -188,6 +220,24 @@ struct ResultPanel: View {
                     showToastMessage("Erreur: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+    
+    private func exportRTF() {
+        let url = getOutputURL(extension: "rtf")
+        let html = state.generatedMarkdown
+        guard let data = html.data(using: .utf8) else { return }
+        
+        do {
+            if let attrStr = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) {
+                let rtfData = try attrStr.data(from: NSRange(location: 0, length: attrStr.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+                try rtfData.write(to: url)
+                showToastMessage("Word (RTF) sauvé: \(url.lastPathComponent)")
+            } else {
+                showToastMessage("Erreur de conversion HTML vers RTF")
+            }
+        } catch {
+            showToastMessage("Erreur: \(error.localizedDescription)")
         }
     }
     
@@ -206,6 +256,7 @@ struct ResultPanel: View {
 
 struct PulsingProgressView: View {
     let message: String
+    var detail: String = ""
     @State private var isPulsing = false
     
     var body: some View {
@@ -221,10 +272,18 @@ struct PulsingProgressView: View {
                     }
                 }
             
-            Text(message)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                if !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
             
             Spacer()
         }

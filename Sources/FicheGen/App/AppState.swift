@@ -11,10 +11,21 @@ final class AppState: ObservableObject {
 
     @Published var isGenerating = false
     @Published var progress: Int = 0
+    @Published var currentProgressDetail: String = ""
     @Published var logMessages: [String] = []
     @Published var chatHistory: [ChatMessage] = []
     @Published var generatedMarkdown: String = ""
+    @Published var markdownHistory: [String] = []
+    
+    // MARK: - Drag and Drop
+    @Published var droppedPDFURL: URL? = nil
+    
+    // MARK: - History
+    @Published var generationHistory: [GenerationHistoryItem] = []
 
+    // MARK: - Style Presets
+    @Published var stylePresets: [StylePreset] = []
+    
     // MARK: - Preferences Settings
     @Published var geminiApiKey: String = ""
     @Published var guidesDir: String = ""
@@ -95,6 +106,7 @@ final class AppState: ObservableObject {
     @Published var expJsonValidation: Bool = true
     @Published var expSpeculativeDecoding: Bool = false
     @Published var expAgenticLoop: Bool = false
+    @Published var expEnableBatch: Bool = false
 
     // MARK: - Available Lessons (ToC Cache)
     @Published var availableLessons: [String] = []
@@ -188,6 +200,22 @@ final class AppState: ObservableObject {
                 self.loadAvailableLessons(classLevel: self.ficheClassLevel)
             }
             .store(in: &cancellables)
+            
+        // Load history
+        generationHistory = HistoryStorage.load()
+    }
+
+    // MARK: - History Operations
+    
+    func saveToHistory(type: GenerationType, topic: String, classLevel: String, subject: String, markdown: String) {
+        let item = GenerationHistoryItem(type: type, classLevel: classLevel, subject: subject, topic: topic, markdown: markdown)
+        generationHistory.insert(item, at: 0)
+        HistoryStorage.save(generationHistory)
+    }
+    
+    func undoMarkdown() {
+        guard !markdownHistory.isEmpty else { return }
+        generatedMarkdown = markdownHistory.removeLast()
     }
 
     // MARK: - Generation (fully native — no Python server)
@@ -212,11 +240,17 @@ final class AppState: ObservableObject {
         let specialInstructions = ficheSpecialInstructions
         let useTopRated = ficheUseTopRated
         let guidesDir = self.guidesDir
+        let droppedPDF = self.droppedPDFURL
 
         generationTask = Task {
             progress = 30
             let lessonText = await Task.detached(priority: .userInitiated) { () -> String in
                 guard !Task.isCancelled else { return "" }
+                
+                if let dropped = droppedPDF, FileManager.default.fileExists(atPath: dropped.path) {
+                    return PDFProcessor.extractText(from: dropped, pages: nil)
+                }
+                
                 guard let guideURL = PDFProcessor.findGuideFile(classLevel: classLevel, guidesDir: guidesDir) else {
                     return ""
                 }
@@ -264,7 +298,9 @@ final class AppState: ObservableObject {
                     }
                 )
                 guard !Task.isCancelled else { return }
+                self.markdownHistory.removeAll()
                 generatedMarkdown = markdown
+                self.saveToHistory(type: .fiche, topic: lessonTopic, classLevel: classLevel, subject: subject, markdown: markdown)
             } catch is CancellationError {
                 // Swallowed
             } catch let error as URLError where error.code == .cancelled {
@@ -326,7 +362,10 @@ final class AppState: ObservableObject {
                     }
                 )
                 guard !Task.isCancelled else { return }
+                self.markdownHistory.removeAll()
                 generatedMarkdown = markdown
+                let title = topics.joined(separator: ", ")
+                self.saveToHistory(type: .evaluation, topic: title, classLevel: classLevel, subject: subject, markdown: markdown)
             } catch is CancellationError {
                 // Swallowed
             } catch let error as URLError where error.code == .cancelled {
@@ -385,7 +424,9 @@ final class AppState: ObservableObject {
                     }
                 )
                 guard !Task.isCancelled else { return }
+                self.markdownHistory.removeAll()
                 generatedMarkdown = markdown
+                self.saveToHistory(type: .quiz, topic: topic, classLevel: classLevel, subject: subject, markdown: markdown)
             } catch is CancellationError {
                 // Swallowed
             } catch let error as URLError where error.code == .cancelled {
@@ -492,6 +533,7 @@ final class AppState: ObservableObject {
         expJsonValidation = bool("exp_json_validation", true)
         expSpeculativeDecoding = bool("exp_speculative_decoding", false)
         expAgenticLoop  = bool("exp_agentic_loop", false)
+        expEnableBatch  = bool("exp_enable_batch", false)
 
         // Apply defaults to form states
         ficheTemperature  = temperatureSetting
@@ -502,6 +544,15 @@ final class AppState: ObservableObject {
         evalSubject      = defaultSubject
         quizDuration     = defaultDuration
         quizSubject      = defaultSubject
+        
+        if let presetsArray = settings["style_presets"] as? [[String: Any]] {
+            do {
+                let data = try JSONSerialization.data(withJSONObject: presetsArray)
+                stylePresets = try JSONDecoder().decode([StylePreset].self, from: data)
+            } catch {
+                print("Failed to decode style presets")
+            }
+        }
         
         // After loading guidesDir, we can safely fetch the TOC cache
         loadAvailableLessons(classLevel: ficheClassLevel)
@@ -541,10 +592,20 @@ final class AppState: ObservableObject {
             "exp_multi_pass_iterations": expMultiPassIterations,
             "exp_style_transfer": expStyleTransfer, "exp_auto_grade_difficulty": expAutoGradeDifficulty,
             "exp_chain_of_thought": expChainOfThought, "exp_json_validation": expJsonValidation,
-            "exp_speculative_decoding": expSpeculativeDecoding, "exp_agentic_loop": expAgenticLoop
+            "exp_agentic_loop": expAgenticLoop,
+            "exp_enable_batch": expEnableBatch
         ]
+        
+        var jsonSettings = settings
+        do {
+            let data = try JSONEncoder().encode(stylePresets)
+            if let arr = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                jsonSettings["style_presets"] = arr
+            }
+        } catch {}
+        
         Task.detached(priority: .utility) {
-            PreferencesStorage.save(settings)
+            PreferencesStorage.save(jsonSettings)
         }
     }
 
@@ -674,6 +735,8 @@ final class AppState: ObservableObject {
             if let val = value as? Bool { expSpeculativeDecoding = val }
         case "exp_agentic_loop":
             if let val = value as? Bool { expAgenticLoop = val }
+        case "exp_enable_batch":
+            if let val = value as? Bool { expEnableBatch = val }
         default:
             break
         }

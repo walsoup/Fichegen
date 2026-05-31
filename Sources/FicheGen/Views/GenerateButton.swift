@@ -22,7 +22,7 @@ struct GenerateButton: View {
             .buttonStyle(.borderedProminent)
             .tint(state.isGenerating ? .red : .accentColor)
             .disabled(!state.isGenerating && !isEnabled)
-            .keyboardShortcut(state.isGenerating ? .cancelAction : .defaultAction)
+            .keyboardShortcut(state.isGenerating ? KeyEquivalent.escape : KeyEquivalent.return, modifiers: state.isGenerating ? [] : [.command])
         }
     }
 }

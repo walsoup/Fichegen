@@ -267,7 +267,10 @@ struct ChatPanelView: View {
                     return
                 }
 
-                await MainActor.run { state.generatedMarkdown = "" }
+                await MainActor.run { 
+                    state.markdownHistory.append(originalHTML)
+                    state.generatedMarkdown = "" 
+                }
                 try await GenerationEngine.shared.editFicheStream(
                     currentHTML: originalHTML,
                     instructions: instruction,
