@@ -9,12 +9,14 @@ DESKTOP_DIR="/Users/wal/Desktop"
 FINAL_DMG="$DESKTOP_DIR/$DMG_NAME"
 
 # Build paths
-APP_PATH="BuildData/Build/Products/Release/$APP_NAME.app"
-BACKGROUND_PNG="BuildData/Build/Products/Release/dmg_background.png"
+APP_PATH="BuildData/Build/Products/Debug/$APP_NAME.app"
+BACKGROUND_PNG="BuildData/Build/Products/Debug/dmg_background.png"
 
 echo "=== Step 1: Generating custom background image ==="
-mkdir -p "BuildData/Build/Products/Release"
-/usr/bin/swift scratch/generate_background.swift "$BACKGROUND_PNG"
+mkdir -p "BuildData/Build/Products/Debug"
+xcrun -sdk macosx swiftc scratch/generate_background.swift -o scratch/generate_background
+./scratch/generate_background "$BACKGROUND_PNG"
+rm -f scratch/generate_background
 
 echo "=== Step 2: Preparing staging directory ==="
 STAGING_DIR="dmg_staging"
@@ -50,7 +52,7 @@ cp "$BACKGROUND_PNG" "$MOUNT_POINT/.background/background.png"
 
 echo "=== Step 6: Setting custom Finder layout via AppleScript ==="
 # Open, configure window style, set background picture, move icons, and close.
-osascript <<EOF
+osascript <<EOF || true
 tell application "Finder"
     tell disk "$VOLUME_NAME"
         open

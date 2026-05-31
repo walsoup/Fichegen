@@ -85,4 +85,4 @@ guard let tiffData = image.tiffRepresentation,
 }
 
 try! pngData.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
-print("Background generated successfully at \\(CommandLine.arguments[1])")
+print("Background generated successfully at \(CommandLine.arguments[1])")

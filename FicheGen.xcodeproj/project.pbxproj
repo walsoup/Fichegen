@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0DE63D5D68496C74B952EF79 /* HistoryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C1C30100FB07937F9D127C /* HistoryStorage.swift */; };
 		10DC81CE6DCBBE5ACA81704D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EC98794B6A3F493D81ABD7 /* Models.swift */; };
 		18B0A555F2BE0C897CC5A962 /* StyleBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A7C5E54D776B7975F8B0CA /* StyleBuilderView.swift */; };
 		220F7B592C59DE84B3B49D17 /* QuizFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 963B653F4CA185FA3FE7A50B /* QuizFormView.swift */; };
@@ -17,6 +18,7 @@
 		5E63508402492B101A5F4CEC /* FicheFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAF6DD9DC8879B438293CACF /* FicheFormView.swift */; };
 		61A10087552CDC8320A1E0DC /* PDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58CEDCE4538591E3450E786 /* PDFGenerator.swift */; };
 		620468D52C1E8B6E86693936 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68E8157D905C2517037F2A0 /* ContentView.swift */; };
+		75A96884A6674528024CB0B1 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4690574E79BFD75FC7988F /* HistoryView.swift */; };
 		75CA2D116F2355BD7CF0D022 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E948796284C0D11F0F124DD8 /* PreferencesView.swift */; };
 		7A1443C064D365F5FA0262B5 /* ResultPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159BD0804B2C1006D0E3A347 /* ResultPanel.swift */; };
 		94AA2328CD2CD61D8C636278 /* Bundle+Module.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4460DD8EF4923A6AD27039 /* Bundle+Module.swift */; };
@@ -28,6 +30,8 @@
 		CAD9D93EEBC9232A3EB59C53 /* FicheGenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C77A9C14768C1181726946D5 /* FicheGenApp.swift */; };
 		CCABAA9BBAC2A1E31FD9EA98 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1908B370BAE639CA17DBAC59 /* AppState.swift */; };
 		E520F4A2F993467D40496C63 /* ChatPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F629C198A6161B9C2C0FF07D /* ChatPanelView.swift */; };
+		F66E40688CC8D2FBD6BF5865 /* StylePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6451C6049C6A81A00AC46B /* StylePreset.swift */; };
+		F8523EBED42F183C1F0602A5 /* GenerationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6EE55C744F78F90E411249 /* GenerationHistoryItem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,10 +49,14 @@
 		90EC98794B6A3F493D81ABD7 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		963B653F4CA185FA3FE7A50B /* QuizFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizFormView.swift; sourceTree = "<group>"; };
 		A68E8157D905C2517037F2A0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A9C1C30100FB07937F9D127C /* HistoryStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStorage.swift; sourceTree = "<group>"; };
+		AC6EE55C744F78F90E411249 /* GenerationHistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerationHistoryItem.swift; sourceTree = "<group>"; };
+		AD6451C6049C6A81A00AC46B /* StylePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StylePreset.swift; sourceTree = "<group>"; };
 		AEFFAD65A20DA86B03AC395F /* marked.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = marked.min.js; sourceTree = "<group>"; };
 		B58CEDCE4538591E3450E786 /* PDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFGenerator.swift; sourceTree = "<group>"; };
 		B6D2E9EF237DB9921ADF672D /* TemplatesPrefsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesPrefsTab.swift; sourceTree = "<group>"; };
 		C77A9C14768C1181726946D5 /* FicheGenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FicheGenApp.swift; sourceTree = "<group>"; };
+		CA4690574E79BFD75FC7988F /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		CAF6DD9DC8879B438293CACF /* FicheFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FicheFormView.swift; sourceTree = "<group>"; };
 		E948796284C0D11F0F124DD8 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		EC09A577F8A37C84D15D0A2A /* EvaluationFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationFormView.swift; sourceTree = "<group>"; };
@@ -69,7 +77,9 @@
 		47F66BDF7F3492B623A3E013 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				AC6EE55C744F78F90E411249 /* GenerationHistoryItem.swift */,
 				90EC98794B6A3F493D81ABD7 /* Models.swift */,
+				AD6451C6049C6A81A00AC46B /* StylePreset.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -104,6 +114,7 @@
 				EC09A577F8A37C84D15D0A2A /* EvaluationFormView.swift */,
 				CAF6DD9DC8879B438293CACF /* FicheFormView.swift */,
 				593E0E64863017A449F2BE46 /* GenerateButton.swift */,
+				CA4690574E79BFD75FC7988F /* HistoryView.swift */,
 				E948796284C0D11F0F124DD8 /* PreferencesView.swift */,
 				963B653F4CA185FA3FE7A50B /* QuizFormView.swift */,
 				159BD0804B2C1006D0E3A347 /* ResultPanel.swift */,
@@ -134,6 +145,7 @@
 			children = (
 				4E8BAE7EC60953497BEBD445 /* GeminiClient.swift */,
 				1615EF469C0985B2EE04FC33 /* GenerationEngine.swift */,
+				A9C1C30100FB07937F9D127C /* HistoryStorage.swift */,
 				B58CEDCE4538591E3450E786 /* PDFGenerator.swift */,
 				0550DCB36F60BEF264367C06 /* PDFProcessor.swift */,
 				55358055A597D8F9251C420A /* PreferencesStorage.swift */,
@@ -169,10 +181,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1640;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					A9EA2AB8ADC7579F504FECB7 = {
+						DevelopmentTeam = 284G9D9Y7T;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = B1684F42EA7C218E4FEECFC4 /* Build configuration list for PBXProject "FicheGen" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -181,6 +198,7 @@
 			);
 			mainGroup = 9D51DA12A0480271C8DECCF1;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 56;
 			productRefGroup = 9ECA1706ADBCA5351B48013B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -217,6 +235,9 @@
 				29484F6FE9EAAB640F8B6EDB /* GeminiClient.swift in Sources */,
 				A5C0011641AB41B39E8312D7 /* GenerateButton.swift in Sources */,
 				AB6C75BD889170305665D886 /* GenerationEngine.swift in Sources */,
+				F8523EBED42F183C1F0602A5 /* GenerationHistoryItem.swift in Sources */,
+				0DE63D5D68496C74B952EF79 /* HistoryStorage.swift in Sources */,
+				75A96884A6674528024CB0B1 /* HistoryView.swift in Sources */,
 				10DC81CE6DCBBE5ACA81704D /* Models.swift in Sources */,
 				61A10087552CDC8320A1E0DC /* PDFGenerator.swift in Sources */,
 				58195A7D716A4770BC6D7B40 /* PDFProcessor.swift in Sources */,
@@ -225,6 +246,7 @@
 				220F7B592C59DE84B3B49D17 /* QuizFormView.swift in Sources */,
 				7A1443C064D365F5FA0262B5 /* ResultPanel.swift in Sources */,
 				18B0A555F2BE0C897CC5A962 /* StyleBuilderView.swift in Sources */,
+				F66E40688CC8D2FBD6BF5865 /* StylePreset.swift in Sources */,
 				4A7670E76E78B7B729DF1DAD /* TemplatesPrefsTab.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -237,23 +259,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = 5Z6FCTL65N;
+				DEVELOPMENT_TEAM = 284G9D9Y7T;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Fichegen;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 3.5.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.itswal.fichegen.app;
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fichegen.app;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -263,23 +278,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = 5Z6FCTL65N;
+				DEVELOPMENT_TEAM = 284G9D9Y7T;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Fichegen;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 3.5.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.itswal.fichegen.app;
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fichegen.app;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -288,7 +296,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -319,11 +326,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -353,7 +358,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -384,11 +388,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

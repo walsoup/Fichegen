@@ -14,13 +14,15 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.fichegen.app
       MACOSX_DEPLOYMENT_TARGET: "14.0"
-      DEVELOPMENT_TEAM: ""
+      DEVELOPMENT_TEAM: "284G9D9Y7T"
+      CODE_SIGN_STYLE: Automatic
+      CODE_SIGN_IDENTITY: "Apple Development"
     info:
       path: Info.plist
       properties:
         CFBundleIdentifier: com.fichegen.app
-        CFBundleShortVersionString: "3.5.1"
-        CFBundleVersion: "3.5.1"
+        CFBundleShortVersionString: "3.6"
+        CFBundleVersion: "3.6"
         LSMinimumSystemVersion: "14.0"
         NSPrincipalClass: NSApplication
         CFBundleIconFile: icon.icns

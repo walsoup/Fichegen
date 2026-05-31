@@ -14,7 +14,7 @@ struct PreferencesView: View {
             
             AIModelsPrefsTab()
                 .tabItem {
-                    Label("IA & Modèles", systemImage: "cpu")
+                    Label("IA & LLMs", systemImage: "cpu")
                 }
                 .tag("ai")
             
@@ -38,7 +38,7 @@ struct PreferencesView: View {
                 
             TemplatesPrefsTab()
                 .tabItem {
-                    Label("Modèles", systemImage: "doc.text.magnifyingglass")
+                    Label("Styles (CSS)", systemImage: "doc.text.magnifyingglass")
                 }
                 .tag("templates")
         }

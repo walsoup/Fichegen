@@ -595,7 +595,7 @@ final class GenerationEngine {
         2. Chaque phase doit préciser les actions enseignant ET élèves.
         3. Inclure des questions d'évaluation avec corrigé.
         4. Durée totale : exactement \(duree) min.
-        5. Si pertinent pour l'exercice, ajoute un tag image: <generateimage:"description précise">
+        5. IMPORTANT : Dans les tableaux 'teacher_steps', 'student_steps', etc., n'hésite pas à utiliser des balises HTML pur (comme <table>, <tr>, <td>, <ul>, <strong>, etc.) pour générer des tableaux de vocabulaire, d'exercices ou des structures complexes. Le code HTML sera interprété nativement. N'utilise pas de Markdown.
 
         FORMAT DE SORTIE (JSON UNIQUEMENT, aucun texte autour):
         RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
@@ -695,6 +695,7 @@ final class GenerationEngine {
         3. Progression du plus simple au plus complexe.
         4. Consignes claires et adaptées au niveau.
         5. Total des points: exactement 20 points.
+        6. IMPORTANT : Dans le champ 'prompt', utilise des balises HTML pur (comme <table>, <tr>, <td>, <ul>, <strong>, etc.) pour formater des tableaux, QCM ou structures complexes. Le code HTML sera interprété nativement. N'utilise pas de Markdown.
 
         FORMAT DE SORTIE (JSON UNIQUEMENT):
         RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
@@ -765,6 +766,7 @@ final class GenerationEngine {
         1. Exactement \(numQuestions) questions variées (QCM, Vrai/Faux, Réponse courte).
         2. Progression du plus simple au plus complexe.
         3. Fournir un corrigé complet.
+        4. IMPORTANT : Dans le champ 'prompt', utilise des balises HTML pur (comme <table>, <ul>, <strong>, etc.) pour formater des tableaux ou QCM complexes. N'utilise pas de Markdown.
 
         FORMAT DE SORTIE (JSON UNIQUEMENT):
         RÈGLE ABSOLUE : Tu dois retourner UNIQUEMENT un objet JSON valide.
@@ -1015,11 +1017,14 @@ final class GenerationEngine {
             for (j, question) in questions.enumerated() {
                 let prompt = cleanText(question["prompt"])
                 if !prompt.isEmpty {
-                    let answerType = cleanText(question["answer_type"], fallback: "réponse ouverte")
+                    let answerType = cleanText(question["answer_type"], fallback: "réponse ouverte").lowercased()
                     lines.append("<h3>Q\(i + 1).\(j + 1) [\(answerType)]</h3>")
-                    lines.append("<p>\(prompt)</p>")
-                    lines.append("<p>Réponse : __________________________________________________________<br>")
-                    lines.append("____________________________________________________________</p>")
+                    lines.append("<div>\(prompt)</div>")
+                    
+                    if !answerType.contains("tableau") && !answerType.contains("qcm") && !answerType.contains("vf") && !answerType.contains("matching") {
+                        lines.append("<p>Réponse : __________________________________________________________<br>")
+                        lines.append("____________________________________________________________</p>")
+                    }
                 }
             }
             lines.append("<hr>")
@@ -1128,8 +1133,8 @@ class BatchService {
             switch self {
             case .missingURL: return "L'URL de base du proxy n'est pas configurée."
             case .missingApiKey: return "La clé API du proxy n'est pas configurée."
-            case .uploadFailed(let msg): return "Erreur d'upload du fichier : \\(msg)"
-            case .batchCreateFailed(let msg): return "Erreur de création du batch : \\(msg)"
+            case .uploadFailed(let msg): return "Erreur d'upload du fichier : \(msg)"
+            case .batchCreateFailed(let msg): return "Erreur de création du batch : \(msg)"
             }
         }
     }
@@ -1167,25 +1172,25 @@ class BatchService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \\(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
-        let boundary = "Boundary-\\(UUID().uuidString)"
-        request.setValue("multipart/form-data; boundary=\\(boundary)", forHTTPHeaderField: "Content-Type")
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
         var body = Data()
         
         // purpose
-        body.append("--\\(boundary)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"purpose\"\r\n\r\n".data(using: .utf8)!)
         body.append("batch\r\n".data(using: .utf8)!)
         
         // file
-        body.append("--\\(boundary)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"batch_requests.jsonl\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n".data(using: .utf8)!)
-        body.append("--\\(boundary)--\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         
         request.httpBody = body
         
@@ -1210,7 +1215,7 @@ class BatchService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \\(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let bodyPayload: [String: Any] = [
