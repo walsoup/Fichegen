@@ -1,0 +1,491 @@
+<UserControl
+    x:Class="FicheGen.App.Views.Controls.AssistantPane"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:FicheGen.App.Views.Controls"
+    xmlns:converters="using:FicheGen.App.Converters"
+    xmlns:ctk="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis" IsInverted="False"/>
+        <converters:BoolToVisibilityConverter x:Key="InverseBoolToVis" IsInverted="True"/>
+        <converters:StringFormatConverter x:Key="StringFormatConverter"/>
+        <local:DiffLineKindToVisibilityConverter x:Key="DiffKindVis"/>
+
+        <!-- Pilules de suggestions rapides -->
+        <Style x:Key="SuggestionChipStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <!-- Ligne de diff : + ajout / − suppression / @@ plage condensée / contexte -->
+        <DataTemplate x:Key="DiffLineTemplate">
+            <Grid Margin="0,1">
+                <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=added}"
+                        Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                        CornerRadius="4" Padding="8,3">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="+" Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   FontWeight="Bold" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=removed}"
+                        Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                        CornerRadius="4" Padding="8,3">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="−" Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   TextWrapping="Wrap" TextDecorations="Strikethrough" IsTextSelectionEnabled="True"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=collapsed}"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        CornerRadius="4" Padding="8,3">
+                    <TextBlock Text="{Binding CollapsedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='@@ {0} lignes inchangées @@'}"
+                               FontFamily="Cascadia Mono, Consolas" FontSize="11" FontStyle="Italic"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=context}"
+                        Padding="8,3">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text=" " Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"/>
+                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Points animés « L'assistant rédige… » -->
+        <Storyboard x:Name="TypingDotsStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity" From="0.25" To="1" Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0"/>
+            <DoubleAnimation Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity" From="0.25" To="1" Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.2"/>
+            <DoubleAnimation Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity" From="0.25" To="1" Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.4"/>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid RowSpacing="10" Padding="16" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tête -->
+        <Grid Grid.Row="0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Border Width="30" Height="30" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                    <FontIcon Glyph="&#xE99A;" FontSize="15" Foreground="White"/>
+                </Border>
+                <TextBlock Text="Assistant IA" Style="{ThemeResource SubtitleTextBlockStyle}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <Button HorizontalAlignment="Right"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Padding="8,4"
+                    Click="OnClearClicked"
+                    ToolTipService.ToolTip="Démarrer une nouvelle conversation"
+                    AutomationProperties.Name="Nouvelle conversation">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE894;" FontSize="12"/>
+                    <TextBlock Text="Nouveau" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Sélecteur de mode -->
+        <StackPanel Grid.Row="1" Spacing="6">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          HorizontalScrollMode="Auto"
+                          VerticalScrollMode="Disabled">
+                <ctk:Segmented x:Name="ModeSegmented"
+                               HorizontalAlignment="Stretch"
+                               MinWidth="260"
+                               SelectedIndex="0"
+                               SelectionChanged="OnModeSelectionChanged"
+                               AutomationProperties.Name="Mode de l'assistant">
+                    <ctk:SegmentedItem Content="Auto" Tag="Auto">
+                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE99A;" FontSize="13"/></ctk:SegmentedItem.Icon>
+                    </ctk:SegmentedItem>
+                    <ctk:SegmentedItem Content="Générer" Tag="Générer">
+                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE8A5;" FontSize="13"/></ctk:SegmentedItem.Icon>
+                    </ctk:SegmentedItem>
+                    <ctk:SegmentedItem Content="Modifier" Tag="Modifier">
+                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE70F;" FontSize="13"/></ctk:SegmentedItem.Icon>
+                    </ctk:SegmentedItem>
+                    <ctk:SegmentedItem Content="Question" Tag="Question">
+                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE897;" FontSize="13"/></ctk:SegmentedItem.Icon>
+                    </ctk:SegmentedItem>
+                </ctk:Segmented>
+            </ScrollViewer>
+            <TextBlock x:Name="ModeCaptionText"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Conversation -->
+        <ScrollViewer Grid.Row="2" x:Name="MessageScrollViewer" VerticalScrollBarVisibility="Auto" Padding="0,4,4,4">
+            <StackPanel>
+
+                <!-- Message de bienvenue épinglé -->
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,10">
+                    <Border Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <TextBlock Text="✨" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border MaxWidth="340" Padding="12" CornerRadius="14,14,14,4"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1">
+                        <TextBlock FontSize="13" TextWrapping="Wrap" LineHeight="20">
+                            <Run Text="Bonjour 👋 ! Je peux "/>
+                            <Run Text="générer" FontWeight="SemiBold"/>
+                            <Run Text=" une fiche, "/>
+                            <Run Text="modifier" FontWeight="SemiBold"/>
+                            <Run Text=" le document courant ou "/>
+                            <Run Text="répondre" FontWeight="SemiBold"/>
+                            <Run Text=" à vos questions pédagogiques."/>
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+
+                <!-- Liste des messages -->
+                <ItemsControl x:Name="MessagesItemsControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2,0,10" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Avatar assistant -->
+                                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                        Visibility="{Binding IsUser, Converter={StaticResource InverseBoolToVis}}">
+                                    <TextBlock Text="✨" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Avatar utilisateur -->
+                                <Border Grid.Column="2" Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top"
+                                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                        Visibility="{Binding IsUser, Converter={StaticResource BoolToVis}}">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </Border>
+
+                                <!-- Bulle assistant -->
+                                <Border Grid.Column="1" HorizontalAlignment="Left" MaxWidth="360"
+                                        Padding="12" Margin="0,0,24,0" CornerRadius="14,14,14,4"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        Visibility="{Binding IsUser, Converter={StaticResource InverseBoolToVis}}">
+                                    <StackPanel Spacing="8">
+                                        <RichTextBlock FontSize="13" TextWrapping="Wrap" LineHeight="20" IsTextSelectionEnabled="True">
+                                            <Paragraph>
+                                                <Run Text="{Binding Content}"/>
+                                                <InlineUIContainer>
+                                                    <Border x:Name="StreamingCaret" Loaded="OnCaretLoaded"
+                                                            Width="2" Height="14" Margin="2,0,0,0"
+                                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            Visibility="{Binding IsStreaming, Converter={StaticResource BoolToVis}}"/>
+                                                </InlineUIContainer>
+                                            </Paragraph>
+                                        </RichTextBlock>
+
+                                        <!-- Carte de modifications (diff) -->
+                                        <Border CornerRadius="8"
+                                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                Visibility="{Binding HasDiff, Converter={StaticResource BoolToVis}}">
+                                            <StackPanel>
+                                                <!-- En-tête avec compteurs -->
+                                                <Border Padding="10,7" CornerRadius="8,8,0,0"
+                                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon Glyph="&#xE70F;" FontSize="12" VerticalAlignment="Center"
+                                                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                        <TextBlock Text="Modifications proposées" FontSize="12" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                                                CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding AddedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='+{0}'}" FontSize="11"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                                        </Border>
+                                                        <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                                                                CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding RemovedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='−{0}'}" FontSize="11"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Lignes du diff -->
+                                                <ItemsControl ItemsSource="{Binding DiffLines}"
+                                                              ItemTemplate="{StaticResource DiffLineTemplate}"
+                                                              Margin="4"/>
+
+                                                <!-- Barre d'actions -->
+                                                <StackPanel Orientation="Horizontal" Spacing="6" Padding="8">
+                                                    <Button Style="{ThemeResource AccentButtonStyle}" Padding="10,5"
+                                                            Click="OnApplyDiffClicked"
+                                                            ToolTipService.ToolTip="Appliquer ces modifications au document (annulation possible via Ctrl+Z)"
+                                                            AutomationProperties.Name="Appliquer les modifications">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE8FB;" FontSize="12"/>
+                                                            <TextBlock Text="Appliquer" FontSize="12" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Padding="10,5" Click="OnRejectDiffClicked"
+                                                            ToolTipService.ToolTip="Rejeter ces modifications"
+                                                            AutomationProperties.Name="Rejeter les modifications">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE711;" FontSize="11"/>
+                                                            <TextBlock Text="Rejeter" FontSize="12" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Style="{ThemeResource SubtleButtonStyle}" Padding="10,5"
+                                                            Click="OnCopyDiffClicked"
+                                                            ToolTipService.ToolTip="Copier le texte modifié"
+                                                            AutomationProperties.Name="Copier le texte modifié">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE8C8;" FontSize="12"/>
+                                                            <TextBlock Text="Copier" FontSize="12" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <TextBlock Text="Ctrl+Z : annuler après application" FontSize="10"
+                                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                               VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+
+										<TextBlock Text="{Binding Timestamp, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:HH:mm}'}" FontSize="10"
+                                           HorizontalAlignment="Right"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Bulle utilisateur -->
+                                <Border Grid.Column="1" HorizontalAlignment="Right" MaxWidth="320"
+                                        Padding="12,8" Margin="24,0,0,0" CornerRadius="14,14,4,14"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                        Visibility="{Binding IsUser, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Content}" FontSize="13" TextWrapping="Wrap" LineHeight="20"
+                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                   IsTextSelectionEnabled="True"/>
+                                        <TextBlock Text="{Binding Timestamp, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:HH:mm}'}" FontSize="10"
+                                                   HorizontalAlignment="Right"
+                                                   Foreground="{ThemeResource TextOnAccentFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Indicateur de frappe / streaming -->
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,8"
+                            Visibility="{Binding IsStreaming, ElementName=Root, Converter={StaticResource BoolToVis}}">
+                    <Border Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <TextBlock Text="✨" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Padding="12,9" CornerRadius="14,14,14,4"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Ellipse x:Name="Dot1" Width="6" Height="6" Fill="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <Ellipse x:Name="Dot2" Width="6" Height="6" Fill="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <Ellipse x:Name="Dot3" Width="6" Height="6" Fill="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="L'assistant rédige…" FontSize="12" FontStyle="Italic"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Puces de suggestions rapides -->
+        <Grid Grid.Row="3" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Suggestions :" Style="{ThemeResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+            <ScrollViewer Grid.Column="1" HorizontalScrollMode="Enabled"
+                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Style="{StaticResource SuggestionChipStyle}" Click="OnChipClicked"
+                            Tag="Simplifie le vocabulaire de cette fiche pour le rendre accessible aux élèves, sans en perdre le sens."
+                            AutomationProperties.Name="Suggestion : simplifier le vocabulaire">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8D2;" FontSize="12"/>
+                            <TextBlock Text="Simplifier le vocabulaire" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SuggestionChipStyle}" Click="OnChipClicked"
+                            Tag="Ajoute 3 questions de compréhension avec leurs réponses à la fin de la fiche."
+                            AutomationProperties.Name="Suggestion : ajouter trois questions de compréhension">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8FD;" FontSize="12"/>
+                            <TextBlock Text="Ajouter 3 questions de compréhension" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SuggestionChipStyle}" Click="OnChipClicked"
+                            Tag="Traduis l'intégralité de cette fiche en anglais, en conservant la mise en forme."
+                            AutomationProperties.Name="Suggestion : traduire en anglais">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE909;" FontSize="12"/>
+                                                        <TextBlock Text="Traduire en anglais" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource SuggestionChipStyle}" Click="OnChipClicked"
+                            Tag="Résume cette fiche en cinq points essentiels, avec un vocabulaire adapté aux élèves."
+                            AutomationProperties.Name="Suggestion : résumer en cinq points">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="12"/>
+                            <TextBlock Text="Résumer en 5 points" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource SuggestionChipStyle}" Click="OnChipClicked"
+                            Tag="Propose une activité différenciée pour les élèves ayant besoin d'un accompagnement supplémentaire."
+                            AutomationProperties.Name="Suggestion : différencier l'activité">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE716;" FontSize="12"/>
+                            <TextBlock Text="Différencier l'activité" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Zone de saisie -->
+        <Border Grid.Row="4"
+                CornerRadius="12"
+                Padding="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox x:Name="PromptTextBox"
+                         Grid.Column="0"
+                         MinHeight="42"
+                         MaxHeight="140"
+                         Padding="8,7"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalContentAlignment="Center"
+                         PlaceholderText="Demandez une modification ou posez une question…"
+                         KeyDown="OnPromptKeyDown"
+                         TextChanged="OnPromptTextChanged"
+                         AutomationProperties.Name="Message pour l'assistant"/>
+
+                <Grid Grid.Column="1" VerticalAlignment="Bottom">
+                    <!-- Bouton Envoyer -->
+                    <Button x:Name="SendButton"
+                            Width="42"
+                            Height="42"
+                            Padding="0"
+                            CornerRadius="21"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Click="OnSendClicked"
+                            IsEnabled="False"
+                            ToolTipService.ToolTip="Envoyer (Entrée)"
+                            AutomationProperties.Name="Envoyer le message">
+                        <FontIcon Glyph="&#xE724;" FontSize="16"/>
+                    </Button>
+
+                    <!-- Remplace Envoyer pendant le streaming -->
+                    <Button x:Name="StopButton"
+                            Width="42"
+                            Height="42"
+                            Padding="0"
+                            CornerRadius="21"
+                            Visibility="Collapsed"
+                            Click="OnStopClicked"
+                            ToolTipService.ToolTip="Arrêter la réponse"
+                            AutomationProperties.Name="Arrêter la réponse">
+                        <FontIcon Glyph="&#xE71A;" FontSize="13"/>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Fournisseur / modèle / aide clavier -->
+        <Grid Grid.Row="5" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                <Border x:Name="ProviderBadge"
+                        Padding="7,2"
+                        CornerRadius="5"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <TextBlock x:Name="ProviderBadgeText"
+                               Text="IA"
+                               FontSize="10"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Border>
+
+                <Border x:Name="ModelBadge"
+                        Padding="7,2"
+                        CornerRadius="5"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <TextBlock x:Name="ModelBadgeText"
+                               Text="Modèle automatique"
+                               FontSize="10"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Border>
+            </StackPanel>
+
+            <TextBlock Grid.Column="1"
+                       Text="Entrée : envoyer • Maj+Entrée : nouvelle ligne"
+                       FontSize="10"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</UserControl>

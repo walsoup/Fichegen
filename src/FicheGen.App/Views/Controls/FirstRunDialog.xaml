@@ -1,0 +1,94 @@
+<ContentDialog
+    x:Class="FicheGen.App.Views.Controls.FirstRunDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="👋 Bienvenue dans PROFstudio"
+    PrimaryButtonText="Suivant ➔"
+    SecondaryButtonText="Précédent"
+    CloseButtonText="Ignorer pour l'instant"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick"
+    SecondaryButtonClick="OnSecondaryButtonClick">
+
+    <Grid MaxWidth="520" MinHeight="360">
+        <!-- Étape 1 : Bienvenue & Présentation -->
+        <StackPanel x:Name="Step1Panel" Spacing="14" Visibility="Visible">
+            <Border Padding="16" CornerRadius="12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Votre assistant pédagogique personnel" Style="{ThemeResource SubtitleTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="PROFstudio aide les enseignants à créer facilement des fiches de cours, des évaluations et des quiz interactifs adaptés au programme Éduscol."
+                               Style="{ThemeResource BodyTextBlockStyle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Grid ColumnSpacing="10" RowSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Padding="12" CornerRadius="10" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="📄 Prêt à l'emploi" FontWeight="SemiBold"/>
+                        <TextBlock Text="Générez et exportez directement en Word (.docx) ou PDF." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Padding="12" CornerRadius="10" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="🔒 100% Confidentiel" FontWeight="SemiBold"/>
+                        <TextBlock Text="Vos cours et données d'élèves restent sur votre ordinateur." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <TextBlock Text="En 2 petites étapes, configurons votre espace de travail !" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Étape 2 : Vos documents & guides -->
+        <StackPanel x:Name="Step2Panel" Spacing="14" Visibility="Collapsed">
+            <TextBlock Text="📁 1. Où se trouvent vos cours et documents ?" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+            <TextBlock Text="Indiquez le dossier contenant vos fiches ou guides pédagogiques, ou glissez-le directement ci-dessous !"
+                       Style="{ThemeResource BodyTextBlockStyle}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <!-- Zone de sélection / dépose -->
+            <Border x:Name="DropZoneBorder" Padding="20" CornerRadius="12" BorderThickness="2" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}" AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE8B9;" FontSize="32" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="Glissez-déposez un dossier ici" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="ou" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <Button Content="📂 Choisir un dossier…" Click="BrowseFolder_Click" HorizontalAlignment="Center" Style="{ThemeResource AccentButtonStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBox x:Name="GuidesFolderTextBox" Header="Dossier sélectionné :" IsReadOnly="True" PlaceholderText="Aucun dossier sélectionné (dossier par défaut Documents/PROFstudio)"/>
+        </StackPanel>
+
+        <!-- Étape 3 : Configurer l'Assistant IA -->
+        <StackPanel x:Name="Step3Panel" Spacing="14" Visibility="Collapsed">
+            <TextBlock Text="🤖 2. Choisissez votre assistant IA" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+            <TextBlock Text="PROFstudio utilise une IA pour rédiger vos fiches. Google AI Studio est gratuit et recommandé."
+                       Style="{ThemeResource BodyTextBlockStyle}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <RadioButtons x:Name="ProviderRadioButtons" SelectedIndex="0" SelectionChanged="ProviderRadioButtons_SelectionChanged">
+                <RadioButton Content="Google AI Studio (Gratuit — Recommandé) 💠"/>
+                <RadioButton Content="OpenAI (GPT-4o) 🤖"/>
+                <RadioButton Content="Proxy local / Ollama (100% hors-ligne) 🦙"/>
+            </RadioButtons>
+
+            <StackPanel x:Name="ApiKeySection" Spacing="6">
+                <TextBlock Text="Votre clé d'accès (API Key) :" FontWeight="SemiBold"/>
+                <PasswordBox x:Name="ApiKeyPasswordBox" PlaceholderText="Collez votre clé ici…" PasswordRevealMode="Peek"/>
+                <HyperlinkButton x:Name="GetKeyHyperlink" Content="Obtenir une clé gratuite Google AI Studio ↗" NavigateUri="https://aistudio.google.com/app/apikey"/>
+            </StackPanel>
+
+            <!-- Télémétrie anonyme -->
+            <Border Padding="10" CornerRadius="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <ToggleSwitch x:Name="TelemetryToggleSwitch"
+                              Header="Autoriser la télémétrie anonyme d'erreurs (désactivé par défaut)"
+                              IsOn="False"/>
+            </Border>
+        </StackPanel>
+    </Grid>
+</ContentDialog>

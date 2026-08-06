@@ -1,0 +1,30 @@
+# Visual Studio & .NET build output
+[Bb]in/
+[Oo]bj/
+[Bb]uild/
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.pyc
+
+# Logs & diagnostic dumps
+*.log
+app-build-diag.txt
+msbuild.log
+build.log
+xaml_err.log
+
+# Build artifacts & releases
+artifacts/
+*.zip
+*.apk
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+
