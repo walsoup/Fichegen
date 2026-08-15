@@ -1,16 +1,30 @@
+using System;
+using System.Threading.Tasks;
 using FicheGen.App.ViewModels;
+using FicheGen.Core.Abstractions;
 using FicheGen.Core.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace FicheGen.App.Views;
 
-public partial class HistoryPage : Page
+public sealed partial class HistoryPage : Page
 {
-    public HistoryViewModel? ViewModel => DataContext as HistoryViewModel;
+    public HistoryViewModel ViewModel { get; }
+    private DispatcherQueueTimer? _undoTimer;
+    private HistoryItemViewModel? _lastDeletedItem;
+    private bool _isDialogActive;
+
+    public static Visibility BoolToVisibility(bool val) => val ? Visibility.Visible : Visibility.Collapsed;
+    public static Visibility InverseBoolToVisibility(bool val) => val ? Visibility.Collapsed : Visibility.Visible;
 
     public HistoryPage()
     {
+        ViewModel = App.Services.GetRequiredService<HistoryViewModel>();
+        DataContext = ViewModel;
+
         InitializeComponent();
         Loaded += OnLoaded;
     }
@@ -20,52 +34,169 @@ public partial class HistoryPage : Page
         SearchBox.Focus(FocusState.Programmatic);
     }
 
+    public void SetSearchQuery(string query)
+    {
+        ViewModel.SearchQuery = query;
+        SearchBox.Text = query;
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (ViewModel != null)
-        {
-            await ViewModel.LoadHistoryAsync();
-        }
+        await ViewModel.LoadHistoryAsync();
     }
 
     private async void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
-        if (ViewModel != null)
-        {
-            await ViewModel.LoadHistoryAsync();
-        }
+        await ViewModel.LoadHistoryAsync();
     }
 
     private async void OnFilterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel != null && FilterRadioButtons.SelectedItem is RadioButton item && item.Content is string filter)
+        if (FilterRadioButtons.SelectedItem is RadioButton item && item.Content is string filter)
         {
             ViewModel.SelectedTypeFilter = filter;
             await ViewModel.LoadHistoryAsync();
         }
     }
 
-    private void OnItemClicked(object sender, RoutedEventArgs e)
+    private void OnItemClicked(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: HistoryItemViewModel item } && ViewModel != null)
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null)
         {
             ViewModel.OpenItem(item);
         }
     }
 
+    private void OnItemKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter || e.Key == Windows.System.VirtualKey.Space)
+        {
+            var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                    ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+            if (item != null)
+            {
+                ViewModel.OpenItem(item);
+                e.Handled = true;
+            }
+        }
+    }
+
     private async void OnFavoriteClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: HistoryItemViewModel item } && ViewModel != null)
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null)
         {
             await ViewModel.ToggleFavoriteAsync(item);
         }
     }
 
+    private void OnOpenMenuItemClicked(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null)
+        {
+            ViewModel.OpenItem(item);
+        }
+    }
+
+    private void OnExportWordMenuItemClicked(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null)
+        {
+            ViewModel.ExportWordCommand.Execute(item);
+        }
+    }
+
+    private void OnExportPdfMenuItemClicked(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null)
+        {
+            ViewModel.ExportPdfCommand.Execute(item);
+        }
+    }
+
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: HistoryItemViewModel item } && ViewModel != null)
+        if (_isDialogActive) return;
+
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null && this.XamlRoot != null)
         {
-            await ViewModel.DeleteItemAsync(item);
+            _isDialogActive = true;
+            try
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Supprimer ce document ?",
+                    Content = $"« {item.Title} » sera retiré de vos documents.",
+                    PrimaryButtonText = "Supprimer",
+                    CloseButtonText = "Annuler",
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    _lastDeletedItem = item;
+                    await ViewModel.DeleteItemAsync(item);
+                    ShowUndoToast(item.Title);
+                }
+            }
+            finally
+            {
+                _isDialogActive = false;
+            }
         }
+    }
+
+    private void ShowUndoToast(string title)
+    {
+        UndoToastText.Text = $"« {title} » supprimé.";
+        UndoToast.Visibility = Visibility.Visible;
+
+        _undoTimer?.Stop();
+        _undoTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _undoTimer.Interval = TimeSpan.FromSeconds(8);
+        _undoTimer.Tick += (s, e) =>
+        {
+            _undoTimer?.Stop();
+            UndoToast.Visibility = Visibility.Collapsed;
+            _lastDeletedItem = null;
+        };
+        _undoTimer.Start();
+    }
+
+    private async void OnUndoDeleteClicked(object sender, RoutedEventArgs e)
+    {
+        _undoTimer?.Stop();
+        UndoToast.Visibility = Visibility.Collapsed;
+
+        if (_lastDeletedItem?.Model is not null)
+        {
+            var repo = App.Services.GetService<IHistoryRepository>();
+            if (repo is not null)
+            {
+                await repo.SaveAsync(_lastDeletedItem.Model);
+                await ViewModel.LoadHistoryAsync();
+            }
+        }
+        _lastDeletedItem = null;
+    }
+
+    private void OnDismissUndoClicked(object sender, RoutedEventArgs e)
+    {
+        _undoTimer?.Stop();
+        UndoToast.Visibility = Visibility.Collapsed;
+        _lastDeletedItem = null;
     }
 }

@@ -10,6 +10,8 @@ public static class PlainTextStreamParser
         [EnumeratorCancellation] CancellationToken ct)
     {
         var buffer = new byte[4096];
+        var decoder = Encoding.UTF8.GetDecoder();
+        var charBuffer = new char[4096];
         int bytesRead;
 
         while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false)) > 0)
@@ -17,11 +19,18 @@ public static class PlainTextStreamParser
             if (ct.IsCancellationRequested)
                 yield break;
 
-            var text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            if (!string.IsNullOrEmpty(text))
+            var charCount = decoder.GetChars(buffer, 0, bytesRead, charBuffer, 0, flush: false);
+            if (charCount > 0)
             {
-                yield return text;
+                yield return new string(charBuffer, 0, charCount);
             }
+        }
+
+        // Flush any remaining characters
+        var remainingChars = decoder.GetChars(Array.Empty<byte>(), 0, 0, charBuffer, 0, flush: true);
+        if (remainingChars > 0)
+        {
+            yield return new string(charBuffer, 0, remainingChars);
         }
     }
 }

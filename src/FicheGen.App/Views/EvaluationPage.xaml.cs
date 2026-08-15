@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -16,7 +17,7 @@ namespace FicheGen.App.Views;
 /// Espace de génération des évaluations : sélecteur de notions multi-critères avec puces,
 /// type (diagnostique / formative / sommative), barème personnalisable, difficulté illustrée.
 /// </summary>
-public sealed partial class EvaluationPage : Page
+public sealed partial class EvaluationPage : Page, IAssistantHostPage
 {
     private const string FormWidthSettingsKey = "FicheGen.EvaluationPage.FormColumnWidth";
 
@@ -24,6 +25,7 @@ public sealed partial class EvaluationPage : Page
     private bool _syncingLessons;
     private bool _chipsInitialized;
     private bool _assistantOverlayOpen;
+    private bool _isAssistantVisible;
 
     private sealed class SubjectOption
     {
@@ -66,6 +68,7 @@ public sealed partial class EvaluationPage : Page
         InitializeComponent();
         SubjectCombo.ItemsSource = SubjectOptions;
         SuggestedLessonsRepeater.ItemsSource = DefaultLessons;
+        AssistantHostHelper.WireAssistantPane(AssistantPaneControl);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -78,7 +81,6 @@ public sealed partial class EvaluationPage : Page
         RefreshLessonSuggestions();
         InitializeChipsFromViewModel();
         UpdateDifficultyLabel();
-        UpdatePointsBadge(TotalPointsBox.Value);
         ValidateForm();
     }
 
@@ -171,10 +173,21 @@ public sealed partial class EvaluationPage : Page
 
     private void InitializeChipsFromViewModel()
     {
-        if (_chipsInitialized) return;
-        _chipsInitialized = true;
+        var raw = (DataContext as EvaluationViewModel)?.Topics;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            raw = TopicsMirror.Text ?? string.Empty;
+        }
 
-        var raw = TopicsMirror.Text ?? string.Empty;
+        var currentTopics = string.Join(", ", _selectedLessons);
+        if (_chipsInitialized && string.Equals(raw.Trim(), currentTopics.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _chipsInitialized = true;
+        _selectedLessons.Clear();
+
         foreach (var item in raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var trimmed = item.Trim();
@@ -190,14 +203,12 @@ public sealed partial class EvaluationPage : Page
         foreach (var label in _selectedLessons)
             SelectedChipsPanel.Children.Add(CreateChip(label));
 
-        LessonsCountText.Text = _selectedLessons.Count switch
+        var topicsStr = string.Join(", ", _selectedLessons);
+        TopicsMirror.Text = topicsStr;
+        if (DataContext is EvaluationViewModel vm)
         {
-            0 => "Aucune notion sélectionnée",
-            1 => "1 notion sélectionnée",
-            var n => $"{n} notions sélectionnées"
-        };
-
-        TopicsMirror.Text = string.Join(", ", _selectedLessons);
+            vm.Topics = topicsStr;
+        }
     }
 
     private Button CreateChip(string label)
@@ -292,13 +303,7 @@ public sealed partial class EvaluationPage : Page
         };
     }
 
-    private void TotalPointsBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => UpdatePointsBadge(args.NewValue);
-
-    private void UpdatePointsBadge(double value)
-    {
-        if (double.IsNaN(value)) value = 20;
-        PointsBadge.Text = $"Évaluation notée sur {value:0} points";
-    }
+    private void TotalPointsBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => ValidateForm();
 
     // ───────────────────────── Guide PDF ─────────────────────────
 
@@ -314,10 +319,19 @@ public sealed partial class EvaluationPage : Page
 
     private void ValidateForm()
     {
+        if (LevelCombo == null || SubjectCombo == null || FormInfoBar == null || PdfDropZoneControl == null)
+            return;
+
         var missing = new List<string>();
-        if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
-        if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add("la matière");
-        if (_selectedLessons.Count == 0) missing.Add("au moins une notion à évaluer");
+        var level = LevelCombo.SelectedValue as string ?? LevelCombo.SelectedItem as string ?? (DataContext as EvaluationViewModel)?.ClassLevel;
+        if (string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
+
+        var subject = SubjectCombo.Text;
+        if (string.IsNullOrWhiteSpace(subject)) subject = (DataContext as EvaluationViewModel)?.Subject;
+        if (string.IsNullOrWhiteSpace(subject)) missing.Add("la matière");
+
+        var hasTopics = _selectedLessons.Count > 0 || !string.IsNullOrWhiteSpace((DataContext as EvaluationViewModel)?.Topics);
+        if (!hasTopics) missing.Add("au moins une notion à évaluer");
 
         if (missing.Count > 0)
         {
@@ -325,8 +339,7 @@ public sealed partial class EvaluationPage : Page
             FormInfoBar.Message = "Pour générer l'évaluation, renseignez " + string.Join(", ", missing) + ".";
             FormInfoBar.Severity = InfoBarSeverity.Error;
             FormInfoBar.IsOpen = true;
-            GenButton.IsEnabled = false;
-            ToolTipService.SetToolTip(GenButton, "Champs manquants : " + string.Join(", ", missing));
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = false;
         }
         else if (string.IsNullOrWhiteSpace(PdfDropZoneControl.GuideFilePath))
         {
@@ -334,30 +347,61 @@ public sealed partial class EvaluationPage : Page
             FormInfoBar.Message = "💡 Un guide PDF (manuel, progression annuelle) permet de calibrer les exercices sur votre séquence.";
             FormInfoBar.Severity = InfoBarSeverity.Informational;
             FormInfoBar.IsOpen = true;
-            GenButton.IsEnabled = true;
-            ToolTipService.SetToolTip(GenButton, null);
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = true;
         }
         else
         {
             FormInfoBar.IsOpen = false;
-            GenButton.IsEnabled = true;
-            ToolTipService.SetToolTip(GenButton, null);
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = true;
         }
     }
 
-    // ───────────────────────── Assistant adaptatif (< 1280 px) ─────────────────────────
+    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
+    {
+        SetAssistantVisible(!_isAssistantVisible);
+    }
+
+    // ───────────────────────── Assistant adaptatif (< 1380 px) ─────────────────────────
+
+    public void SetAssistantVisible(bool isVisible)
+    {
+        _isAssistantVisible = isVisible;
+        if (ActualWidth >= 1380)
+        {
+            AssistantColumn.Width = isVisible ? new GridLength(360) : new GridLength(0);
+            if (!isVisible) CloseAssistantOverlay();
+        }
+        else
+        {
+            if (isVisible)
+            {
+                _assistantOverlayOpen = true;
+                MoveAssistantTo(OverlayHost);
+                AssistantOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                CloseAssistantOverlay();
+            }
+        }
+    }
 
     private void AdaptiveStates_CurrentStateChanged(object sender, VisualStateChangedEventArgs e)
     {
-        if (e.NewState == WideState)
+        if (e.NewState?.Name == "WideState")
         {
             _assistantOverlayOpen = false;
             AssistantOverlay.Visibility = Visibility.Collapsed;
             MoveAssistantTo(AssistantInlineHost);
+            AssistantColumn.Width = _isAssistantVisible ? new GridLength(340) : new GridLength(0);
         }
-        else if (_assistantOverlayOpen)
+        else
         {
-            MoveAssistantTo(OverlayHost);
+            AssistantColumn.Width = new GridLength(0);
+            if (_assistantOverlayOpen)
+            {
+                MoveAssistantTo(OverlayHost);
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -8,11 +9,12 @@ using Windows.Storage;
 
 namespace FicheGen.App.Views;
 
-public sealed partial class QuizPage : Page
+public sealed partial class QuizPage : Page, IAssistantHostPage
 {
     private const string FormWidthSettingsKey = "FicheGen.QuizPage.FormColumnWidth";
 
     private bool _assistantOverlayOpen;
+    private bool _isAssistantVisible;
 
     private sealed class SubjectOption
     {
@@ -57,6 +59,7 @@ public sealed partial class QuizPage : Page
     {
         InitializeComponent();
         SubjectCombo.ItemsSource = SubjectOptions;
+        AssistantHostHelper.WireAssistantPane(AssistantPaneControl);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -123,30 +126,55 @@ public sealed partial class QuizPage : Page
                 ? TopicSuggestions.Take(8).ToList()
                 : TopicSuggestions.Where(t => t.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
         }
+        if (DataContext is QuizViewModel vm)
+        {
+            vm.Topic = sender.Text;
+        }
         ValidateForm();
     }
 
     private void TopicBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
     {
         if (args.SelectedItem is string suggestion)
+        {
             sender.Text = suggestion;
+            if (DataContext is QuizViewModel vm)
+            {
+                vm.Topic = suggestion;
+            }
+        }
+        ValidateForm();
     }
 
-    private void TopicBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) => ValidateForm();
+    private void TopicBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (DataContext is QuizViewModel vm)
+        {
+            vm.Topic = sender.Text;
+        }
+        ValidateForm();
+    }
 
     private void QuizField_ValueChanged(object sender, RoutedEventArgs e) => ValidateForm();
-    private void QuizField_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => ValidateForm();
+    private void QuizNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => ValidateForm();
 
     // ───────────────────────── Validation en ligne ─────────────────────────
 
     private void ValidateForm()
     {
-        if (LevelCombo == null || SubjectCombo == null || TopicBox == null || FormInfoBar == null || GenButton == null) return;
+        if (LevelCombo == null || SubjectCombo == null || TopicBox == null || FormInfoBar == null || CmdGenerate == null) return;
 
         var missing = new System.Collections.Generic.List<string>();
-        if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
-        if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add("la matière");
-        if (string.IsNullOrWhiteSpace(TopicBox.Text)) missing.Add("le sujet du quiz");
+        var level = LevelCombo.SelectedValue as string ?? LevelCombo.SelectedItem as string ?? (DataContext as QuizViewModel)?.ClassLevel;
+        if (string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
+
+        var subject = SubjectCombo.Text;
+        if (string.IsNullOrWhiteSpace(subject)) subject = (DataContext as QuizViewModel)?.Subject;
+        if (string.IsNullOrWhiteSpace(subject)) missing.Add("la matière");
+
+        var topic = TopicBox.Text;
+        if (string.IsNullOrWhiteSpace(topic)) topic = (DataContext as QuizViewModel)?.Topic;
+        if (string.IsNullOrWhiteSpace(topic)) missing.Add("le sujet du quiz");
 
         if (missing.Count > 0)
         {
@@ -154,30 +182,61 @@ public sealed partial class QuizPage : Page
             FormInfoBar.Message = "Pour générer votre quiz, renseignez " + string.Join(", ", missing) + ".";
             FormInfoBar.Severity = InfoBarSeverity.Error;
             FormInfoBar.IsOpen = true;
-            GenButton.IsEnabled = false;
-            ToolTipService.SetToolTip(GenButton, "Champs manquants : " + string.Join(", ", missing));
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = false;
         }
         else
         {
             FormInfoBar.IsOpen = false;
-            GenButton.IsEnabled = true;
-            ToolTipService.SetToolTip(GenButton, null);
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = true;
         }
     }
 
-    // ───────────────────────── Assistant adaptatif (< 1280 px) ─────────────────────────
+    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
+    {
+        SetAssistantVisible(!_isAssistantVisible);
+    }
+
+    // ───────────────────────── Assistant adaptatif (< 1380 px) ─────────────────────────
+
+    public void SetAssistantVisible(bool isVisible)
+    {
+        _isAssistantVisible = isVisible;
+        if (ActualWidth >= 1380)
+        {
+            AssistantColumn.Width = isVisible ? new GridLength(360) : new GridLength(0);
+            if (!isVisible) CloseAssistantOverlay();
+        }
+        else
+        {
+            if (isVisible)
+            {
+                _assistantOverlayOpen = true;
+                MoveAssistantTo(OverlayHost);
+                AssistantOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                CloseAssistantOverlay();
+            }
+        }
+    }
 
     private void AdaptiveStates_CurrentStateChanged(object sender, VisualStateChangedEventArgs e)
     {
-        if (e.NewState == WideState)
+        if (e.NewState?.Name == "WideState")
         {
             _assistantOverlayOpen = false;
             AssistantOverlay.Visibility = Visibility.Collapsed;
             MoveAssistantTo(AssistantInlineHost);
+            AssistantColumn.Width = _isAssistantVisible ? new GridLength(340) : new GridLength(0);
         }
-        else if (_assistantOverlayOpen)
+        else
         {
-            MoveAssistantTo(OverlayHost);
+            AssistantColumn.Width = new GridLength(0);
+            if (_assistantOverlayOpen)
+            {
+                MoveAssistantTo(OverlayHost);
+            }
         }
     }
 

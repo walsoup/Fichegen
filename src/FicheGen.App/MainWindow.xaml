@@ -49,72 +49,51 @@
 
             <!-- Logo + identité -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
-                        Margin="14,0,0,0" Spacing="10">
+                        Margin="16,0,0,0" Spacing="10">
                 <Border Width="30" Height="30" CornerRadius="8"
                         Background="{ThemeResource PROFstudioLogoBrush}">
-                    <TextBlock Text="📘" FontSize="15"
+                    <TextBlock Text="📘" FontSize="16"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="PROFstudio" FontWeight="SemiBold" FontSize="14" LineHeight="17"
+                    <TextBlock Text="PROFstudio" FontWeight="SemiBold" FontSize="15" LineHeight="18"
                                AutomationProperties.HeadingLevel="Level1"/>
                 </StackPanel>
             </StackPanel>
 
-            <!-- Puce dynamique : fournisseur & modèle d'IA -->
+            <!-- Titre central / état -->
             <Button x:Name="AiProviderChip" Grid.Column="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="12,3" CornerRadius="14" MaxWidth="440"
-                    Background="{ThemeResource AiChipBackgroundBrush}"
-                    BorderBrush="{ThemeResource AiChipBorderBrush}" BorderThickness="1"
+                    Padding="14,4" CornerRadius="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     Click="OnAiChipClicked"
-                    AutomationProperties.Name="Fournisseur d'IA actuel — ouvrir les paramètres"
-                    ToolTipService.ToolTip="Fournisseur d'IA actif. Cliquer pour configurer (Ctrl+,)">
+                    AutomationProperties.Name="Assistant IA"
+                    ToolTipService.ToolTip="Statut de l'assistant IA">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Ellipse x:Name="AiStatusDot" Width="8" Height="8"
-                             Fill="{ThemeResource AiStatusOnlineBrush}"/>
-                    <TextBlock x:Name="AiProviderChipText" Text="🤖 Assistant IA" FontSize="12"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="AiStatusGlyph" Text="○" FontSize="11" FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="AiProviderChipText" Text="Assistant IA — vérification…" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
 
             <!-- Actions rapides + profil -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
-                        VerticalAlignment="Center" Margin="0,0,8,0">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                        VerticalAlignment="Center" Margin="0,0,12,0">
 
-                <Button x:Name="NewFicheButton" Style="{ThemeResource AccentButtonStyle}"
-                        CornerRadius="8" Padding="12,4"
-                        Click="OnNewFicheClicked"
-                        ToolTipService.ToolTip="Créer une nouvelle fiche (Ctrl+N)"
-                        AutomationProperties.Name="Nouvelle fiche">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE710;" FontSize="12"/>
-                        <TextBlock Text="Nouvelle fiche" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <ToggleButton x:Name="AssistantToggleButton" CornerRadius="8" Padding="10,4"
+                <ToggleButton x:Name="AssistantToggleButton" CornerRadius="8" Padding="12,5"
                               Click="OnAssistantToggleClicked"
                               ToolTipService.ToolTip="Afficher ou masquer l'Assistant IA (Ctrl+B)"
-                              AutomationProperties.Name="Assistant IA — afficher ou masquer">
+                              AutomationProperties.Name="Assistant IA">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="💬" FontSize="13"/>
-                        <TextBlock Text="Assistant" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="Assistant" FontSize="12.5" VerticalAlignment="Center"/>
                     </StackPanel>
                 </ToggleButton>
 
-                <Border Width="1" Height="20" Margin="4,0"
-                        Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-
-                <Button x:Name="SearchButton" Padding="8,4" CornerRadius="8"
-                        Background="Transparent" BorderBrush="Transparent"
-                        Click="OnSearchClicked"
-                        ToolTipService.ToolTip="Rechercher dans l'historique (Ctrl+F)"
-                        AutomationProperties.Name="Rechercher">
-                    <FontIcon Glyph="&#xE721;" FontSize="14"/>
-                </Button>
-
-                <Button x:Name="ThemeButton" Padding="8,4" CornerRadius="8"
+                <Button x:Name="ThemeButton" Padding="8,5" CornerRadius="8"
                         Background="Transparent" BorderBrush="Transparent"
                         ToolTipService.ToolTip="Thème d'affichage : Clair, Sombre ou Système"
                         AutomationProperties.Name="Changer de thème">
@@ -131,15 +110,7 @@
                     </Button.Flyout>
                 </Button>
 
-                <Button x:Name="ShortcutsButton" Padding="8,4" CornerRadius="8"
-                        Background="Transparent" BorderBrush="Transparent"
-                        Click="OnShortcutsClicked"
-                        ToolTipService.ToolTip="Raccourcis clavier (F1)"
-                        AutomationProperties.Name="Raccourcis clavier">
-                    <FontIcon Glyph="&#xE765;" FontSize="14"/>
-                </Button>
-
-                <Button x:Name="SettingsButton" Padding="8,4" CornerRadius="8"
+                <Button x:Name="SettingsButton" Padding="8,5" CornerRadius="8"
                         Background="Transparent" BorderBrush="Transparent"
                         Click="OnSettingsClicked"
                         ToolTipService.ToolTip="Paramètres (Ctrl+,)"
@@ -147,10 +118,10 @@
                     <FontIcon Glyph="&#xE713;" FontSize="14"/>
                 </Button>
 
-                <Border Width="1" Height="20" Margin="4,0"
+                <Border Width="1" Height="18" Margin="2,0"
                         Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
 
-                <!-- Badge profil enseignant -->
+                <!-- Profil enseignant -->
                 <Button x:Name="ProfileButton" Padding="2" CornerRadius="16"
                         Background="Transparent" BorderBrush="Transparent"
                         ToolTipService.ToolTip="Profil enseignant"
@@ -158,13 +129,13 @@
                     <PersonPicture x:Name="TeacherPersonPicture" Width="28" Height="28"/>
                     <Button.Flyout>
                         <Flyout Placement="BottomEdgeAlignedRight">
-                            <StackPanel Width="300" Spacing="2">
+                            <StackPanel Width="280" Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="12" Margin="6,6,6,10">
-                                    <PersonPicture x:Name="TeacherPersonPictureLarge" Width="48" Height="48"/>
+                                    <PersonPicture x:Name="TeacherPersonPictureLarge" Width="44" Height="44"/>
                                     <StackPanel VerticalAlignment="Center" Spacing="2">
                                         <TextBlock x:Name="ProfileNameText" Text="Enseignant·e"
-                                                   FontWeight="SemiBold" FontSize="15"/>
-                                        <TextBlock x:Name="ProfileSubtext" Text="Compte local — aucune donnée partagée"
+                                                   FontWeight="SemiBold" FontSize="14"/>
+                                        <TextBlock x:Name="ProfileSubtext" Text="Vos documents sont enregistrés sur cet ordinateur"
                                                    FontSize="11" TextWrapping="Wrap"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
@@ -172,16 +143,16 @@
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnProfileSettingsClicked"
-                                        AutomationProperties.Name="Gérer le profil dans les paramètres">
+                                        AutomationProperties.Name="Paramètres">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Text="⚙️" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Gérer le profil (Paramètres)" FontSize="12.5" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnProfileShortcutsClicked"
-                                        AutomationProperties.Name="Voir les raccourcis clavier">
+                                        AutomationProperties.Name="Raccourcis clavier">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Text="⌨️" FontSize="13" VerticalAlignment="Center"/>
                                         <TextBlock Text="Raccourcis clavier (F1)" FontSize="12.5" VerticalAlignment="Center"/>
@@ -190,7 +161,7 @@
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnAboutClicked"
-                                        AutomationProperties.Name="À propos de PROFstudio">
+                                        AutomationProperties.Name="À propos">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Text="ℹ️" FontSize="13" VerticalAlignment="Center"/>
                                         <TextBlock Text="À propos de PROFstudio" FontSize="12.5" VerticalAlignment="Center"/>
@@ -206,9 +177,9 @@
         <!-- ================= Navigation principale ================= -->
         <NavigationView x:Name="NavView" Grid.Row="1"
                         PaneDisplayMode="Auto"
-                        CompactModeThresholdWidth="1000"
-                        ExpandedModeThresholdWidth="1280"
-                        OpenPaneLength="280"
+                        CompactModeThresholdWidth="900"
+                        ExpandedModeThresholdWidth="1200"
+                        OpenPaneLength="260"
                         IsTitleBarAutoPaddingEnabled="False"
                         IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="True"
@@ -218,38 +189,38 @@
 
             <NavigationView.AutoSuggestBox>
                 <AutoSuggestBox x:Name="GlobalSearchBox"
-                                PlaceholderText="Rechercher une fiche, un quiz…"
+                                PlaceholderText="Rechercher un document…"
                                 QueryIcon="Find"
                                 QuerySubmitted="OnGlobalSearchSubmitted"
-                                ToolTipService.ToolTip="Rechercher dans l'historique (Ctrl+F)"
+                                ToolTipService.ToolTip="Rechercher dans mes documents (Ctrl+F)"
                                 AutomationProperties.Name="Recherche globale"/>
             </NavigationView.AutoSuggestBox>
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Fiche pédagogique" Tag="FichePage"
-                                    ToolTipService.ToolTip="Créer une fiche pédagogique (Ctrl+1)"
+                                    ToolTipService.ToolTip="Créer une fiche de séance (Ctrl+1)"
                                     AutomationProperties.Name="Fiche pédagogique">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8A5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Évaluation" Tag="EvaluationPage"
-                                    ToolTipService.ToolTip="Créer une évaluation (Ctrl+2)"
-                                    AutomationProperties.Name="Évaluation">
+                <NavigationViewItem Content="Évaluations &amp; Contrôles" Tag="EvaluationPage"
+                                    ToolTipService.ToolTip="Créer une évaluation avec barème (Ctrl+2)"
+                                    AutomationProperties.Name="Évaluations et Contrôles">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE70F;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Quiz" Tag="QuizPage"
-                                    ToolTipService.ToolTip="Créer un quiz interactif (Ctrl+3)"
-                                    AutomationProperties.Name="Quiz">
+                <NavigationViewItem Content="Quiz rapides" Tag="QuizPage"
+                                    ToolTipService.ToolTip="Créer un quiz ou QCM (Ctrl+3)"
+                                    AutomationProperties.Name="Quiz rapides">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Historique" Tag="HistoryPage"
-                                    ToolTipService.ToolTip="Retrouver vos créations (Ctrl+4)"
-                                    AutomationProperties.Name="Historique">
+                <NavigationViewItem Content="Mes documents" Tag="HistoryPage"
+                                    ToolTipService.ToolTip="Retrouver tous mes documents créés (Ctrl+4)"
+                                    AutomationProperties.Name="Mes documents">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;"/>
                     </NavigationViewItem.Icon>
@@ -257,7 +228,7 @@
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="Aide et raccourcis" Tag="Help" SelectsOnInvoked="False"
+                <NavigationViewItem Content="Aide &amp; Raccourcis" Tag="Help" SelectsOnInvoked="False"
                                     ToolTipService.ToolTip="Aide et raccourcis clavier (F1)"
                                     AutomationProperties.Name="Aide et raccourcis clavier">
                     <NavigationViewItem.Icon>
@@ -269,25 +240,39 @@
             <Frame x:Name="ContentFrame"/>
         </NavigationView>
 
-        <!-- ================= Barre d'état ================= -->
-        <Border Grid.Row="2" Padding="12,0"
+        <!-- ================= Barre de notification & d'état active (§5.3) ================= -->
+        <Border Grid.Row="2" x:Name="NotificationBar" Padding="14,0"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <Grid Height="28">
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="✨" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="StatusText" Text="Prêt" FontSize="12"
+            <Grid Height="30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock x:Name="NotificationIcon" Text="✨" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StatusText" Text="Prêt pour une nouvelle séance" FontSize="11.5"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <Border Width="1" Height="14" Margin="4,0"
-                            Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-                    <TextBlock x:Name="StatusSectionText" Text="Section : Fiche pédagogique" FontSize="12"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <Button x:Name="NotificationActionButton" Content="Configurer"
+                            Visibility="Collapsed" Padding="8,2" Margin="8,0,0,0"
+                            Style="{ThemeResource AccentButtonStyle}" FontSize="11"
+                            Click="NotificationAction_Click"/>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                           Text="Ctrl+G Générer   •   Ctrl+B Assistant   •   Ctrl+F Rechercher   •   F1 Raccourcis"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusSectionText" Text="Fiche pédagogique" FontSize="11"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="NotificationDismissButton" Visibility="Collapsed"
+                            Style="{ThemeResource SubtleButtonStyle}" Padding="4"
+                            Click="NotificationDismiss_Click"
+                            AutomationProperties.Name="Fermer la notification">
+                        <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

@@ -282,6 +282,9 @@ public partial class HistoryViewModel : ObservableObject
 
     public ObservableCollection<HistoryGroupViewModel> GroupedItems { get; } = new();
 
+    /// <summary>Accès direct à la collection des éléments chargés.</summary>
+    public IReadOnlyList<HistoryItemViewModel> Items => _allItems;
+
     /// <summary>Déclenché quand la vue doit exporter un ou plusieurs documents (sélecteurs de fichiers côté vue).</summary>
     public event EventHandler<HistoryExportRequestedEventArgs>? ExportRequested;
 

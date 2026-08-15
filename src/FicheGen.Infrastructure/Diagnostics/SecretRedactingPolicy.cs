@@ -14,7 +14,19 @@ public class SecretRedactingPolicy : ILogEventEnricher
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        // Redacts string properties if present
+        if (logEvent == null) return;
+
+        foreach (var property in logEvent.Properties.ToList())
+        {
+            if (property.Value is ScalarValue { Value: string strVal })
+            {
+                var redacted = RedactText(strVal);
+                if (!ReferenceEquals(redacted, strVal))
+                {
+                    logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(property.Key, redacted));
+                }
+            }
+        }
     }
 
     public static string RedactText(string input)

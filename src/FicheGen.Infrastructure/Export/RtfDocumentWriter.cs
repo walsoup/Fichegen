@@ -99,6 +99,22 @@ public sealed class RtfDocumentWriter : IRtfDocumentWriter
                 break;
 
             case TableBlock tbl:
+                if (tbl.Headers.Count > 0)
+                {
+                    sb.Append(@"\trowd\trgaph108");
+                    int headerCellX = 2000;
+                    for (int c = 0; c < tbl.Headers.Count; c++)
+                    {
+                        sb.Append($@"\cellx{headerCellX}");
+                        headerCellX += 2000;
+                    }
+                    for (int c = 0; c < tbl.Headers.Count; c++)
+                    {
+                        sb.Append($@"\b {EscapeRtf(tbl.Headers[c])}\b0\cell");
+                    }
+                    sb.AppendLine(@"\row");
+                }
+
                 foreach (var row in tbl.Rows)
                 {
                     sb.Append(@"\trowd\trgaph108");
@@ -159,7 +175,7 @@ public sealed class RtfDocumentWriter : IRtfDocumentWriter
             else if (c == '}') sb.Append(@"\}");
             else if (c > 127)
             {
-                sb.Append($@"\u{(int)c}?");
+                sb.Append($@"\u{(short)c}?");
             }
             else
             {

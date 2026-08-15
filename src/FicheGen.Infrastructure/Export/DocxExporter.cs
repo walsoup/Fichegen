@@ -195,8 +195,8 @@ public sealed class DocxExporter : IDocxExporter
                 {
                     var kvPara = new Paragraph(
                         new ParagraphProperties(new SpacingBetweenLines { After = "80" }),
-                        new Run(new RunProperties(new Bold(), new Color { Val = "64748B" }), new Text($"{pair.Key} : ")),
-                        new Run(new Text(pair.Value))
+                        new Run(new RunProperties(new Bold(), new Color { Val = "64748B" }), new Text($"{pair.Key} : ") { Space = SpaceProcessingModeValues.Preserve }),
+                        new Run(new Text(pair.Value) { Space = SpaceProcessingModeValues.Preserve })
                     );
                     body.AppendChild(kvPara);
                 }
@@ -224,7 +224,7 @@ public sealed class DocxExporter : IDocxExporter
         runProps.AppendChild(new FontSize { Val = fontSizeHalfPoints });
         if (!string.IsNullOrEmpty(color)) runProps.AppendChild(new Color { Val = color });
 
-        return new Run(runProps, new Text(run.Text));
+        return new Run(runProps, new Text(run.Text) { Space = SpaceProcessingModeValues.Preserve });
     }
 
     private static string HexColor(string colorHex)

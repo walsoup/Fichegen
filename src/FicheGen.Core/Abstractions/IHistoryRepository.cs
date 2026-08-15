@@ -17,5 +17,7 @@ public interface IHistoryRepository
     Task DeleteAsync(string id, CancellationToken ct = default);
     Task RenameAsync(string id, string newTitle, CancellationToken ct = default);
     Task ToggleFavoriteAsync(string id, bool isFavorite, CancellationToken ct = default);
+    Task<IReadOnlyList<HistoryItem>> GetAllAsync(CancellationToken ct = default) => SearchAsync(limit: 1000, ct: ct);
+    Task<IReadOnlyList<HistoryItem>> ListAsync(CancellationToken ct = default) => SearchAsync(limit: 1000, ct: ct);
     Task<int> CleanupRetentionAsync(int retentionDays, CancellationToken ct = default);
 }

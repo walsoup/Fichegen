@@ -28,3 +28,17 @@ artifacts/
 .DS_Store
 Thumbs.db
 
+# Agent orchestration & tooling state
+.agents/
+graphify-out/
+
+# Local integration test artifacts
+integration_raw.json
+integration_result.html
+
+# Test-only textbook sample (not distributed)
+GUIDE-ETINCELLE-MANUEL-MATHS-1AC.pdf
+
+# Duplicate manifest (tracked as Package.appxmanifest.xml)
+src/FicheGen.App/Package.appxmanifest
+

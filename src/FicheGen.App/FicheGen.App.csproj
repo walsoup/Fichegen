@@ -15,7 +15,23 @@
     <WindowsPackageType>None</WindowsPackageType>
     <PublishReadyToRun>true</PublishReadyToRun>
     <LangVersion>preview</LangVersion>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
   </PropertyGroup>
+
+
+
+
+
+
+
+
+
+  <ItemGroup>
+    <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FicheGen.Core\FicheGen.Core.csproj" />

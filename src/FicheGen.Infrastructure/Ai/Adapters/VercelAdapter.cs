@@ -41,6 +41,12 @@ public sealed class VercelAdapter : IProviderAdapter
 
     public async IAsyncEnumerable<string> ParseStreamAsync(HttpResponseMessage response, [EnumeratorCancellation] CancellationToken ct)
     {
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            EnsureSuccess(response, errorContent);
+        }
+
         var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         await foreach (var chunk in PlainTextStreamParser.ReadTextChunksAsync(stream, ct).ConfigureAwait(false))
         {

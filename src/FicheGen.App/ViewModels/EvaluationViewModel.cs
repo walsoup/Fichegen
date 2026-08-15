@@ -36,14 +36,16 @@ public partial class EvaluationViewModel : ObservableValidator
     private static readonly HashSet<string> DraftTrackedProperties = new(StringComparer.Ordinal)
     {
         nameof(ClassLevel), nameof(Subject), nameof(Topics), nameof(EvaluationType),
-        nameof(DurationMinutes), nameof(DifficultyLevel), nameof(TotalPoints)
+        nameof(DurationMinutes), nameof(DifficultyLevel), nameof(TotalPoints), nameof(GuideFilePath)
     };
 
     private readonly GenerationOrchestrator _orchestrator;
     private readonly ISettingsStore _settingsStore;
+    private readonly ICredentialStore? _credentialStore;
     private readonly IHistoryRepository _historyRepository;
     private readonly StylePresetService _stylePresetService;
     private readonly IDraftStore? _draftStore;
+    private readonly IReadinessService? _readinessService;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly DispatcherQueueTimer? _draftTimer;
     private readonly DispatcherQueueTimer? _elapsedTimer;
@@ -78,16 +80,31 @@ public partial class EvaluationViewModel : ObservableValidator
     public partial int DurationMinutes { get; set; }
 
     [ObservableProperty]
-    [Range(0.0, 1.0, ErrorMessage = "La difficulté doit être comprise entre 0 et 1.")]
+    [Range(1.0, 5.0, ErrorMessage = "La difficulté doit être comprise entre 1 et 5.")]
     [NotifyPropertyChangedFor(nameof(DifficultyLabel))]
     [NotifyPropertyChangedFor(nameof(DifficultyPercentText))]
     [NotifyPropertyChangedFor(nameof(EvaluationSummaryText))]
-    public partial double DifficultyLevel { get; set; } // 0.0 - 1.0
+    public partial double DifficultyLevel { get; set; } // 1.0 - 5.0
 
     [ObservableProperty]
     [Range(5, 100, ErrorMessage = "Le barème doit être compris entre 5 et 100 points.")]
     [NotifyPropertyChangedFor(nameof(EvaluationSummaryText))]
     public partial int TotalPoints { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasExerciseNotions { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasCorrectionGuide { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasDifferentiation { get; set; }
+
+    [ObservableProperty]
+    public partial bool UsePedagogicalGuide { get; set; }
+
+    [ObservableProperty]
+    public partial string? GuideFilePath { get; set; }
 
     // ------------------------------------------------------------------
     // État d'exécution
@@ -126,12 +143,14 @@ public partial class EvaluationViewModel : ObservableValidator
     /// <summary>Libellé lisible du niveau de difficulté.</summary>
     public string DifficultyLabel => DifficultyLevel switch
     {
-        < 0.34 => "Accessible",
-        < 0.67 => "Intermédiaire",
+        <= 1.5 => "Accessible",
+        <= 2.5 => "Standard",
+        <= 3.5 => "Intermédiaire",
+        <= 4.5 => "Avancé",
         _ => "Exigeant"
     };
 
-    public string DifficultyPercentText => $"{DifficultyLevel:P0}";
+    public string DifficultyPercentText => $"{(int)Math.Round(DifficultyLevel * 20)} %";
 
     /// <summary>Résumé compact affiché dans l'en-tête du formulaire.</summary>
     public string EvaluationSummaryText =>
@@ -177,21 +196,25 @@ public partial class EvaluationViewModel : ObservableValidator
         IHistoryRepository historyRepository,
         StylePresetService stylePresetService,
         ResultViewModel resultViewModel,
-        IDraftStore? draftStore = null)
+        ICredentialStore? credentialStore = null,
+        IDraftStore? draftStore = null,
+        IReadinessService? readinessService = null)
     {
         _orchestrator = orchestrator;
         _settingsStore = settingsStore;
+        _credentialStore = credentialStore;
         _historyRepository = historyRepository;
         _stylePresetService = stylePresetService;
         ResultViewModel = resultViewModel;
         _draftStore = draftStore;
+        _readinessService = readinessService;
 
         ClassLevel = "CM2";
         Subject = "Mathématiques";
         Topics = string.Empty;
         EvaluationType = "sommative";
         DurationMinutes = 45;
-        DifficultyLevel = 0.5;
+        DifficultyLevel = 3.0;
         TotalPoints = 20;
         StatusMessage = "Prêt à générer une évaluation.";
         CurrentStatusSeverity = StatusSeverity.Info;
@@ -204,7 +227,7 @@ public partial class EvaluationViewModel : ObservableValidator
 
         ClearErrors();
 
-        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        try { _dispatcherQueue = DispatcherQueue.GetForCurrentThread(); } catch { _dispatcherQueue = null; }
         if (_dispatcherQueue is not null)
         {
             _draftTimer = _dispatcherQueue.CreateTimer();
@@ -238,6 +261,9 @@ public partial class EvaluationViewModel : ObservableValidator
         }
 
         IsGenerating = true;
+        ResultViewModel.IsBusy = true;
+        ResultViewModel.CurrentHtml = string.Empty;
+        ResultViewModel.SetStatus("Structuration de l'évaluation et du barème…", StatusSeverity.Info);
         SetStatus("Structuration de l'évaluation et du barème…", StatusSeverity.Info);
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
@@ -258,10 +284,12 @@ public partial class EvaluationViewModel : ObservableValidator
                 Topics.Trim(),
                 EvaluationType,
                 TotalPoints,
-                DifficultyLevel
+                DifficultyLevel / 5.0,
+                UsePedagogicalGuide: !string.IsNullOrWhiteSpace(GuideFilePath)
             );
 
             SetStatus("Rédaction des exercices par l'IA…", StatusSeverity.Info);
+            ResultViewModel.SetStatus("Rédaction des exercices par l'IA…", StatusSeverity.Info);
             var result = await _orchestrator.GenerateEvaluationAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
             var document = result.Document;
             var html = result.PreviewHtml;
@@ -284,6 +312,7 @@ public partial class EvaluationViewModel : ObservableValidator
             };
 
             await _historyRepository.SaveAsync(historyItem);
+            _readinessService?.ReportExecutionOutcome(true);
             SetStatus($"Évaluation « {document.Metadata.Title} » générée en {result.Elapsed.TotalSeconds:F1} s.", StatusSeverity.Success);
         }
         catch (OperationCanceledException)
@@ -292,12 +321,14 @@ public partial class EvaluationViewModel : ObservableValidator
         }
         catch (Exception ex)
         {
-            SetStatus($"Une erreur est survenue : {ex.Message}", StatusSeverity.Error);
+            _readinessService?.ReportExecutionOutcome(false, ex);
+            SetStatus(ErrorMessageTranslator.ToUserFriendlyMessage(ex), StatusSeverity.Error);
         }
         finally
         {
             _elapsedTimer?.Stop();
             IsGenerating = false;
+            ResultViewModel.IsBusy = false;
             _cts?.Dispose();
             _cts = null;
         }
@@ -369,7 +400,8 @@ public partial class EvaluationViewModel : ObservableValidator
                 [nameof(EvaluationType)] = EvaluationType,
                 [nameof(DurationMinutes)] = DurationMinutes.ToString(),
                 [nameof(DifficultyLevel)] = DifficultyLevel.ToString(CultureInfo.InvariantCulture),
-                [nameof(TotalPoints)] = TotalPoints.ToString()
+                [nameof(TotalPoints)] = TotalPoints.ToString(),
+                [nameof(GuideFilePath)] = GuideFilePath
             };
             await _draftStore.SaveDraftAsync(DraftKey, fields);
             DraftStatusMessage = $"Brouillon enregistré automatiquement à {DateTime.Now:HH:mm:ss}.";
@@ -398,8 +430,9 @@ public partial class EvaluationViewModel : ObservableValidator
                     if (fields.TryGetValue(nameof(Topics), out var to) && to is not null) Topics = to;
                     if (fields.TryGetValue(nameof(EvaluationType), out var et) && !string.IsNullOrWhiteSpace(et)) EvaluationType = et;
                     if (fields.TryGetValue(nameof(DurationMinutes), out var du) && int.TryParse(du, out var minutes) && minutes is >= 5 and <= 180) DurationMinutes = minutes;
-                    if (fields.TryGetValue(nameof(DifficultyLevel), out var dl) && double.TryParse(dl, NumberStyles.Float, CultureInfo.InvariantCulture, out var difficulty) && difficulty is >= 0.0 and <= 1.0) DifficultyLevel = difficulty;
+                    if (fields.TryGetValue(nameof(DifficultyLevel), out var dl) && double.TryParse(dl, NumberStyles.Float, CultureInfo.InvariantCulture, out var difficulty) && difficulty is >= 1.0 and <= 5.0) DifficultyLevel = difficulty;
                     if (fields.TryGetValue(nameof(TotalPoints), out var tp) && int.TryParse(tp, out var points) && points is >= 5 and <= 100) TotalPoints = points;
+                    if (fields.TryGetValue(nameof(GuideFilePath), out var gf)) GuideFilePath = gf;
                     ClearErrors();
                 }
                 finally
@@ -452,7 +485,7 @@ public partial class EvaluationViewModel : ObservableValidator
             : "⚠️ " + string.Join(" ", errors);
     }
 
-    private static AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
+    private AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
         appSettings.Ai.GlobalProvider,
         appSettings.Ai.Models,
         appSettings.Ai.RoutingOverrides.ToDictionary(k => k.Key, v => new RoutingOverride(v.Value.Provider, v.Value.Model)),
@@ -460,5 +493,5 @@ public partial class EvaluationViewModel : ObservableValidator
         appSettings.Ai.Vertex.Project,
         appSettings.Ai.Vertex.Region,
         new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation } },
-        (_, _) => ValueTask.FromResult<string?>(null));
+        (k, _) => ValueTask.FromResult(_credentialStore?.Get(k)));
 }

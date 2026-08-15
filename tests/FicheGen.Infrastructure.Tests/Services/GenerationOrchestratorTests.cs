@@ -99,4 +99,6 @@ Ceci est du markdown brut renvoyé par l'IA au lieu du JSON.";
         result.PreviewHtml.Should().Contain("Mode dégradé");
         result.PreviewHtml.Should().Contain("Titre de secours");
     }
+
+    // Note: Live external API integration tests should run in a dedicated test suite with environment variables, not in standard CI.
 }

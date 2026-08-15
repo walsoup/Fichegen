@@ -9,12 +9,11 @@ public static class ClipboardPackageBuilder
     public static string FormatCfHtml(string htmlFragment)
     {
         const string headerTemplate =
-@"Version:1.0
-StartHTML:0000000000
-EndHTML:0000000000
-StartFragment:0000000000
-EndFragment:0000000000
-";
+            "Version:1.0\r\n" +
+            "StartHTML:0000000000\r\n" +
+            "EndHTML:0000000000\r\n" +
+            "StartFragment:0000000000\r\n" +
+            "EndFragment:0000000000\r\n";
         const string htmlPrefix = "<!DOCTYPE html><html><body><!--StartFragment-->";
         const string htmlSuffix = "<!--EndFragment--></body></html>";
 
@@ -29,12 +28,11 @@ EndFragment:0000000000
         var endHtml = endFragment + suffixBytesCount;
 
         var header =
-$@"Version:1.0
-StartHTML:{startHtml:D10}
-EndHTML:{endHtml:D10}
-StartFragment:{startFragment:D10}
-EndFragment:{endFragment:D10}
-";
+            "Version:1.0\r\n" +
+            $"StartHTML:{startHtml:D10}\r\n" +
+            $"EndHTML:{endHtml:D10}\r\n" +
+            $"StartFragment:{startFragment:D10}\r\n" +
+            $"EndFragment:{endFragment:D10}\r\n";
 
         return $"{header}{htmlPrefix}{htmlFragment}{htmlSuffix}";
     }

@@ -12,7 +12,7 @@ public sealed partial class FirstRunDialog : ContentDialog
 {
     private int _currentStep = 1;
 
-    public bool TelemetryEnabled => TelemetryToggleSwitch.IsOn;
+    public bool TelemetryEnabled => false;
     public string GuidesPath { get; private set; } = string.Empty;
     public string SelectedProviderKey
     {
@@ -114,6 +114,11 @@ public sealed partial class FirstRunDialog : ContentDialog
 
     private void ProviderRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (ProviderRadioButtons == null || ApiKeySection == null || GetKeyHyperlink == null)
+        {
+            return;
+        }
+
         switch (ProviderRadioButtons.SelectedIndex)
         {
             case 0: // Google AI Studio

@@ -173,4 +173,47 @@ public sealed class HistoryRepositoryTests : IDisposable
         remaining.Select(x => x.Id).Should().Contain(new[] { oldFav.Id, recentNonFav.Id });
         remaining.Select(x => x.Id).Should().NotContain(oldNonFav.Id);
     }
+
+    [Theory]
+    [InlineData("l'accord (sujet-verbe) :")]
+    [InlineData("AND OR NOT")]
+    [InlineData("\"unmatched quotes")]
+    [InlineData(":::***???")]
+    public async Task SearchAsync_WithSpecialCharactersAndOperators_DoesNotThrow(string query)
+    {
+        var repo = new HistoryRepository(_tempDbPath);
+        var item = new HistoryItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = "fiche",
+            Title = "L'accord sujet verbe",
+            PlainText = "Exercices sur l'accord du participe passé",
+            Html = "<p>Accord</p>"
+        };
+
+        await repo.SaveAsync(item);
+
+        var act = async () => await repo.SearchAsync(query);
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task RenameAsync_UpdatesTitleSuccessfully()
+    {
+        var repo = new HistoryRepository(_tempDbPath);
+        var item = new HistoryItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = "fiche",
+            Title = "Ancien Nom",
+            PlainText = "Texte",
+            Html = "<p>Texte</p>"
+        };
+
+        await repo.SaveAsync(item);
+        await repo.RenameAsync(item.Id, "Nouveau Nom");
+
+        var retrieved = await repo.GetByIdAsync(item.Id);
+        retrieved!.Title.Should().Be("Nouveau Nom");
+    }
 }

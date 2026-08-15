@@ -9,25 +9,25 @@ namespace FicheGen.Infrastructure.Tests;
 
 public class SettingsStoreTests : IDisposable
 {
+    private readonly string _testDir;
     private readonly string _tempPath;
     private readonly DpapiCredentialStore _credStore;
     private readonly SettingsStore _settingsStore;
 
     public SettingsStoreTests()
     {
-        _tempPath = Path.Combine(Path.GetTempPath(), $"fichegen_test_{Guid.NewGuid():N}", "settings.json");
-        _credStore = new DpapiCredentialStore();
+        _testDir = Path.Combine(Path.GetTempPath(), $"fichegen_test_{Guid.NewGuid():N}");
+        _tempPath = Path.Combine(_testDir, "settings.json");
+        _credStore = new DpapiCredentialStore(Path.Combine(_testDir, "credentials"));
         _settingsStore = new SettingsStore(_credStore, _tempPath);
     }
 
     public void Dispose()
     {
-        var dir = Path.GetDirectoryName(_tempPath);
-        if (Directory.Exists(dir))
+        if (Directory.Exists(_testDir))
         {
-            try { Directory.Delete(dir, recursive: true); } catch { }
+            try { Directory.Delete(_testDir, recursive: true); } catch { }
         }
-        _credStore.Remove("gemini_api_key");
     }
 
     [Fact]

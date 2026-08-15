@@ -11,10 +11,10 @@
     <UserControl.Resources>
         <!-- Converters -->
         <converters:StringFormatConverter x:Key="StringFormatConverter"/>
-        
-        <!-- Boutons de la barre d'outils flottante -->
+
+        <!-- Styles de boutons de la barre d'outils -->
         <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
-            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="MinHeight" Value="32"/>
             <Setter Property="MinWidth" Value="0"/>
         </Style>
@@ -54,46 +54,170 @@
         </Storyboard>
     </UserControl.Resources>
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-          PointerMoved="OnRootPointerMoved">
-
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="ToolbarStates">
-                <VisualStateGroup.Transitions>
-                    <VisualTransition To="ToolbarVisible" GeneratedDuration="0:0:0.22">
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetName="FloatingToolbar" Storyboard.TargetProperty="Opacity" To="1">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                            </DoubleAnimation>
-                            <DoubleAnimation Storyboard.TargetName="ToolbarTransform" Storyboard.TargetProperty="Y" To="0">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                            </DoubleAnimation>
-                        </Storyboard>
-                    </VisualTransition>
-                    <VisualTransition To="ToolbarHidden" GeneratedDuration="0:0:0.35">
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetName="FloatingToolbar" Storyboard.TargetProperty="Opacity" To="0">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
-                            </DoubleAnimation>
-                            <DoubleAnimation Storyboard.TargetName="ToolbarTransform" Storyboard.TargetProperty="Y" To="-6">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
-                            </DoubleAnimation>
-                        </Storyboard>
-                    </VisualTransition>
-                </VisualStateGroup.Transitions>
-                <VisualState x:Name="ToolbarVisible"/>
-                <VisualState x:Name="ToolbarHidden"/>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
-
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
+            <!-- Barre d'outils permanente -->
             <RowDefinition Height="Auto"/>
+            <!-- Bannières (export, streaming) -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <!-- Zone principale de document / état vide / erreur -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- ================= Barre d'outils permanente (AppCommandBar UX-03) ================= -->
+        <Border x:Name="TopToolbarBorder"
+                Grid.Row="0"
+                Padding="12,6"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                AutomationProperties.Name="Barre d'outils du document">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Groupe Style & Vue Élève/Corrigé -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Séparateur -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Groupe Zoom -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Espace flexible -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Groupe Exports & Actions -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 1. Style & Élève/Corrigé -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <FontIcon Glyph="&#xE8D2;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="StylePresetComboBox"
+                              MinWidth="140"
+                              SelectedIndex="0"
+                              SelectionChanged="OnStylePresetSelectionChanged"
+                              ToolTipService.ToolTip="Style visuel de la fiche"
+                              AutomationProperties.Name="Style visuel du document">
+                        <ComboBoxItem Content="Moderne" Tag="modern"/>
+                        <ComboBoxItem Content="Classique" Tag="classic"/>
+                        <ComboBoxItem Content="Minimaliste" Tag="minimal"/>
+                        <ComboBoxItem Content="Académique" Tag="academic"/>
+                        <ComboBoxItem Content="Ludique" Tag="playful"/>
+                    </ComboBox>
+
+                    <Button x:Name="StudentViewButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="OnStudentViewClicked"
+                            ToolTipService.ToolTip="Basculer entre la version enseignant (avec corrigé) et la version élève (Ctrl+Shift+V)"
+                            AutomationProperties.Name="Basculer la version élève ou corrigé">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE77B;" FontSize="13"/>
+                            <TextBlock Text="Élève / Corrigé" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Séparateur -->
+                <Border Grid.Column="1" Width="1" Height="20" Margin="10,0" VerticalAlignment="Center"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                <!-- 2. Zoom -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomOutClicked"
+                            ToolTipService.ToolTip="Réduire le zoom" AutomationProperties.Name="Réduire le zoom">
+                        <FontIcon Glyph="&#xE71F;" FontSize="12"/>
+                    </Button>
+                    <TextBlock x:Name="ZoomPercentText" Text="100 %" Width="48" FontSize="12"
+                               TextAlignment="Center" VerticalAlignment="Center"
+                               AutomationProperties.Name="Niveau de zoom"/>
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomInClicked"
+                            ToolTipService.ToolTip="Agrandir le zoom" AutomationProperties.Name="Agrandir le zoom">
+                        <FontIcon Glyph="&#xE8A3;" FontSize="12"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomResetClicked"
+                            ToolTipService.ToolTip="Réinitialiser le zoom à 100 % (Ctrl+0)" AutomationProperties.Name="Réinitialiser le zoom">
+                        <FontIcon Glyph="&#xE72C;" FontSize="12"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- 3. Exports, Impression, Lecture, Presse-papiers -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button x:Name="ExportWordButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="OnExportWordClicked"
+                            ToolTipService.ToolTip="Exporter en document Word modifiable (Ctrl+Shift+W)"
+                            AutomationProperties.Name="Exporter en Word">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Word" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ExportPdfButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="OnExportPdfClicked"
+                            ToolTipService.ToolTip="Exporter en document PDF imprimable (Ctrl+Shift+E)"
+                            AutomationProperties.Name="Exporter en PDF">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xEA90;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="PDF" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="PrintButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="OnPrintClicked"
+                            ToolTipService.ToolTip="Imprimer le document (Ctrl+P)"
+                            AutomationProperties.Name="Imprimer le document">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE749;" FontSize="13"/>
+                            <TextBlock Text="Imprimer" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Menu Autres actions -->
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                            ToolTipService.ToolTip="Autres actions"
+                            AutomationProperties.Name="Autres options d'export et d'écoute">
+                        <FontIcon Glyph="&#xE712;" FontSize="13"/>
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuFlyoutItem Text="📄 Exporter en RTF" Click="OnExportRtfClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C6;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="📋 Copier le texte complet" Click="OnCopyClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem x:Name="ReadAloudMenuItem" Text="🔊 Lire à voix haute" Click="OnReadAloudClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon x:Name="ReadAloudMenuIcon" Glyph="&#xE995;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Bannière d'exportation réussie -->
+        <InfoBar x:Name="ExportSuccessInfoBar"
+                 Grid.Row="1"
+                 IsOpen="{Binding ShowExportSuccessBanner, Mode=TwoWay}"
+                 Severity="Success"
+                 Title="Document exporté avec succès"
+                 Message="{Binding ExportSuccessMessage}"
+                 IsClosable="True"
+                 Margin="12,6"
+                 AutomationProperties.LiveSetting="Polite">
+            <InfoBar.ActionButton>
+                <Button Content="Ouvrir le fichier"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Command="{Binding OpenLastExportedFileCommand}"
+                        AutomationProperties.Name="Ouvrir le fichier exporté"/>
+            </InfoBar.ActionButton>
+        </InfoBar>
+
         <!-- Bannière de rendu progressif (streaming) -->
         <Border x:Name="StreamingBanner"
-                Grid.Row="0"
+                Grid.Row="2"
                 Visibility="Collapsed"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -129,7 +253,7 @@
         </Border>
 
         <!-- Zone de contenu -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="3">
 
             <!-- État vide avec illustration de marque + astuces -->
             <StackPanel x:Name="EmptyStatePanel"
@@ -248,109 +372,47 @@
                       VerticalAlignment="Stretch"
                       AutomationProperties.Name="Aperçu interactif du document WebView2"/>
 
-            <!-- Barre d'outils flottante auto-masquable -->
-            <Border x:Name="FloatingToolbar"
-                    Opacity="0"
-                    IsHitTestVisible="False"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="16"
-                    CornerRadius="10"
-                    Padding="6"
-                    Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    PointerEntered="OnToolbarPointerEntered"
-                    PointerExited="OnToolbarPointerExited"
-                    AutomationProperties.Name="Barre d'outils de l'aperçu">
-                <Border.RenderTransform>
-                    <TranslateTransform x:Name="ToolbarTransform" Y="-6"/>
-                </Border.RenderTransform>
+            <!-- État d'erreur WebView2 absent (UX-04) -->
+            <StackPanel x:Name="WebView2ErrorPanel"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="16"
+                        MaxWidth="480"
+                        Margin="24"
+                        AutomationProperties.Name="Aperçu indisponible : composant manquant">
+                <Border Width="72" Height="72" CornerRadius="18" HorizontalAlignment="Center"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                    <FontIcon Glyph="&#xE7BA;" FontSize="32" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                </Border>
 
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="L'aperçu ne peut pas s'afficher"
+                           Style="{ThemeResource TitleTextBlockStyle}"
+                           HorizontalAlignment="Center"/>
 
-                    <!-- Sélecteur de style -->
-                    <FontIcon Glyph="&#xE8D2;" FontSize="14" Margin="6,0,2,0" VerticalAlignment="Center"
-                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <ComboBox x:Name="StylePresetComboBox"
-                              MinWidth="160"
-                              SelectedIndex="0"
-                              SelectionChanged="OnStylePresetSelectionChanged"
-                              DropDownOpened="OnPresetDropDownOpened"
-                              DropDownClosed="OnPresetDropDownClosed"
-                              ToolTipService.ToolTip="Style visuel de la fiche"
-                              AutomationProperties.Name="Style visuel du document">
-                        <ComboBoxItem Content="Classique" Tag="classique"/>
-                        <ComboBoxItem Content="Moderne" Tag="moderne"/>
-                        <ComboBoxItem Content="Épuré" Tag="epure"/>
-                        <ComboBoxItem Content="Dyslexie (police adaptée)" Tag="dyslexie"/>
-                        <ComboBoxItem Content="Compact (impression)" Tag="compact"/>
-                    </ComboBox>
+                <TextBlock Text="PROFstudio a besoin du composant Microsoft Edge WebView2 pour afficher et exporter vos documents. Il n'est pas installé sur cet ordinateur."
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
 
-                    <Border Width="1" Height="20" Margin="4,0" VerticalAlignment="Center"
-                            Background="{ThemeResource CardStrokeColorDefaultBrush}"/>
-
-                    <!-- Zoom -->
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomOutClicked"
-                            ToolTipService.ToolTip="Réduire le zoom" AutomationProperties.Name="Réduire le zoom">
-                        <FontIcon Glyph="&#xE71F;" FontSize="12"/>
-                    </Button>
-                    <TextBlock x:Name="ZoomPercentText" Text="100 %" Width="48" FontSize="12"
-                               TextAlignment="Center" VerticalAlignment="Center"
-                               AutomationProperties.Name="Niveau de zoom"/>
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomInClicked"
-                            ToolTipService.ToolTip="Agrandir le zoom" AutomationProperties.Name="Agrandir le zoom">
-                        <FontIcon Glyph="&#xE8A3;" FontSize="12"/>
-                    </Button>
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomResetClicked"
-                            ToolTipService.ToolTip="Réinitialiser le zoom (100 %)" AutomationProperties.Name="Réinitialiser le zoom">
-                        <FontIcon Glyph="&#xE72C;" FontSize="12"/>
-                    </Button>
-
-                    <Border Width="1" Height="20" Margin="4,0" VerticalAlignment="Center"
-                            Background="{ThemeResource CardStrokeColorDefaultBrush}"/>
-
-                    <!-- Exports -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnExportPdfClicked"
-                            ToolTipService.ToolTip="Exporter en PDF (Ctrl+Shift+E)" AutomationProperties.Name="Exporter en PDF">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xEA90;" FontSize="14"/>
-                            <TextBlock Text="PDF" FontSize="12" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnExportWordClicked"
-                            ToolTipService.ToolTip="Exporter en Word (Ctrl+Shift+W)" AutomationProperties.Name="Exporter en Word">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE8A5;" FontSize="14"/>
-                            <TextBlock Text="Word" FontSize="12" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnExportRtfClicked"
-                            ToolTipService.ToolTip="Exporter en RTF" AutomationProperties.Name="Exporter en RTF">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE8C6;" FontSize="14"/>
-                            <TextBlock Text="RTF" FontSize="12" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Border Width="1" Height="20" Margin="4,0" VerticalAlignment="Center"
-                            Background="{ThemeResource CardStrokeColorDefaultBrush}"/>
-
-                    <!-- Presse-papiers / Impression / Lecture -->
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnCopyClicked"
-                            ToolTipService.ToolTip="Copier dans le presse-papiers" AutomationProperties.Name="Copier le document">
-                        <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                    </Button>
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnPrintClicked"
-                            ToolTipService.ToolTip="Imprimer (Ctrl+P)" AutomationProperties.Name="Imprimer le document">
-                        <FontIcon Glyph="&#xE749;" FontSize="14"/>
-                    </Button>
-                    <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnReadAloudClicked"
-                            ToolTipService.ToolTip="Lire la fiche à voix haute" AutomationProperties.Name="Lire la fiche à voix haute">
-                        <FontIcon Glyph="&#xE995;" FontSize="14"/>
-                    </Button>
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <Button Content="Installer le composant ↗"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Click="OnInstallWebView2Clicked"
+                            AutomationProperties.Name="Installer le composant WebView2"/>
+                    <Button Content="Copier le lien pour l'informaticien"
+                            Click="OnCopyWebView2LinkClicked"
+                            AutomationProperties.Name="Copier le lien de téléchargement pour l'administrateur"/>
                 </StackPanel>
-            </Border>
+
+                <TextBlock x:Name="WebView2LinkCopiedNotice"
+                           Text="✓ Lien copié dans le presse-papiers"
+                           FontSize="12"
+                           Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

@@ -76,34 +76,15 @@ public sealed class SettingsStore : ISettingsStore
 
             if (settings is AppSettings appSettings)
             {
-                // 1. Save secrets to credential store
-                if (!string.IsNullOrEmpty(appSettings.Ai.GeminiApiKey))
-                    _credentialStore.Set("gemini_api_key", appSettings.Ai.GeminiApiKey);
-                if (!string.IsNullOrEmpty(appSettings.Ai.ProxyApiKey))
-                    _credentialStore.Set("proxy_api_key", appSettings.Ai.ProxyApiKey);
-                if (!string.IsNullOrEmpty(appSettings.Ai.VercelApiKey))
-                    _credentialStore.Set("vercel_api_key", appSettings.Ai.VercelApiKey);
+                // 1. Sync secrets with credential store
+                SyncSecret("gemini_api_key", appSettings.Ai.GeminiApiKey);
+                SyncSecret("openai_api_key", appSettings.Ai.OpenAiApiKey);
+                SyncSecret("anthropic_api_key", appSettings.Ai.AnthropicApiKey);
+                SyncSecret("proxy_api_key", appSettings.Ai.ProxyApiKey);
+                SyncSecret("vercel_api_key", appSettings.Ai.VercelApiKey);
 
-                // 2. Clone/snapshot settings and strip secrets before disk serialization
-                var tempGemini = appSettings.Ai.GeminiApiKey;
-                var tempProxy = appSettings.Ai.ProxyApiKey;
-                var tempVercel = appSettings.Ai.VercelApiKey;
-
-                try
-                {
-                    appSettings.Ai.GeminiApiKey = string.Empty;
-                    appSettings.Ai.ProxyApiKey = string.Empty;
-                    appSettings.Ai.VercelApiKey = string.Empty;
-
-                    jsonToWrite = JsonSerializer.Serialize(appSettings, JsonOptions);
-                }
-                finally
-                {
-                    // Restore in-memory values for UI binding
-                    appSettings.Ai.GeminiApiKey = tempGemini;
-                    appSettings.Ai.ProxyApiKey = tempProxy;
-                    appSettings.Ai.VercelApiKey = tempVercel;
-                }
+                // 2. Serialize settings to disk (secrets are decorated with [JsonIgnore])
+                jsonToWrite = JsonSerializer.Serialize(appSettings, JsonOptions);
             }
             else
             {
@@ -121,9 +102,23 @@ public sealed class SettingsStore : ISettingsStore
         }
     }
 
+    private void SyncSecret(string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            try { _credentialStore.Remove(key); } catch { }
+        }
+        else
+        {
+            try { _credentialStore.Set(key, value); } catch { }
+        }
+    }
+
     private void LoadSecretsInto(AppSettings appSettings)
     {
         appSettings.Ai.GeminiApiKey = _credentialStore.Get("gemini_api_key") ?? string.Empty;
+        appSettings.Ai.OpenAiApiKey = _credentialStore.Get("openai_api_key") ?? string.Empty;
+        appSettings.Ai.AnthropicApiKey = _credentialStore.Get("anthropic_api_key") ?? string.Empty;
         appSettings.Ai.ProxyApiKey = _credentialStore.Get("proxy_api_key") ?? string.Empty;
         appSettings.Ai.VercelApiKey = _credentialStore.Get("vercel_api_key") ?? string.Empty;
     }

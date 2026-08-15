@@ -15,6 +15,7 @@ using FicheGen.Core.Diff;
 using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
 using FicheGen.Core.Storage;
+using FicheGen.App.Services;
 
 namespace FicheGen.App.ViewModels;
 
@@ -85,6 +86,7 @@ public partial class AssistantViewModel : ObservableObject
 
     private readonly IAssistantService _assistantService;
     private readonly ISettingsStore _settingsStore;
+    private readonly ICredentialStore? _credentialStore;
     private readonly ResultViewModel _resultViewModel;
 
     private readonly List<string> _promptHistory = new();
@@ -182,10 +184,12 @@ public partial class AssistantViewModel : ObservableObject
     public AssistantViewModel(
         IAssistantService assistantService,
         ISettingsStore settingsStore,
-        ResultViewModel resultViewModel)
+        ResultViewModel resultViewModel,
+        ICredentialStore? credentialStore = null)
     {
         _assistantService = assistantService;
         _settingsStore = settingsStore;
+        _credentialStore = credentialStore;
         _resultViewModel = resultViewModel;
 
         SelectedMode = "Auto";
@@ -262,7 +266,7 @@ public partial class AssistantViewModel : ObservableObject
                 appSettings.Ai.Vertex.Project,
                 appSettings.Ai.Vertex.Region,
                 new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation }, { "intent", appSettings.Ai.Temperatures.Intent } },
-                (_, _) => ValueTask.FromResult<string?>(null)
+                (k, _) => ValueTask.FromResult(_credentialStore?.Get(k))
             );
 
             var assistantMsg = new ChatMessageItem
@@ -338,13 +342,14 @@ public partial class AssistantViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            var friendlyMessage = ErrorMessageTranslator.ToUserFriendlyMessage(ex);
             var last = Messages.Count > 0 ? Messages[^1] : null;
             if (last is { Sender: "Assistant" })
             {
                 last.IsStreaming = false;
-                if (last.Content.Length == 0) last.Content = $"Une erreur est survenue : {ex.Message}";
+                if (last.Content.Length == 0) last.Content = friendlyMessage;
             }
-            SetStatus($"Une erreur est survenue : {ex.Message}", StatusSeverity.Error);
+            SetStatus(friendlyMessage, StatusSeverity.Error);
         }
         finally
         {

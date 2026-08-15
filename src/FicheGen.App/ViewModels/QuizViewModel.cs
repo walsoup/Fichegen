@@ -33,14 +33,17 @@ public partial class QuizViewModel : ObservableValidator
     {
         nameof(ClassLevel), nameof(Subject), nameof(Topic), nameof(QuestionCount),
         nameof(DurationMinutes), nameof(IncludeMultipleChoice), nameof(IncludeTrueFalse),
-        nameof(IncludeShortAnswer), nameof(IncludeAnswerKey), nameof(UseDyslexiaFont)
+        nameof(IncludeShortAnswer), nameof(IncludeAnswerKey), nameof(UseDyslexiaFont),
+        nameof(GuideFilePath)
     };
 
     private readonly GenerationOrchestrator _orchestrator;
     private readonly ISettingsStore _settingsStore;
+    private readonly ICredentialStore? _credentialStore;
     private readonly IHistoryRepository _historyRepository;
     private readonly StylePresetService _stylePresetService;
     private readonly IDraftStore? _draftStore;
+    private readonly IReadinessService? _readinessService;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly DispatcherQueueTimer? _draftTimer;
     private readonly DispatcherQueueTimer? _elapsedTimer;
@@ -92,6 +95,9 @@ public partial class QuizViewModel : ObservableValidator
 
     [ObservableProperty]
     public partial bool UseDyslexiaFont { get; set; }
+
+    [ObservableProperty]
+    public partial string? GuideFilePath { get; set; }
 
     // ------------------------------------------------------------------
     // État d'exécution & erreurs personnalisées
@@ -184,14 +190,18 @@ public partial class QuizViewModel : ObservableValidator
         IHistoryRepository historyRepository,
         StylePresetService stylePresetService,
         ResultViewModel resultViewModel,
-        IDraftStore? draftStore = null)
+        ICredentialStore? credentialStore = null,
+        IDraftStore? draftStore = null,
+        IReadinessService? readinessService = null)
     {
         _orchestrator = orchestrator;
         _settingsStore = settingsStore;
+        _credentialStore = credentialStore;
         _historyRepository = historyRepository;
         _stylePresetService = stylePresetService;
         ResultViewModel = resultViewModel;
         _draftStore = draftStore;
+        _readinessService = readinessService;
 
         ClassLevel = "CM2";
         Subject = "Mathématiques";
@@ -215,7 +225,7 @@ public partial class QuizViewModel : ObservableValidator
 
         ClearErrors();
 
-        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        try { _dispatcherQueue = DispatcherQueue.GetForCurrentThread(); } catch { _dispatcherQueue = null; }
         if (_dispatcherQueue is not null)
         {
             _draftTimer = _dispatcherQueue.CreateTimer();
@@ -259,6 +269,9 @@ public partial class QuizViewModel : ObservableValidator
         }
 
         IsGenerating = true;
+        ResultViewModel.IsBusy = true;
+        ResultViewModel.CurrentHtml = string.Empty;
+        ResultViewModel.SetStatus("Conception des questions et des distracteurs…", StatusSeverity.Info);
         SetStatus("Conception des questions et des distracteurs…", StatusSeverity.Info);
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
@@ -292,6 +305,7 @@ public partial class QuizViewModel : ObservableValidator
             );
 
             SetStatus("Rédaction du quiz par l'IA…", StatusSeverity.Info);
+            ResultViewModel.SetStatus("Rédaction du quiz par l'IA…", StatusSeverity.Info);
             var result = await _orchestrator.GenerateQuizAsync(parameters, config, _cts.Token);
             var document = result.Document;
             var html = result.PreviewHtml;
@@ -315,6 +329,7 @@ public partial class QuizViewModel : ObservableValidator
             };
 
             await _historyRepository.SaveAsync(historyItem);
+            _readinessService?.ReportExecutionOutcome(true);
             SetStatus($"Quiz « {document.Metadata.Title} » généré en {result.Elapsed.TotalSeconds:F1} s.", StatusSeverity.Success);
         }
         catch (OperationCanceledException)
@@ -323,12 +338,14 @@ public partial class QuizViewModel : ObservableValidator
         }
         catch (Exception ex)
         {
-            SetStatus($"Une erreur est survenue : {ex.Message}", StatusSeverity.Error);
+            _readinessService?.ReportExecutionOutcome(false, ex);
+            SetStatus(ErrorMessageTranslator.ToUserFriendlyMessage(ex), StatusSeverity.Error);
         }
         finally
         {
             _elapsedTimer?.Stop();
             IsGenerating = false;
+            ResultViewModel.IsBusy = false;
             _cts?.Dispose();
             _cts = null;
         }
@@ -403,7 +420,8 @@ public partial class QuizViewModel : ObservableValidator
                 [nameof(IncludeTrueFalse)] = IncludeTrueFalse ? "true" : "false",
                 [nameof(IncludeShortAnswer)] = IncludeShortAnswer ? "true" : "false",
                 [nameof(IncludeAnswerKey)] = IncludeAnswerKey ? "true" : "false",
-                [nameof(UseDyslexiaFont)] = UseDyslexiaFont ? "true" : "false"
+                [nameof(UseDyslexiaFont)] = UseDyslexiaFont ? "true" : "false",
+                [nameof(GuideFilePath)] = GuideFilePath
             };
             await _draftStore.SaveDraftAsync(DraftKey, fields);
             DraftStatusMessage = $"Brouillon enregistré automatiquement à {DateTime.Now:HH:mm:ss}.";
@@ -437,6 +455,7 @@ public partial class QuizViewModel : ObservableValidator
                     if (fields.TryGetValue(nameof(IncludeShortAnswer), out var sa) && bool.TryParse(sa, out var rc)) IncludeShortAnswer = rc;
                     if (fields.TryGetValue(nameof(IncludeAnswerKey), out var ak) && bool.TryParse(ak, out var answerKey)) IncludeAnswerKey = answerKey;
                     if (fields.TryGetValue(nameof(UseDyslexiaFont), out var df) && bool.TryParse(df, out var dyslexiaFont)) UseDyslexiaFont = dyslexiaFont;
+                    if (fields.TryGetValue(nameof(GuideFilePath), out var gf)) GuideFilePath = gf;
                     ClearErrors();
                 }
                 finally
@@ -489,7 +508,7 @@ public partial class QuizViewModel : ObservableValidator
             : "⚠️ " + string.Join(" ", errors);
     }
 
-    private static AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
+    private AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
         appSettings.Ai.GlobalProvider,
         appSettings.Ai.Models,
         appSettings.Ai.RoutingOverrides.ToDictionary(k => k.Key, v => new RoutingOverride(v.Value.Provider, v.Value.Model)),
@@ -497,5 +516,5 @@ public partial class QuizViewModel : ObservableValidator
         appSettings.Ai.Vertex.Project,
         appSettings.Ai.Vertex.Region,
         new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation } },
-        (_, _) => ValueTask.FromResult<string?>(null));
+        (k, _) => ValueTask.FromResult(_credentialStore?.Get(k)));
 }

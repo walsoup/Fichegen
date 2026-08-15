@@ -83,14 +83,11 @@ public class AiRequestConfig { public string GlobalProvider { get; set; } }
 
 ## Known Issues — Fix Before Adding Features
 
-These are known defects. If you encounter them during work, fix them:
+These are known areas undergoing maintenance:
 
-1. **`WebView2PdfExporter` is a stub** — it writes raw HTML to the output path instead of calling `CoreWebView2.PrintToPdfAsync()`. See `WINDOWS_BLUEPRINT.md` §4.C.3 for the correct implementation.
-2. **`MainWindow.xaml.cs` is 1,375 lines** — god-object code-behind. Needs decomposition into helper classes or partial classes.
-3. **`SettingsViewModel.cs` is 1,334 lines** — should be split into tab-specific partial classes.
-4. **`ToggleAssistantVisibility(bool)` in `MainWindow.xaml.cs` is empty** — method body is `{ }`.
-5. **Duplicate navigation logic** — initial page navigation is copy-pasted between `OnMainWindowLoaded` and `OnMainWindowActivated`.
-6. **Reflection-based command dispatching** — `MainWindow` uses `TryExecuteCommand`/`TryInvokeMethod` to invoke commands on child VMs. Replace with an interface or messaging.
+1. **`MainWindow.xaml.cs` is 1,375 lines** — god-object code-behind. Needs decomposition into helper classes or partial classes.
+2. **`SettingsViewModel.cs` is 1,334 lines** — should be split into tab-specific partial classes.
+3. **Reflection-based command dispatching** — `MainWindow` uses `TryExecuteCommand`/`TryInvokeMethod` to invoke commands on child VMs. Replace with an interface or messaging.
 
 ## Testing
 
@@ -126,3 +123,6 @@ dotnet run --project src/FicheGen.App/FicheGen.App.csproj -c Debug -p:Platform=x
 6. **CF_HTML clipboard requires byte-offset headers** (`StartHTML:`, `EndHTML:`) — Word silently drops malformed payloads.
 7. **DPAPI blobs are machine+user bound** — settings export must exclude `secretsProtected`.
 8. **Secrets never in logs** — `SecretRedactingPolicy` strips API keys. Maintain this when adding new secret fields.
+9. **UserControl + WebView2 Reactive Binding** — Wrapping `WebView2` in a custom `UserControl` requires subscribing to `DataContextChanged` and the ViewModel's `INotifyPropertyChanged` to imperatively call `NavigateToStringAsync()` and manage visual states (`Generating`, `Ready`, `Empty`).
+10. **WebView2 Viewport Sizing** — Never place a `WebView2` container in a `Grid.Row` with `Height="Auto"`. It requires `Height="*"` or a fixed height, otherwise it collapses to zero height.
+11. **UserControl Toolbar Command Forwarding** — Embedded toolbars in custom controls must provide fallback delegation to the `DataContext` ViewModel's commands (`ExportPdfAsync`, `ExportDocxAsync`, `CopyPlainText`, etc.) when event handlers are unhooked.

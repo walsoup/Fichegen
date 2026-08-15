@@ -9,6 +9,7 @@ using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FicheGen.App.Services;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
@@ -19,7 +20,8 @@ namespace FicheGen.App.ViewModels;
 public enum ExportKind
 {
     Pdf,
-    Docx
+    Docx,
+    Rtf
 }
 
 /// <summary>Arguments de l'événement <see cref="ResultViewModel.ExportRequested"/>.</summary>
@@ -135,7 +137,10 @@ public partial class ResultViewModel : ObservableObject
     public partial GeneratedDocument? CurrentDocument { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewHtml))]
     public partial string CurrentHtml { get; set; }
+
+    public string PreviewHtml => CurrentHtml;
 
     [ObservableProperty]
     public partial string ActivePresetId { get; set; }
@@ -154,6 +159,23 @@ public partial class ResultViewModel : ObservableObject
 
     [ObservableProperty]
     public partial StatusSeverity CurrentStatusSeverity { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StudentViewButtonLabel))]
+    [NotifyPropertyChangedFor(nameof(StudentViewButtonIcon))]
+    public partial bool IsStudentView { get; set; }
+
+    public string StudentViewButtonLabel => IsStudentView ? "Version Élève" : "Corrigé Enseignant";
+    public string StudentViewButtonIcon => IsStudentView ? "\uE77B" : "\uE7BE";
+
+    [ObservableProperty]
+    public partial string? LastExportedFilePath { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowExportSuccessBanner { get; set; }
+
+    [ObservableProperty]
+    public partial string ExportSuccessMessage { get; set; }
 
     // ------------------------------------------------------------------
     // Annuler / Rétablir
@@ -236,6 +258,30 @@ public partial class ResultViewModel : ObservableObject
     /// <summary>Déclenché pour que la vue place le texte dans le presse-papiers.</summary>
     public event EventHandler<CopyRequestedEventArgs>? CopyRequested;
 
+    /// <summary>Déclenché pour créer une évaluation suite au document courant (Sprint 6 UX Document Chaining).</summary>
+    public event EventHandler<GeneratedDocument>? CreateEvaluationRequested;
+
+    /// <summary>Déclenché pour créer un quiz suite au document courant.</summary>
+    public event EventHandler<GeneratedDocument>? CreateQuizRequested;
+
+    [RelayCommand]
+    public void CreateFollowUpEvaluation()
+    {
+        if (CurrentDocument != null)
+        {
+            CreateEvaluationRequested?.Invoke(this, CurrentDocument);
+        }
+    }
+
+    [RelayCommand]
+    public void CreateFollowUpQuiz()
+    {
+        if (CurrentDocument != null)
+        {
+            CreateQuizRequested?.Invoke(this, CurrentDocument);
+        }
+    }
+
     // ------------------------------------------------------------------
     // Catalogues exposés à la vue
     // ------------------------------------------------------------------
@@ -292,6 +338,7 @@ public partial class ResultViewModel : ObservableObject
         RedoDescription = string.Empty;
         FindQuery = string.Empty;
         FindStatusText = string.Empty;
+        ExportSuccessMessage = string.Empty;
 
         // Restauration des préférences d'aperçu persistées (zoom + thème).
         try
@@ -316,6 +363,9 @@ public partial class ResultViewModel : ObservableObject
     public void LoadDocument(GeneratedDocument document, string html, string? presetId = null)
     {
         CurrentDocument = document;
+        IsStudentView = false;
+        ShowExportSuccessBanner = false;
+        LastExportedFilePath = null;
         CurrentHtml = html;
         if (!string.IsNullOrEmpty(presetId)) ActivePresetId = presetId;
 
@@ -331,17 +381,28 @@ public partial class ResultViewModel : ObservableObject
         SetStatus($"Document prêt — {DocumentStatsText}.", StatusSeverity.Success);
     }
 
-    /// <summary>Re-génère le HTML d'aperçu avec le thème actif (après modification IA).</summary>
+    /// <summary>Bascule entre le mode Corrigé enseignant et la Version élève (avec lignes pointillées).</summary>
+    [RelayCommand(CanExecute = nameof(HasDocument))]
+    public void ToggleStudentView()
+    {
+        IsStudentView = !IsStudentView;
+        RefreshRendering();
+        SetStatus(
+            IsStudentView ? "Affichage : Version Élève (prête pour impression/distribution)." : "Affichage : Version Enseignant (avec corrigé complet).",
+            StatusSeverity.Info);
+    }
+
+    /// <summary>Re-génère le HTML d'aperçu avec le thème actif (après modification IA ou bascule élève/corrigé).</summary>
     public void RefreshRendering()
     {
         if (CurrentDocument is null) return;
         try
         {
-            CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, _stylePresetService.GetPreset(ActivePresetId));
+            CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, _stylePresetService.GetPreset(ActivePresetId), isStudentVersion: IsStudentView);
         }
         catch
         {
-            CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument);
+            CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, isStudentVersion: IsStudentView);
         }
         ComputeDocumentStats();
     }
@@ -375,7 +436,7 @@ public partial class ResultViewModel : ObservableObject
         try
         {
             if (CurrentDocument is not null)
-                CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, _stylePresetService.GetPreset(presetId));
+                CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, _stylePresetService.GetPreset(presetId), isStudentVersion: IsStudentView);
 
             try { _preferencesStore?.SaveActivePresetId(presetId); } catch { /* persistance non critique */ }
 
@@ -495,6 +556,10 @@ public partial class ResultViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasDocument))]
     public async Task ExportDocxAsync() => await RunExportAsync(ExportKind.Docx);
 
+    /// <summary>Exporte le document au format RTF.</summary>
+    [RelayCommand(CanExecute = nameof(HasDocument))]
+    public async Task ExportRtfAsync() => await RunExportAsync(ExportKind.Rtf);
+
     private async Task RunExportAsync(ExportKind kind)
     {
         if (CurrentDocument is null) return;
@@ -502,32 +567,100 @@ public partial class ResultViewModel : ObservableObject
         var suggestedFileName = BuildSuggestedFileName(kind);
 
         // Sans service de flux : la vue prend le relais (sélecteur de fichier).
-        if (_exportWorkflow is null)
+        if (_exportWorkflow is null && kind != ExportKind.Rtf)
         {
             ExportRequested?.Invoke(this, new ExportRequestedEventArgs(kind, CurrentDocument, CurrentHtml, suggestedFileName));
             return;
         }
 
         IsBusy = true;
-        SetStatus(kind == ExportKind.Pdf ? "Export PDF en cours…" : "Export Word en cours…", StatusSeverity.Info);
+        SetStatus(kind switch
+        {
+            ExportKind.Pdf => "Export PDF en cours…",
+            ExportKind.Docx => "Export Word en cours…",
+            _ => "Export RTF en cours…"
+        }, StatusSeverity.Info);
         try
         {
-            var path = kind == ExportKind.Pdf
-                ? await _exportWorkflow.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, CancellationToken.None)
-                : await _exportWorkflow.ExportDocxAsync(CurrentDocument, suggestedFileName, CancellationToken.None);
+            var path = kind switch
+            {
+                ExportKind.Pdf => await _exportWorkflow!.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, CancellationToken.None),
+                ExportKind.Docx => await _exportWorkflow!.ExportDocxAsync(CurrentDocument, suggestedFileName, CancellationToken.None),
+                _ => await ExportRtfDirectAsync(CurrentDocument, suggestedFileName, CancellationToken.None)
+            };
 
-            SetStatus(
-                path is null ? "Export annulé." : $"Document exporté : {path}",
-                path is null ? StatusSeverity.Warning : StatusSeverity.Success);
+            if (path is not null)
+            {
+                LastExportedFilePath = path;
+                var fileName = Path.GetFileName(path);
+                ExportSuccessMessage = kind switch
+                {
+                    ExportKind.Pdf => $"Document PDF prêt : {fileName}",
+                    ExportKind.Docx => $"Document Word prêt : {fileName}",
+                    _ => $"Document RTF prêt : {fileName}"
+                };
+                ShowExportSuccessBanner = true;
+                SetStatus($"Document exporté : {path}", StatusSeverity.Success);
+            }
+            else
+            {
+                SetStatus("Export annulé.", StatusSeverity.Warning);
+            }
         }
         catch (Exception ex)
         {
-            SetStatus($"Échec de l'export : {ex.Message}", StatusSeverity.Error);
+            SetStatus($"Échec de l'export : {ErrorMessageTranslator.ToUserFriendlyMessage(ex)}", StatusSeverity.Error);
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>Ouvre le dernier fichier exporté avec l'application par défaut de Windows.</summary>
+    [RelayCommand]
+    public void OpenLastExportedFile()
+    {
+        if (string.IsNullOrWhiteSpace(LastExportedFilePath) || !File.Exists(LastExportedFilePath)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = LastExportedFilePath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Impossible d'ouvrir le fichier : {ex.Message}", StatusSeverity.Warning);
+        }
+    }
+
+    /// <summary>Ouvre l'Explorateur Windows et sélectionne le dernier fichier exporté.</summary>
+    [RelayCommand]
+    public void OpenLastExportedFolder()
+    {
+        if (string.IsNullOrWhiteSpace(LastExportedFilePath) || !File.Exists(LastExportedFilePath)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{LastExportedFilePath}\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Impossible d'ouvrir le dossier : {ex.Message}", StatusSeverity.Warning);
+        }
+    }
+
+    /// <summary>Ferme la bannière d'export réussi.</summary>
+    [RelayCommand]
+    public void DismissExportSuccessBanner()
+    {
+        ShowExportSuccessBanner = false;
     }
 
     /// <summary>Ctrl+P — Imprime le document courant.</summary>
@@ -665,7 +798,7 @@ public partial class ResultViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetStatus($"Échec de l'export de diagnostic : {ex.Message}", StatusSeverity.Error);
+            SetStatus($"Échec de l'export de diagnostic : {ErrorMessageTranslator.ToUserFriendlyMessage(ex)}", StatusSeverity.Error);
         }
         finally
         {
@@ -701,11 +834,26 @@ public partial class ResultViewModel : ObservableObject
         title = string.Join(' ', title.Split(' ', StringSplitOptions.RemoveEmptyEntries));
         if (title.Length == 0) title = "document";
 
-        var extension = kind == ExportKind.Pdf ? ".pdf" : ".docx";
+        var extension = kind switch
+        {
+            ExportKind.Pdf => ".pdf",
+            ExportKind.Docx => ".docx",
+            _ => ".rtf"
+        };
         return $"{title}{extension}";
     }
 
-    private void SetStatus(string message, StatusSeverity severity)
+    private async Task<string?> ExportRtfDirectAsync(GeneratedDocument document, string suggestedFileName, CancellationToken cancellationToken)
+    {
+        var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        Directory.CreateDirectory(targetDir);
+        var targetPath = Path.Combine(targetDir, suggestedFileName);
+        var bytes = _rtfWriter.ExportRtfBytes(document);
+        await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken).ConfigureAwait(false);
+        return targetPath;
+    }
+
+    public void SetStatus(string message, StatusSeverity severity)
     {
         StatusMessage = message;
         CurrentStatusSeverity = severity;

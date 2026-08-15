@@ -8,6 +8,7 @@ using FicheGen.App.ViewModels;
 using FicheGen.App.Views;
 using FicheGen.App.Views.Controls;
 using FicheGen.Core.Abstractions;
+using FicheGen.Core.Documents;
 using FicheGen.Core.Storage;
 using FicheGen.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -127,11 +128,83 @@ public sealed partial class MainWindow : Window
         UpdateTitleBarLayout();
 
         // ----- Badges dynamiques (IA, profil) -----
+        var readinessService = App.Services.GetService<IReadinessService>();
+        if (readinessService != null)
+        {
+            readinessService.ReadinessChanged += (s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() => UpdateAiChipUi(readinessService));
+            };
+        }
         RefreshAiChip();
         RefreshTeacherBadge();
 
         // ----- Navigation initiale : dernière section utilisée -----
         NavView.SelectedItem = FindNavItem(_shellState.LastNavigationTag) ?? NavView.MenuItems[0];
+
+        var historyVm = App.Services.GetService<HistoryViewModel>();
+        if (historyVm != null)
+        {
+            historyVm.DocumentOpened += (s, item) =>
+            {
+                var resultVm = App.Services.GetService<ResultViewModel>();
+                if (resultVm != null)
+                {
+                    if (!string.IsNullOrEmpty(item.Model.SourceJson))
+                    {
+                        try
+                        {
+                            var doc = System.Text.Json.JsonSerializer.Deserialize<GeneratedDocument>(item.Model.SourceJson);
+                            if (doc != null)
+                            {
+                                resultVm.LoadDocument(doc, item.Html ?? string.Empty, item.StylePresetId);
+                            }
+                        }
+                        catch { }
+                    }
+                    else if (string.IsNullOrEmpty(resultVm.CurrentHtml) && !string.IsNullOrEmpty(item.Html))
+                    {
+                        resultVm.CurrentHtml = item.Html;
+                    }
+                }
+
+                var tag = item.TypeKey switch
+                {
+                    "evaluation" => "EvaluationPage",
+                    "quiz" => "QuizPage",
+                    _ => "FichePage"
+                };
+                NavigateToTag(tag);
+            };
+        }
+
+        var resultViewModel = App.Services.GetService<ResultViewModel>();
+        if (resultViewModel != null)
+        {
+            resultViewModel.CreateEvaluationRequested += (s, doc) =>
+            {
+                var evalVm = App.Services.GetService<EvaluationViewModel>();
+                if (evalVm != null)
+                {
+                    evalVm.ClassLevel = doc.Metadata.ClassLevel ?? "CM2";
+                    evalVm.Subject = doc.Metadata.Subject ?? "Mathématiques";
+                    evalVm.Topics = doc.Metadata.Title ?? string.Empty;
+                }
+                NavigateToTag("EvaluationPage");
+            };
+
+            resultViewModel.CreateQuizRequested += (s, doc) =>
+            {
+                var quizVm = App.Services.GetService<QuizViewModel>();
+                if (quizVm != null)
+                {
+                    quizVm.ClassLevel = doc.Metadata.ClassLevel ?? "CM2";
+                    quizVm.Subject = doc.Metadata.Subject ?? "Mathématiques";
+                    quizVm.Topic = doc.Metadata.Title ?? string.Empty;
+                }
+                NavigateToTag("QuizPage");
+            };
+        }
 
         RootGrid.Loaded += OnMainWindowLoaded;
         _appWindow.Changed += OnAppWindowChanged;
@@ -241,9 +314,9 @@ public sealed partial class MainWindow : Window
             };
 
             var res = await firstRunDlg.ShowAsync();
+            settings.IsFirstRunCompleted = true; // Persiste le choix même en cas d'ignorance (UX-08)
             if (res == ContentDialogResult.Primary)
             {
-                settings.IsFirstRunCompleted = true;
                 settings.Features.Telemetry = firstRunDlg.TelemetryEnabled;
                 if (!string.IsNullOrWhiteSpace(firstRunDlg.GuidesPath))
                 {
@@ -268,27 +341,11 @@ public sealed partial class MainWindow : Window
                 ShowHint("Bienvenue dans PROFstudio 👋",
                     "Votre espace est prêt ! Cliquez sur « Nouvelle fiche » pour démarrer votre premier document.");
             }
-        }
-
-        // Navigation initiale garantie
-        if (ContentFrame.Content == null)
-        {
-            var initialTag = _shellState.LastNavigationTag ?? "FichePage";
-            var initialItem = FindNavItem(initialTag) ?? (NavView.MenuItems.Count > 0 ? NavView.MenuItems[0] as NavigationViewItem : null);
-            if (initialItem != null)
+            else
             {
-                NavView.SelectedItem = initialItem;
+                await settingsStore.SaveSettingsAsync(settings);
             }
-            var pageType = (initialItem?.Tag?.ToString() ?? initialTag) switch
-            {
-                "FichePage" => typeof(FichePage),
-                "EvaluationPage" => typeof(EvaluationPage),
-                "QuizPage" => typeof(QuizPage),
-                "HistoryPage" => typeof(HistoryPage),
-                "SettingsPage" => typeof(SettingsPage),
-                _ => typeof(FichePage)
-            };
-            NavigateTo(pageType, initialItem?.Tag?.ToString() ?? initialTag);
+            RefreshAiChip();
         }
     }
 
@@ -406,7 +463,7 @@ public sealed partial class MainWindow : Window
 
         void ApplyToHistory(HistoryPage hp)
         {
-            TryInvokeMethod(hp, "SetSearchQuery", query);
+            hp.SetSearchQuery(query);
             hp.FocusSearchBox();
         }
 
@@ -446,12 +503,25 @@ public sealed partial class MainWindow : Window
 
     private void ToggleAssistantVisibility(bool isVisible)
     {
+        if (ContentFrame.Content is IAssistantHostPage hostPage)
+        {
+            hostPage.SetAssistantVisible(isVisible);
+        }
     }
 
-    // ==========================================================================
-    //  Actions rapides de la barre de titre
-    // ==========================================================================
-    private void OnAiChipClicked(object sender, RoutedEventArgs e) => NavigateToTag("SettingsPage");
+    private async void OnAiChipClicked(object sender, RoutedEventArgs e)
+    {
+        var readiness = App.Services.GetService<IReadinessService>();
+        if (readiness != null && (readiness.State == ReadinessState.Degraded || readiness.State == ReadinessState.Offline))
+        {
+            await readiness.RefreshAsync();
+            UpdateAiChipUi(readiness);
+        }
+        else
+        {
+            NavigateToTag("SettingsPage");
+        }
+    }
 
     private void OnNewFicheClicked(object sender, RoutedEventArgs e) => CreateNewFiche();
 
@@ -493,7 +563,7 @@ public sealed partial class MainWindow : Window
         SetStatus("📄 Nouvelle fiche");
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
-            TryExecuteCommand(dc, out _, "NewFicheCommand", "NewCommand", "ResetFormCommand", "ResetCommand"))
+            ExecuteMatchingCommand(dc, out _, "ResetFormCommand", "NewFicheCommand"))
         {
             ShowHint("Nouvelle fiche", "Le formulaire est prêt — à vous de jouer ! ✨");
         }
@@ -821,43 +891,45 @@ public sealed partial class MainWindow : Window
     }
 
     // ==========================================================================
-    //  Badges dynamiques : puce IA & profil enseignant
+    //  Badges dynamiques : puce IA & profil enseignant (IReadinessService UX-05)
     // ==========================================================================
     public void RefreshAiChip()
     {
-        string? provider = null;
-        string? model = null;
+        var readiness = App.Services.GetService<IReadinessService>();
+        if (readiness == null) return;
 
-        try
+        _ = readiness.RefreshAsync();
+        UpdateAiChipUi(readiness);
+    }
+
+    private void UpdateAiChipUi(IReadinessService readiness)
+    {
+        AiStatusGlyph.Text = readiness.ShapeGlyph;
+        AiProviderChipText.Text = readiness.StatusTitle;
+
+        switch (readiness.State)
         {
-            var settings = _settingsStore.GetSettings<AppSettings>();
-            provider = FindStringProperty(settings, "provider")
-                    ?? FindStringProperty(settings, "fournisseur");
-            model = FindStringProperty(settings, "model");
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(ex, "Lecture de la configuration IA impossible.");
+            case ReadinessState.Ready:
+                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129));
+                break;
+            case ReadinessState.Checking:
+                AiStatusGlyph.Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
+                break;
+            case ReadinessState.Degraded:
+            case ReadinessState.Offline:
+                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 234, 179, 8));
+                break;
+            case ReadinessState.Blocked:
+                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68));
+                break;
+            case ReadinessState.NotConfigured:
+            default:
+                AiStatusGlyph.Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"];
+                break;
         }
 
-        if (!string.IsNullOrWhiteSpace(model))
-        {
-            AiProviderChipText.Text = string.IsNullOrWhiteSpace(provider)
-                ? $"🤖 {model}"
-                : $"🤖 {model} ({provider})";
-            AiStatusDot.Fill = new SolidColorBrush(Color.FromArgb(255, 16, 185, 129));
-            ToolTipService.SetToolTip(AiProviderChip,
-                $"Fournisseur d'IA : {provider ?? "inconnu"}\nModèle : {model}\nCliquer pour ouvrir les Paramètres (Ctrl+,)");
-            AutomationProperties.SetName(AiProviderChip,
-                $"Fournisseur d'IA actuel : {model} ({provider}). Ouvrir les paramètres.");
-        }
-        else
-        {
-            AiProviderChipText.Text = "🤖 IA à configurer";
-            AiStatusDot.Fill = new SolidColorBrush(Color.FromArgb(255, 154, 163, 178));
-            ToolTipService.SetToolTip(AiProviderChip,
-                "Aucun fournisseur d'IA configuré.\nCliquer pour ouvrir les Paramètres (Ctrl+,)");
-        }
+        ToolTipService.SetToolTip(AiProviderChip, readiness.StatusDetails);
+        AutomationProperties.SetName(AiProviderChip, $"{readiness.StatusTitle}. {readiness.StatusDetails}");
     }
 
     private void RefreshTeacherBadge()
@@ -932,7 +1004,7 @@ public sealed partial class MainWindow : Window
 
         if (ContentFrame.Content is Page { DataContext: object dc })
         {
-            if (TryExecuteCommand(dc, out bool found,
+            if (ExecuteMatchingCommand(dc, out bool found,
                     "GenerateFicheCommand", "GenerateEvaluationCommand", "GenerateQuizCommand", "GenerateCommand"))
             {
                 SetStatus("⏳ Génération en cours…");
@@ -956,7 +1028,7 @@ public sealed partial class MainWindow : Window
         ShellHintTip.IsOpen = false;
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
-            TryExecuteCommand(dc, out _, "CancelCommand", "CancelGenerationCommand"))
+            ExecuteMatchingCommand(dc, out _, "CancelCommand", "CancelGenerationCommand"))
         {
             SetStatus("✋ Génération annulée");
             ShowHint("Annulation", "La génération en cours a été annulée.");
@@ -989,7 +1061,7 @@ public sealed partial class MainWindow : Window
 
         if (ContentFrame.Content is Page { DataContext: object dc })
         {
-            if (TryExecuteCommand(dc, out bool found,
+            if (ExecuteMatchingCommand(dc, out bool found,
                     "ExportCommand", "ExportDocxCommand", "ExportPdfCommand", "ExportRtfCommand"))
             {
                 SetStatus("📄 Exportation du document…");
@@ -1013,14 +1085,9 @@ public sealed partial class MainWindow : Window
         _isPreviewVisible = !_isPreviewVisible;
 
         bool handled = false;
-        if (ContentFrame.Content is Page page)
+        if (ContentFrame.Content is Page page && page.DataContext is object dc)
         {
-            handled = TryInvokeMethod(page, "SetPreviewPaneVisibility", _isPreviewVisible);
-
-            if (!handled && page.DataContext is object dc)
-            {
-                handled = TryExecuteCommand(dc, out _, "TogglePreviewCommand");
-            }
+            handled = ExecuteMatchingCommand(dc, out _, "TogglePreviewCommand");
         }
 
         ShowHint("Aperçu", handled
@@ -1034,7 +1101,7 @@ public sealed partial class MainWindow : Window
 
         if (ContentFrame.Content is Page { DataContext: object dc })
         {
-            if (TryExecuteCommand(dc, out bool found,
+            if (ExecuteMatchingCommand(dc, out bool found,
                     "PrintCommand", "ExportPdfCommand", "PrintPdfCommand"))
             {
                 SetStatus("🖨️ Préparation de l'impression…");
@@ -1069,7 +1136,7 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
-            TryExecuteCommand(dc, out _, "UndoCommand", "RestoreLastDeletedCommand", "UndoDeleteCommand"))
+            ExecuteMatchingCommand(dc, out _, "UndoCommand", "RestoreLastDeletedCommand", "UndoDeleteCommand"))
         {
             SetStatus("↩️ Action annulée");
             ShowHint("Annulation", "Dernière action annulée. ↩️");
@@ -1128,47 +1195,93 @@ public sealed partial class MainWindow : Window
     }
 
     // ==========================================================================
-    //  Dispatch réflexif des commandes (compatible CommunityToolkit.Mvvm)
+    //  Dispatch typé des commandes
     // ==========================================================================
-    private static bool TryExecuteCommand(object viewModel, out bool found, params string[] commandNames)
+    private static bool ExecuteMatchingCommand(object? viewModel, out bool found, params string[] commandNames)
     {
         found = false;
-        var type = viewModel.GetType();
+        if (viewModel is null) return false;
 
-        foreach (var name in commandNames)
+        if (viewModel is FicheFormViewModel fvm)
         {
-            var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-            if (prop?.GetValue(viewModel) is System.Windows.Input.ICommand cmd)
+            if (commandNames.Contains("GenerateFicheCommand") || commandNames.Contains("GenerateCommand"))
             {
                 found = true;
-                if (cmd.CanExecute(null))
-                {
-                    cmd.Execute(null);
-                    return true;
-                }
-                return false; // Commande trouvée mais occupée / indisponible
+                if (fvm.GenerateFicheCommand.CanExecute(null)) { fvm.GenerateFicheCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("CancelGenerationCommand") || commandNames.Contains("CancelCommand"))
+            {
+                found = true;
+                if (fvm.CancelGenerationCommand.CanExecute(null)) { fvm.CancelGenerationCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("ResetFormCommand") || commandNames.Contains("NewFicheCommand"))
+            {
+                found = true;
+                if (fvm.ResetFormCommand.CanExecute(null)) { fvm.ResetFormCommand.Execute(null); return true; }
+                return false;
             }
         }
+        else if (viewModel is EvaluationViewModel evm)
+        {
+            if (commandNames.Contains("GenerateEvaluationCommand") || commandNames.Contains("GenerateCommand") || commandNames.Contains("GenerateFicheCommand"))
+            {
+                found = true;
+                if (evm.GenerateEvaluationCommand.CanExecute(null)) { evm.GenerateEvaluationCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("CancelGenerationCommand") || commandNames.Contains("CancelCommand"))
+            {
+                found = true;
+                if (evm.CancelGenerationCommand.CanExecute(null)) { evm.CancelGenerationCommand.Execute(null); return true; }
+                return false;
+            }
+        }
+        else if (viewModel is QuizViewModel qvm)
+        {
+            if (commandNames.Contains("GenerateQuizCommand") || commandNames.Contains("GenerateCommand") || commandNames.Contains("GenerateFicheCommand"))
+            {
+                found = true;
+                if (qvm.GenerateQuizCommand.CanExecute(null)) { qvm.GenerateQuizCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("CancelGenerationCommand") || commandNames.Contains("CancelCommand"))
+            {
+                found = true;
+                if (qvm.CancelGenerationCommand.CanExecute(null)) { qvm.CancelGenerationCommand.Execute(null); return true; }
+                return false;
+            }
+        }
+        else if (viewModel is HistoryViewModel)
+        {
+            // History commands handled directly on page
+        }
+
+        var resultVm = App.Services.GetService<ResultViewModel>();
+        if (resultVm != null && resultVm.HasDocument)
+        {
+            if (commandNames.Contains("ExportPdfCommand") || commandNames.Contains("ExportCommand"))
+            {
+                found = true;
+                if (resultVm.ExportPdfCommand.CanExecute(null)) { resultVm.ExportPdfCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("ExportDocxCommand"))
+            {
+                found = true;
+                if (resultVm.ExportDocxCommand.CanExecute(null)) { resultVm.ExportDocxCommand.Execute(null); return true; }
+                return false;
+            }
+            if (commandNames.Contains("UndoCommand") && resultVm.CanUndo)
+            {
+                found = true;
+                resultVm.Undo();
+                return true;
+            }
+        }
+
         return false;
-    }
-
-    private static bool TryInvokeMethod(object target, string methodName, params object[] parameters)
-    {
-        var method = target.GetType()
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == parameters.Length);
-
-        if (method is null) return false;
-
-        try
-        {
-            method.Invoke(target, parameters);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     // ==========================================================================
@@ -1369,6 +1482,19 @@ public sealed partial class MainWindow : Window
         {
             Log.Debug(ex, "Affichage de la boîte de dialogue À propos impossible.");
         }
+    }
+
+    private void NotificationAction_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateToTag("SettingsPage");
+    }
+
+    private void NotificationDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        NotificationActionButton.Visibility = Visibility.Collapsed;
+        NotificationDismissButton.Visibility = Visibility.Collapsed;
+        StatusText.Text = "Prêt pour une nouvelle séance";
+        NotificationIcon.Text = "✨";
     }
 }
 

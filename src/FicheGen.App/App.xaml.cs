@@ -24,6 +24,7 @@ public partial class App : Application
     public static IServiceProvider Services => ((App)Current)._host.Services;
 
     public MainWindow? MainWindow { get; private set; }
+    public static MainWindow? CurrentMainWindow => (Current as App)?.MainWindow;
 
     public App()
     {
@@ -47,6 +48,7 @@ public partial class App : Application
                 services.AddSingleton<ISettingsStore, SettingsStore>();
                 services.AddSingleton<IClock, SystemClock>();
                 services.AddSingleton<IHistoryRepository, HistoryRepository>();
+                services.AddSingleton<IDraftStore, FileDraftStore>();
                 services.AddSingleton<StylePresetService>();
                 services.AddSingleton<PickerService>();
                 services.AddSingleton<DialogService>();
@@ -59,18 +61,20 @@ public partial class App : Application
                 services.AddSingleton<IDocxExporter, DocxExporter>();
                 services.AddSingleton<IRtfDocumentWriter, RtfDocumentWriter>();
                 services.AddSingleton<IDocumentPdfExporter, WebView2PdfExporter>();
+                services.AddSingleton<IExportWorkflowService, ExportWorkflowService>();
 
                 services.AddSingleton<GenerationOrchestrator>();
                 services.AddSingleton<IAssistantService, AssistantService>();
+                services.AddSingleton<IReadinessService, ReadinessService>();
 
                 // ViewModels
                 services.AddSingleton<ResultViewModel>();
-                services.AddTransient<FicheFormViewModel>();
-                services.AddTransient<EvaluationViewModel>();
-                services.AddTransient<QuizViewModel>();
-                services.AddTransient<AssistantViewModel>();
-                services.AddTransient<HistoryViewModel>();
-                services.AddTransient<SettingsViewModel>();
+                services.AddSingleton<FicheFormViewModel>();
+                services.AddSingleton<EvaluationViewModel>();
+                services.AddSingleton<QuizViewModel>();
+                services.AddSingleton<AssistantViewModel>();
+                services.AddSingleton<HistoryViewModel>();
+                services.AddSingleton<SettingsViewModel>();
             })
             .Build();
     }

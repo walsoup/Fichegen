@@ -6,35 +6,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:FicheGen.App.Views.Controls"
     xmlns:local="using:FicheGen.App.Views"
-    xmlns:converters="using:FicheGen.App.Converters"
     xmlns:vm="using:FicheGen.App.ViewModels"
     mc:Ignorable="d">
 
     <Page.Resources>
         <ResourceDictionary>
-
-            <!-- Prise en charge du contraste élevé pour les ressources personnalisées -->
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Default">
-                    <StaticResource x:Key="HistoryChipBackgroundBrush" ResourceKey="CardBackgroundFillColorDefaultBrush"/>
-                    <StaticResource x:Key="HistoryChipBackgroundPointerOverBrush" ResourceKey="SubtleFillColorSecondaryBrush"/>
-                    <StaticResource x:Key="HistoryChipBackgroundCheckedBrush" ResourceKey="AccentFillColorDefaultBrush"/>
-                    <StaticResource x:Key="HistoryChipCheckedForegroundBrush" ResourceKey="TextOnAccentFillColorPrimaryBrush"/>
-                    <StaticResource x:Key="HistoryChipBorderBrush" ResourceKey="ControlStrokeColorDefaultBrush"/>
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="HighContrast">
-                    <SolidColorBrush x:Key="HistoryChipBackgroundBrush" Color="#FF000000"/>
-                    <SolidColorBrush x:Key="HistoryChipBackgroundPointerOverBrush" Color="#FF202020"/>
-                    <SolidColorBrush x:Key="HistoryChipBackgroundCheckedBrush" Color="#FF1AEBFF"/>
-                    <SolidColorBrush x:Key="HistoryChipCheckedForegroundBrush" Color="#FF000000"/>
-                    <SolidColorBrush x:Key="HistoryChipBorderBrush" Color="#FFFFFFFF"/>
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-
-            <!-- Convertisseurs -->
-            <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisInverted" IsInverted="True"/>
-
             <!-- Style « puce » pour les filtres (anneau de focus système conservé) -->
             <Style x:Key="FilterChipRadioButtonStyle" TargetType="RadioButton">
                 <Setter Property="MinWidth" Value="0"/>
@@ -42,8 +18,8 @@
                 <Setter Property="Margin" Value="0,0,8,0"/>
                 <Setter Property="Padding" Value="14,6"/>
                 <Setter Property="FontSize" Value="13"/>
-                <Setter Property="Background" Value="{ThemeResource HistoryChipBackgroundBrush}"/>
-                <Setter Property="BorderBrush" Value="{ThemeResource HistoryChipBorderBrush}"/>
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
                 <Setter Property="UseSystemFocusVisuals" Value="True"/>
@@ -71,7 +47,7 @@
                                     <VisualState x:Name="Normal"/>
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
-                                            <Setter Target="Chip.Background" Value="{ThemeResource HistoryChipBackgroundPointerOverBrush}"/>
+                                            <Setter Target="Chip.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
@@ -89,9 +65,9 @@
                                     <VisualState x:Name="Unchecked"/>
                                     <VisualState x:Name="Checked">
                                         <VisualState.Setters>
-                                            <Setter Target="Chip.Background" Value="{ThemeResource HistoryChipBackgroundCheckedBrush}"/>
+                                            <Setter Target="Chip.Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
                                             <Setter Target="Chip.BorderBrush" Value="Transparent"/>
-                                            <Setter Target="ChipContent.Foreground" Value="{ThemeResource HistoryChipCheckedForegroundBrush}"/>
+                                            <Setter Target="ChipContent.Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
@@ -136,30 +112,39 @@
         </ResourceDictionary>
     </Page.Resources>
 
-    <Grid x:Name="RootGrid" Padding="12">
+    <Grid x:Name="RootGrid" Padding="20,16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- En-tête serein -->
+        <StackPanel Grid.Row="0" Spacing="3" Margin="0,0,0,16">
+            <TextBlock Text="Mes documents" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="SemiBold"/>
+            <TextBlock Text="Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur."
+                       Style="{StaticResource CaptionSecondaryStyle}"/>
+        </StackPanel>
+
         <!-- Barre de recherche -->
         <AutoSuggestBox x:Name="SearchBox"
-                        Grid.Row="0"
+                        Grid.Row="1"
                         Margin="0,0,0,12"
-                        PlaceholderText="Rechercher dans l'historique..."
+                        PlaceholderText="Rechercher par titre, matière, niveau ou mot-clé…"
                         Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         QuerySubmitted="OnSearchQuerySubmitted"
                         QueryIcon="Find"
-                        Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisInverted}}"/>
+                        Visibility="{x:Bind local:HistoryPage.InverseBoolToVisibility(ViewModel.IsLoading), Mode=OneWay}"/>
 
         <!-- Filtres par type -->
         <RadioButtons x:Name="FilterRadioButtons"
-                      Grid.Row="1"
-                      Margin="0,0,0,12"
+                      Grid.Row="2"
+                      Margin="0,0,0,16"
                       MaxColumns="5"
+                      SelectedIndex="0"
                       SelectionChanged="OnFilterSelectionChanged"
-                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisInverted}}">
+                      Visibility="{x:Bind local:HistoryPage.InverseBoolToVisibility(ViewModel.IsLoading), Mode=OneWay}">
             <RadioButton Content="Tout" 
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
             <RadioButton Content="Fiches"
@@ -173,15 +158,15 @@
         </RadioButtons>
 
         <!-- Indicateur de chargement -->
-        <ProgressRing Grid.Row="2"
+        <ProgressRing Grid.Row="3"
                       IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
-                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                      Visibility="{x:Bind local:HistoryPage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"/>
 
         <!-- État vide -->
-        <StackPanel Grid.Row="2"
-                    Visibility="{x:Bind ViewModel.ShowEmptyState, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+        <StackPanel Grid.Row="3"
+                    Visibility="{x:Bind local:HistoryPage.BoolToVisibility(ViewModel.ShowEmptyState), Mode=OneWay}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
             <FontIcon FontFamily="Segoe MDL2 Assets"
@@ -196,8 +181,8 @@
         </StackPanel>
 
         <!-- Contenu principal - Liste des éléments -->
-        <ScrollViewer Grid.Row="2"
-                      Visibility="{x:Bind ViewModel.HasResults, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+        <ScrollViewer Grid.Row="3"
+                      Visibility="{x:Bind local:HistoryPage.BoolToVisibility(ViewModel.HasResults), Mode=OneWay}">
             <StackPanel>
                 <!-- Statistiques -->
                 <StackPanel Orientation="Horizontal"
@@ -236,7 +221,11 @@
                                             <Border Style="{StaticResource HistoryItemContainerStyle}" 
                                                     Margin="0,0,0,8"
                                                     Tapped="OnItemClicked"
-                                                    Tag="{Binding}">
+                                                    KeyDown="OnItemKeyDown"
+                                                    IsTabStop="True"
+                                                    Tag="{Binding}"
+                                                    AutomationProperties.Name="{x:Bind Title}"
+                                                    AutomationProperties.HelpText="{x:Bind TypeDisplay}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto"/>
@@ -282,28 +271,55 @@
                                                                Text="{x:Bind Snippet}"
                                                                FontSize="12"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                               Visibility="{x:Bind HasSnippet, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                               Visibility="{x:Bind local:HistoryPage.BoolToVisibility(HasSnippet), Mode=OneWay}"
                                                                Margin="0,4,0,0"
                                                                TextTrimming="CharacterEllipsis"/>
 
-                                                    <!-- Boutons d'action -->
+                                                    <!-- Boutons d'action (§8.2) -->
                                                     <StackPanel Grid.Column="2" 
                                                                 Grid.Row="0"
                                                                 Orientation="Horizontal"
                                                                 VerticalAlignment="Center">
                                                         <Button Style="{ThemeResource SubtleButtonStyle}"
                                                                 FontFamily="Segoe MDL2 Assets"
-                                                                Content="{x:Bind FavoriteGlyph}"
-                                                                ToolTipService.ToolTip="{x:Bind FavoriteText}"
+                                                                Content="{x:Bind FavoriteGlyph, Mode=OneWay}"
+                                                                ToolTipService.ToolTip="{x:Bind FavoriteText, Mode=OneWay}"
+                                                                AutomationProperties.Name="{x:Bind FavoriteText, Mode=OneWay}"
                                                                 Tag="{Binding}"
                                                                 Click="OnFavoriteClicked"
                                                                 Margin="0,0,4,0"/>
+                                                        
                                                         <Button Style="{ThemeResource SubtleButtonStyle}"
-                                                                FontFamily="Segoe MDL2 Assets"
-                                                                Content="&#xE74D;"
-                                                                ToolTipService.ToolTip="Supprimer"
-                                                                Tag="{Binding}"
-                                                                Click="OnDeleteClicked"/>
+                                                                ToolTipService.ToolTip="Options du document (⋯)"
+                                                                AutomationProperties.Name="Options du document"
+                                                                Tag="{Binding}">
+                                                            <FontIcon Glyph="&#xE712;" FontSize="12"/>
+                                                            <Button.Flyout>
+                                                                <MenuFlyout>
+                                                                    <MenuFlyoutItem Text="Ouvrir le document" Click="OnOpenMenuItemClicked" Tag="{Binding}">
+                                                                        <MenuFlyoutItem.Icon>
+                                                                            <FontIcon Glyph="&#xE8E5;"/>
+                                                                        </MenuFlyoutItem.Icon>
+                                                                    </MenuFlyoutItem>
+                                                                    <MenuFlyoutItem Text="Exporter en Word (.docx)" Click="OnExportWordMenuItemClicked" Tag="{Binding}">
+                                                                        <MenuFlyoutItem.Icon>
+                                                                            <FontIcon Glyph="&#xE8A5;"/>
+                                                                        </MenuFlyoutItem.Icon>
+                                                                    </MenuFlyoutItem>
+                                                                    <MenuFlyoutItem Text="Exporter en PDF" Click="OnExportPdfMenuItemClicked" Tag="{Binding}">
+                                                                        <MenuFlyoutItem.Icon>
+                                                                            <FontIcon Glyph="&#xEA90;"/>
+                                                                        </MenuFlyoutItem.Icon>
+                                                                    </MenuFlyoutItem>
+                                                                    <MenuFlyoutSeparator/>
+                                                                    <MenuFlyoutItem Text="Supprimer le document" Click="OnDeleteClicked" Tag="{Binding}">
+                                                                        <MenuFlyoutItem.Icon>
+                                                                            <FontIcon Glyph="&#xE74D;"/>
+                                                                        </MenuFlyoutItem.Icon>
+                                                                    </MenuFlyoutItem>
+                                                                </MenuFlyout>
+                                                            </Button.Flyout>
+                                                        </Button>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -316,5 +332,23 @@
                 </ListView>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Toast d'annulation de suppression (§8.3) -->
+        <Border x:Name="UndoToast" Grid.Row="0"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,24" Padding="16,10" CornerRadius="8"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="UndoToastText" Text="Document supprimé" FontSize="13" VerticalAlignment="Center"/>
+                <Button x:Name="UndoToastButton" Content="Annuler" Style="{ThemeResource AccentButtonStyle}"
+                        Padding="12,4" FontSize="12" Click="OnUndoDeleteClicked"/>
+                <Button Style="{ThemeResource SubtleButtonStyle}" Padding="6" Click="OnDismissUndoClicked">
+                    <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                </Button>
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

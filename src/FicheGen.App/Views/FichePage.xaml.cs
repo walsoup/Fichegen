@@ -13,22 +13,10 @@ namespace FicheGen.App.Views;
 /// Espace de génération des fiches pédagogiques : modèles rapides, badges Eduscol,
 /// améliorateurs de prompt, validation en ligne et disposition adaptative.
 /// </summary>
-public sealed partial class FichePage : Page
+public sealed partial class FichePage : Page, IAssistantHostPage
 {
     private const string FormWidthSettingsKey = "FicheGen.FichePage.FormColumnWidth";
-    private const string PdfTipSettingsKey = "FicheGen.FichePage.PdfTipShown";
-
-    private const string DysSnippet =
-        "Adapte la fiche pour des élèves à besoins éducatifs particuliers (DYS) : consignes courtes et numérotées, " +
-        "mise en page aérée, exemples guidés pas à pas et temps de réalisation majoré.";
-    private const string ProgressifSnippet =
-        "Propose des exercices progressifs en trois niveaux : réactivation des prérequis, entraînement guidé, " +
-        "puis approfondissement pour les élèves les plus à l'aise.";
-    private const string BilanSnippet =
-        "Conclus la fiche par un bilan visuel : carte mentale ou schéma récapitulatif à compléter par l'élève " +
-        "pour ancrer les apprentissages.";
-
-    private bool _suppressEnhancerSync;
+    private bool _isAssistantVisible;
     private bool _assistantOverlayOpen;
 
     private sealed class SubjectOption
@@ -84,6 +72,7 @@ public sealed partial class FichePage : Page
     {
         InitializeComponent();
         SubjectCombo.ItemsSource = SubjectOptions;
+        AssistantHostHelper.WireAssistantPane(AssistantPaneControl);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -93,9 +82,7 @@ public sealed partial class FichePage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         RestoreFormColumnWidth();
-        UpdateCycleBadges();
         ValidateForm();
-        MaybeShowPdfTip();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e) => PersistFormColumnWidth();
@@ -123,66 +110,9 @@ public sealed partial class FichePage : Page
         catch { /* Non bloquant. */ }
     }
 
-    // ───────────────────────── Démarrage rapide ─────────────────────────
+    // ───────────────────────── Niveau & Matière ─────────────────────────
 
-    private void QuickStart_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement element || element.Tag is not string tag) return;
-        var parts = tag.Split('|');
-        if (parts.Length < 4) return;
-
-        LevelCombo.SelectedValue = parts[0];
-        SubjectCombo.Text = parts[1];
-        TopicBox.Text = parts[2];
-        if (double.TryParse(parts[3], out var minutes))
-            DurationBox.Value = Math.Clamp(minutes, DurationBox.Minimum, DurationBox.Maximum);
-
-        UpdateCycleBadges();
-        ValidateForm();
-    }
-
-    // ───────────────────────── Badges Cycle Eduscol ─────────────────────────
-
-    private void LevelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        UpdateCycleBadges();
-        ValidateForm();
-    }
-
-    private void UpdateCycleBadges()
-    {
-        var level = LevelCombo.SelectedValue as string ?? string.Empty;
-        string cycle, focus;
-        switch (level)
-        {
-            case "CP":
-            case "CE1":
-            case "CE2":
-                cycle = "🎓 Cycle 2 · Apprentissages fondamentaux";
-                focus = "🧠 Lire, écrire, compter";
-                break;
-            case "CM1":
-            case "CM2":
-            case "6e":
-                cycle = "🎓 Cycle 3 · Consolidation";
-                focus = "🧠 Autonomie et abstraction";
-                break;
-            case "5e":
-            case "4e":
-            case "3e":
-                cycle = "🎓 Cycle 4 · Approfondissements";
-                focus = "🧠 Méthode et pensée critique";
-                break;
-            default:
-                cycle = "🎓 Sélectionnez un niveau";
-                focus = "🧠 Compétences du cycle";
-                break;
-        }
-        CycleBadgeText.Text = cycle;
-        CompetenceBadgeText.Text = focus;
-    }
-
-    // ───────────────────────── Matière ─────────────────────────
+    private void LevelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => ValidateForm();
 
     private void SubjectCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -215,100 +145,37 @@ public sealed partial class FichePage : Page
 
     private void TopicBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) => ValidateForm();
 
-    // ───────────────────────── Durée ─────────────────────────
+    // ───────────────────────── Durée & Consignes ─────────────────────────
 
     private void DurationBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => ValidateForm();
 
-    // ───────────────────────── Améliorateurs de prompt ─────────────────────────
-
-    private static string GetSnippet(string key) => key switch
+    private void OnDurationQuickPickClicked(object sender, RoutedEventArgs e)
     {
-        "Dys" => DysSnippet,
-        "Progressif" => ProgressifSnippet,
-        "Bilan" => BilanSnippet,
-        _ => string.Empty
-    };
-
-    private void Enhancer_Checked(object sender, RoutedEventArgs e) => SetSnippet((sender as FrameworkElement)?.Tag as string, true);
-    private void Enhancer_Unchecked(object sender, RoutedEventArgs e) => SetSnippet((sender as FrameworkElement)?.Tag as string, false);
-
-    private void SetSnippet(string? key, bool add)
-    {
-        if (string.IsNullOrEmpty(key)) return;
-        var snippet = GetSnippet(key!);
-        if (snippet.Length == 0) return;
-
-        _suppressEnhancerSync = true;
-        var text = InstructionsBox.Text ?? string.Empty;
-        if (add)
+        if (sender is Button btn && btn.Tag is string tagStr && int.TryParse(tagStr, out var mins))
         {
-            if (!text.Contains(snippet, StringComparison.Ordinal))
-                InstructionsBox.Text = string.IsNullOrWhiteSpace(text) ? snippet : text.TrimEnd() + "\n" + snippet;
+            DurationBox.Value = mins;
         }
-        else if (text.Contains(snippet, StringComparison.Ordinal))
-        {
-            InstructionsBox.Text = text.Replace(snippet, string.Empty).Replace("\n\n", "\n").Trim();
-        }
-        _suppressEnhancerSync = false;
     }
 
-    private void InstructionsBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (!_suppressEnhancerSync)
-        {
-            // Si l'enseignant modifie le texte à la main, les bascules restent synchronisées.
-            SyncEnhancerToggle(DysEnhancer, DysSnippet);
-            SyncEnhancerToggle(ProgressifEnhancer, ProgressifSnippet);
-            SyncEnhancerToggle(BilanEnhancer, BilanSnippet);
-        }
-        ValidateForm();
-    }
-
-    private void SyncEnhancerToggle(ToggleButton toggle, string snippet)
-    {
-        var contains = (InstructionsBox.Text ?? string.Empty).Contains(snippet, StringComparison.Ordinal);
-        if (toggle.IsChecked != contains)
-            toggle.IsChecked = contains; // SetSnippet est idempotent : aucune boucle.
-    }
+    private void InstructionsBox_TextChanged(object sender, TextChangedEventArgs e) => ValidateForm();
 
     // ───────────────────────── Guide PDF ─────────────────────────
 
     private async void PdfDropZoneControl_Tapped(object sender, TappedRoutedEventArgs e)
     {
-        // Laisse le temps au sélecteur de fichiers de mettre à jour GuideFilePath.
         await Task.Delay(450);
         ValidateForm();
     }
 
     private void PdfDropZoneControl_Drop(object sender, DragEventArgs e) => ValidateForm();
 
-    private void MaybeShowPdfTip()
-    {
-        try
-        {
-            var values = ApplicationData.Current.LocalSettings.Values;
-            if (!values.ContainsKey(PdfTipSettingsKey))
-            {
-                PdfTeachingTip.Target = PdfDropZoneControl;
-                PdfTeachingTip.IsOpen = true;
-            }
-        }
-        catch { /* Astuce non critique. */ }
-    }
-
-    private void PdfTeachingTip_ActionButtonClick(TeachingTip sender, object args) => MarkPdfTipShown();
-    private void PdfTeachingTip_Closed(TeachingTip sender, TeachingTipClosedEventArgs args) => MarkPdfTipShown();
-
-    private static void MarkPdfTipShown()
-    {
-        try { ApplicationData.Current.LocalSettings.Values[PdfTipSettingsKey] = true; }
-        catch { /* Ignoré. */ }
-    }
-
     // ───────────────────────── Validation en ligne ─────────────────────────
 
     private void ValidateForm()
     {
+        if (LevelCombo == null || SubjectCombo == null || TopicBox == null || FormInfoBar == null)
+            return;
+
         var missing = new System.Collections.Generic.List<string>();
         if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
         if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add("la matière");
@@ -316,43 +183,65 @@ public sealed partial class FichePage : Page
 
         if (missing.Count > 0)
         {
-            FormInfoBar.Title = "Formulaire incomplet";
-            FormInfoBar.Message = "Pour générer votre fiche, renseignez " + string.Join(", ", missing) + ".";
-            FormInfoBar.Severity = InfoBarSeverity.Error;
-            FormInfoBar.IsOpen = true;
-            GenButton.IsEnabled = false;
-            ToolTipService.SetToolTip(GenButton, "Champs manquants : " + string.Join(", ", missing));
-        }
-        else if (string.IsNullOrWhiteSpace(PdfDropZoneControl.GuideFilePath))
-        {
-            FormInfoBar.Title = "Conseil";
-            FormInfoBar.Message = "💡 Déposez un programme Eduscol (PDF) pour aligner automatiquement la fiche sur les attendus officiels.";
+            FormInfoBar.Title = "Informations requises";
+            FormInfoBar.Message = "Veuillez renseigner : " + string.Join(", ", missing) + ".";
             FormInfoBar.Severity = InfoBarSeverity.Informational;
             FormInfoBar.IsOpen = true;
-            GenButton.IsEnabled = true;
-            ToolTipService.SetToolTip(GenButton, null);
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = false;
         }
         else
         {
             FormInfoBar.IsOpen = false;
-            GenButton.IsEnabled = true;
-            ToolTipService.SetToolTip(GenButton, null);
+            if (CmdGenerate != null) CmdGenerate.IsEnabled = true;
         }
     }
 
-    // ───────────────────────── Assistant adaptatif (< 1280 px) ─────────────────────────
+    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
+    {
+        SetAssistantVisible(!_isAssistantVisible);
+    }
+
+    // ───────────────────────── Assistant adaptatif (< 1380 px) ─────────────────────────
+
+    public void SetAssistantVisible(bool isVisible)
+    {
+        _isAssistantVisible = isVisible;
+        if (ActualWidth >= 1380)
+        {
+            AssistantColumn.Width = isVisible ? new GridLength(360) : new GridLength(0);
+            if (!isVisible) CloseAssistantOverlay();
+        }
+        else
+        {
+            if (isVisible)
+            {
+                _assistantOverlayOpen = true;
+                MoveAssistantTo(OverlayHost);
+                AssistantOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                CloseAssistantOverlay();
+            }
+        }
+    }
 
     private void AdaptiveStates_CurrentStateChanged(object sender, VisualStateChangedEventArgs e)
     {
-        if (e.NewState == WideState)
+        if (e.NewState?.Name == "WideState")
         {
             _assistantOverlayOpen = false;
             AssistantOverlay.Visibility = Visibility.Collapsed;
             MoveAssistantTo(AssistantInlineHost);
+            AssistantColumn.Width = _isAssistantVisible ? new GridLength(340) : new GridLength(0);
         }
-        else if (_assistantOverlayOpen)
+        else
         {
-            MoveAssistantTo(OverlayHost);
+            AssistantColumn.Width = new GridLength(0);
+            if (_assistantOverlayOpen)
+            {
+                MoveAssistantTo(OverlayHost);
+            }
         }
     }
 

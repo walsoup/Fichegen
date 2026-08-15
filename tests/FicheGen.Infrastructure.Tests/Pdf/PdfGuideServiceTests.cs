@@ -1,3 +1,4 @@
+using System.Text;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Toc;
 using FicheGen.Infrastructure.Pdf;
@@ -86,5 +87,19 @@ public class PdfGuideServiceTests : IDisposable
 
         result.Should().NotBeNull();
         result.Should().Be(cm2File);
+    }
+
+    [Fact]
+    public async Task RealGuidePdf_GetToc_ExtractsEntries()
+    {
+        var realPdfPath = @"c:\Users\walid\work\goofy-goodall\GUIDE-ETINCELLE-MANUEL-MATHS-1AC.pdf";
+        if (!File.Exists(realPdfPath)) return;
+
+        var result = await _guideService.GetTocAsync(realPdfPath, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.IsScanned.Should().BeFalse();
+        result.Entries.Should().NotBeEmpty();
+        result.Entries.Should().HaveCountGreaterThan(10);
     }
 }

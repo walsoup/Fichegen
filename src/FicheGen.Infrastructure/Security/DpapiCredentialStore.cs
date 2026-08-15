@@ -8,13 +8,23 @@ public sealed class DpapiCredentialStore : ICredentialStore
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("FicheGen.Entropy.v1");
 
+    private readonly string _credentialsDirectory;
+
+    public DpapiCredentialStore(string? credentialsDirectory = null)
+    {
+        _credentialsDirectory = credentialsDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "FicheGen",
+            "credentials");
+    }
+
     public void Set(string key, string secret)
     {
         var secretBytes = Encoding.UTF8.GetBytes(secret);
         var protectedBytes = ProtectedData.Protect(secretBytes, Entropy, DataProtectionScope.CurrentUser);
         var base64 = Convert.ToBase64String(protectedBytes);
         var storageFile = GetStoragePath(key);
-        Directory.CreateDirectory(Path.GetDirectoryName(storageFile)!);
+        Directory.CreateDirectory(_credentialsDirectory);
         File.WriteAllText(storageFile, base64);
     }
 
@@ -32,6 +42,7 @@ public sealed class DpapiCredentialStore : ICredentialStore
         }
         catch
         {
+            try { File.Delete(storageFile); } catch { }
             return null;
         }
     }
@@ -45,12 +56,9 @@ public sealed class DpapiCredentialStore : ICredentialStore
         }
     }
 
-    private static string GetStoragePath(string key)
+    private string GetStoragePath(string key)
     {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FicheGen",
-            "credentials",
-            $"{key}.dpapi");
+        var safeKey = string.Join("_", key.Split(Path.GetInvalidFileNameChars()));
+        return Path.Combine(_credentialsDirectory, $"{safeKey}.dpapi");
     }
 }

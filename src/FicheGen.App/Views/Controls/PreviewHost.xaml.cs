@@ -2,9 +2,11 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Serilog;
 using Windows.ApplicationModel.DataTransfer;
 
 namespace FicheGen.App.Views.Controls;
@@ -19,12 +21,14 @@ public enum PreviewState
     /// <summary>Rendu progressif : WebView visible + bannière de streaming.</summary>
     Streaming,
     /// <summary>Document finalisé et interactif.</summary>
-    Ready
+    Ready,
+    /// <summary>Composant WebView2 manquant ou erreur d'initialisation (UX-04).</summary>
+    Error
 }
 
 /// <summary>
 /// Hôte d'aperçu du document : état vide brandé, squelette shimmer, rendu progressif,
-/// barre d'outils flottante auto-masquable (styles, zoom, exports, lecture à voix haute).
+/// barre d'outils permanente (styles, zoom, exports, lecture à voix haute) et gestion d'erreur WebView2.
 /// </summary>
 public sealed partial class PreviewHost : UserControl
 {
@@ -85,38 +89,180 @@ public sealed partial class PreviewHost : UserControl
     // Champs privés
     // ------------------------------------------------------------------
 
-    private readonly DispatcherTimer _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
     private double _zoomFactor = 1.0;
+    private ResultViewModel? _currentViewModel;
+    private bool _isWebView2Initialized;
+    private bool _isWebView2Failed;
+    private bool _isSpeaking;
 
     private const double ZoomStep = 0.1;
     private const double ZoomMin = 0.5;
     private const double ZoomMax = 2.0;
 
-    private bool IsToolbarContext => State == PreviewState.Streaming || State == PreviewState.Ready;
-
     public PreviewHost()
     {
         InitializeComponent();
 
-        _idleTimer.Tick += OnIdleTimerTick;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        DataContextChanged += OnDataContextChanged;
 
         UpdateVisualState();
     }
 
     // ------------------------------------------------------------------
-    // Cycle de vie
+    // Cycle de vie & Synchronisation ViewModel
     // ------------------------------------------------------------------
 
-    private void OnLoaded(object sender, RoutedEventArgs e) => UpdateVisualState();
+    private void OnDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+    {
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        if (args.NewValue is ResultViewModel vm)
+        {
+            _currentViewModel = vm;
+            _currentViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            SyncFromViewModel(vm);
+        }
+        else
+        {
+            _currentViewModel = null;
+            if (State != PreviewState.Error)
+            {
+                State = PreviewState.Empty;
+            }
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is ResultViewModel vm)
+        {
+            if (e.PropertyName == nameof(ResultViewModel.CurrentHtml) ||
+                e.PropertyName == nameof(ResultViewModel.PreviewHtml) ||
+                e.PropertyName == nameof(ResultViewModel.CurrentDocument))
+            {
+                SyncHtmlFromViewModel(vm);
+            }
+            else if (e.PropertyName == nameof(ResultViewModel.IsBusy))
+            {
+                if (vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
+                {
+                    StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? "Génération de votre document par l'IA…" : vm.StatusMessage;
+                    State = PreviewState.Generating;
+                }
+                else if (!vm.IsBusy && !string.IsNullOrWhiteSpace(vm.CurrentHtml))
+                {
+                    State = PreviewState.Ready;
+                }
+                else if (!vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
+                {
+                    State = PreviewState.Empty;
+                }
+            }
+            else if (e.PropertyName == nameof(ResultViewModel.StatusMessage))
+            {
+                if (!string.IsNullOrWhiteSpace(vm.StatusMessage))
+                {
+                    StatusText = vm.StatusMessage;
+                }
+            }
+            else if (e.PropertyName == nameof(ResultViewModel.ZoomFactor))
+            {
+                _ = SetZoomAsync(vm.ZoomFactor);
+            }
+        }
+    }
+
+    private void SyncFromViewModel(ResultViewModel vm)
+    {
+        if (vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
+        {
+            StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? "Génération de votre document par l'IA…" : vm.StatusMessage;
+            State = PreviewState.Generating;
+        }
+        else if (!string.IsNullOrWhiteSpace(vm.CurrentHtml))
+        {
+            SyncHtmlFromViewModel(vm);
+        }
+        else
+        {
+            State = PreviewState.Empty;
+        }
+    }
+
+    private async void SyncHtmlFromViewModel(ResultViewModel vm)
+    {
+        if (!string.IsNullOrWhiteSpace(vm.CurrentHtml))
+        {
+            await NavigateToStringAsync(vm.CurrentHtml);
+        }
+        else
+        {
+            State = PreviewState.Empty;
+        }
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                _isWebView2Failed = true;
+                State = PreviewState.Error;
+            }
+        }
+        catch
+        {
+            _isWebView2Failed = true;
+            State = PreviewState.Error;
+        }
+
+        UpdateVisualState();
+        if (WebViewControl != null && !_isWebView2Failed)
+        {
+            WebViewControl.CoreProcessFailed -= OnCoreProcessFailed;
+            WebViewControl.CoreProcessFailed += OnCoreProcessFailed;
+        }
+
+        if (DataContext is ResultViewModel vm)
+        {
+            if (_currentViewModel != vm)
+            {
+                if (_currentViewModel != null) _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+                _currentViewModel = vm;
+                _currentViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            }
+            SyncFromViewModel(vm);
+        }
+    }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        _idleTimer.Stop();
-        ShimmerStoryboard.Stop();
-        PulseStoryboard.Stop();
-        EmptyEntranceStoryboard.Stop();
+        if (WebViewControl != null)
+        {
+            WebViewControl.CoreProcessFailed -= OnCoreProcessFailed;
+        }
+        ShimmerStoryboard?.Stop();
+        PulseStoryboard?.Stop();
+        EmptyEntranceStoryboard?.Stop();
+
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+    }
+
+    private void OnCoreProcessFailed(WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2ProcessFailedEventArgs args)
+    {
+        Log.Warning("WebView2 process failed: {Reason}", args.ProcessFailedKind);
+        _isWebView2Initialized = false;
+        State = PreviewState.Error;
     }
 
     // ------------------------------------------------------------------
@@ -130,90 +276,48 @@ public sealed partial class PreviewHost : UserControl
     {
         var self = (PreviewHost)d;
         var value = (double)e.NewValue;
-        self.StreamingProgressBar.IsIndeterminate = value <= 0;
-        self.StreamingPercentText.Visibility = value > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (self.StreamingProgressBar != null)
+        {
+            self.StreamingProgressBar.IsIndeterminate = value <= 0;
+        }
+        if (self.StreamingPercentText != null)
+        {
+            self.StreamingPercentText.Visibility = value > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private void UpdateVisualState()
     {
         var state = State;
 
-        EmptyStatePanel.Visibility = state == PreviewState.Empty ? Visibility.Visible : Visibility.Collapsed;
-        SkeletonOverlay.Visibility = state == PreviewState.Generating ? Visibility.Visible : Visibility.Collapsed;
-        WebViewControl.Visibility = IsToolbarContext ? Visibility.Visible : Visibility.Collapsed;
-        StreamingBanner.Visibility = state == PreviewState.Streaming ? Visibility.Visible : Visibility.Collapsed;
+        if (EmptyStatePanel != null)
+            EmptyStatePanel.Visibility = state == PreviewState.Empty ? Visibility.Visible : Visibility.Collapsed;
+        if (SkeletonOverlay != null)
+            SkeletonOverlay.Visibility = state == PreviewState.Generating ? Visibility.Visible : Visibility.Collapsed;
+        if (WebViewControl != null)
+            WebViewControl.Visibility = (state == PreviewState.Streaming || state == PreviewState.Ready) ? Visibility.Visible : Visibility.Collapsed;
+        if (StreamingBanner != null)
+            StreamingBanner.Visibility = state == PreviewState.Streaming ? Visibility.Visible : Visibility.Collapsed;
+        if (WebView2ErrorPanel != null)
+            WebView2ErrorPanel.Visibility = state == PreviewState.Error ? Visibility.Visible : Visibility.Collapsed;
+
+        // Activation / désactivation des contrôles de la barre d'outils
+        var hasDoc = state == PreviewState.Streaming || state == PreviewState.Ready;
+        if (ExportWordButton != null) ExportWordButton.IsEnabled = hasDoc;
+        if (ExportPdfButton != null) ExportPdfButton.IsEnabled = hasDoc;
+        if (PrintButton != null) PrintButton.IsEnabled = hasDoc;
+        if (StudentViewButton != null) StudentViewButton.IsEnabled = hasDoc;
+        if (StylePresetComboBox != null) StylePresetComboBox.IsEnabled = hasDoc;
 
         if (!IsLoaded)
         {
             return;
         }
 
-        if (state == PreviewState.Generating) ShimmerStoryboard.Begin(); else ShimmerStoryboard.Stop();
-        if (state == PreviewState.Streaming) PulseStoryboard.Begin(); else PulseStoryboard.Stop();
-        if (state == PreviewState.Empty) EmptyEntranceStoryboard.Begin();
-
-        if (IsToolbarContext)
-        {
-            ShowToolbar();
-            RestartIdleTimer();
-        }
-        else
-        {
-            HideToolbar();
-        }
+        if (state == PreviewState.Generating) ShimmerStoryboard?.Begin(); else ShimmerStoryboard?.Stop();
+        if (state == PreviewState.Streaming) PulseStoryboard?.Begin(); else PulseStoryboard?.Stop();
+        if (state == PreviewState.Empty) EmptyEntranceStoryboard?.Begin();
     }
-
-    // ------------------------------------------------------------------
-    // Barre d'outils auto-masquable (3 s d'inactivité)
-    // ------------------------------------------------------------------
-
-    private void OnRootPointerMoved(object sender, PointerRoutedEventArgs e)
-    {
-        if (!IsToolbarContext)
-        {
-            return;
-        }
-
-        ShowToolbar();
-        RestartIdleTimer();
-    }
-
-    private void ShowToolbar()
-    {
-        if (!IsToolbarContext)
-        {
-            return;
-        }
-
-        FloatingToolbar.IsHitTestVisible = true;
-        VisualStateManager.GoToState(this, "ToolbarVisible", true);
-    }
-
-    private void HideToolbar()
-    {
-        VisualStateManager.GoToState(this, "ToolbarHidden", true);
-        FloatingToolbar.IsHitTestVisible = false;
-    }
-
-    private void RestartIdleTimer()
-    {
-        _idleTimer.Stop();
-        _idleTimer.Start();
-    }
-
-    private void OnIdleTimerTick(object? sender, object e)
-    {
-        _idleTimer.Stop();
-        HideToolbar();
-    }
-
-    private void OnToolbarPointerEntered(object sender, PointerRoutedEventArgs e) => _idleTimer.Stop();
-
-    private void OnToolbarPointerExited(object sender, PointerRoutedEventArgs e) => RestartIdleTimer();
-
-    private void OnPresetDropDownOpened(object sender, object e) => _idleTimer.Stop();
-
-    private void OnPresetDropDownClosed(object sender, object e) => RestartIdleTimer();
 
     // ------------------------------------------------------------------
     // Zoom (50 % – 200 %)
@@ -231,12 +335,14 @@ public sealed partial class PreviewHost : UserControl
     private async Task SetZoomAsync(double value)
     {
         _zoomFactor = Math.Clamp(value, ZoomMin, ZoomMax);
-        ZoomPercentText.Text = string.Format(CultureInfo.InvariantCulture, "{0} %", (int)Math.Round(_zoomFactor * 100));
-        RestartIdleTimer();
+        if (ZoomPercentText != null)
+        {
+            ZoomPercentText.Text = string.Format(CultureInfo.InvariantCulture, "{0} %", (int)Math.Round(_zoomFactor * 100));
+        }
 
         try
         {
-            if (WebViewControl.CoreWebView2 != null)
+            if (WebViewControl?.CoreWebView2 != null)
             {
                 var zoom = _zoomFactor.ToString(CultureInfo.InvariantCulture);
                 await WebViewControl.ExecuteScriptAsync($"document.documentElement.style.zoom='{zoom}';");
@@ -244,7 +350,7 @@ public sealed partial class PreviewHost : UserControl
         }
         catch
         {
-            // Le WebView n'est pas encore initialisé : le zoom sera appliqué au prochain rendu.
+            // Le WebView n'est pas encore initialisé
         }
     }
 
@@ -254,18 +360,22 @@ public sealed partial class PreviewHost : UserControl
 
     private async void OnStylePresetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (StylePresetComboBox.SelectedItem is not ComboBoxItem item)
+        if (StylePresetComboBox?.SelectedItem is not ComboBoxItem item)
         {
             return;
         }
 
         var preset = item.Tag as string ?? "classique";
-        RestartIdleTimer();
         StylePresetChanged?.Invoke(this, preset);
+
+        if (DataContext is ResultViewModel vm)
+        {
+            vm.ChangePreset(preset);
+        }
 
         try
         {
-            if (WebViewControl.CoreWebView2 != null)
+            if (WebViewControl?.CoreWebView2 != null)
             {
                 await WebViewControl.ExecuteScriptAsync(
                     $"document.documentElement.setAttribute('data-style-preset','{preset}');");
@@ -273,39 +383,67 @@ public sealed partial class PreviewHost : UserControl
         }
         catch
         {
-            // Le document ne gère pas (encore) les presets : l'événement permet au parent de régénérer.
         }
     }
 
     // ------------------------------------------------------------------
-    // Exports / Presse-papiers / Impression / Lecture
+    // Exports / Presse-papiers / Impression / Lecture / Version Élève
     // ------------------------------------------------------------------
 
-    private void OnExportPdfClicked(object sender, RoutedEventArgs e)
+    private void OnStudentViewClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-        ExportPdfRequested?.Invoke(this, EventArgs.Empty);
+        if (DataContext is ResultViewModel vm)
+        {
+            vm.ToggleStudentView();
+        }
     }
 
-    private void OnExportWordClicked(object sender, RoutedEventArgs e)
+    private async void OnExportPdfClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-        ExportWordRequested?.Invoke(this, EventArgs.Empty);
+        if (ExportPdfRequested != null)
+        {
+            ExportPdfRequested(this, EventArgs.Empty);
+        }
+        else if (DataContext is ResultViewModel vm)
+        {
+            await vm.ExportPdfAsync();
+        }
     }
 
-    private void OnExportRtfClicked(object sender, RoutedEventArgs e)
+    private async void OnExportWordClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-        ExportRtfRequested?.Invoke(this, EventArgs.Empty);
+        if (ExportWordRequested != null)
+        {
+            ExportWordRequested(this, EventArgs.Empty);
+        }
+        else if (DataContext is ResultViewModel vm)
+        {
+            await vm.ExportDocxAsync();
+        }
+    }
+
+    private async void OnExportRtfClicked(object sender, RoutedEventArgs e)
+    {
+        if (ExportRtfRequested != null)
+        {
+            ExportRtfRequested(this, EventArgs.Empty);
+        }
+        else if (DataContext is ResultViewModel vm)
+        {
+            await vm.ExportRtfAsync();
+        }
     }
 
     private async void OnCopyClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-
         if (CopyRequested != null)
         {
             CopyRequested(this, EventArgs.Empty);
+        }
+        else if (DataContext is ResultViewModel vm)
+        {
+            vm.CopyPlainText();
+            await CopyDocumentToClipboardAsync();
         }
         else
         {
@@ -313,10 +451,8 @@ public sealed partial class PreviewHost : UserControl
         }
     }
 
-    private void OnPrintClicked(object sender, RoutedEventArgs e)
+    private async void OnPrintClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-
         if (PrintRequested != null)
         {
             PrintRequested(this, EventArgs.Empty);
@@ -325,19 +461,22 @@ public sealed partial class PreviewHost : UserControl
         {
             try
             {
-                WebViewControl.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+                var ready = await EnsureWebViewReadyAsync();
+                if (ready && WebViewControl?.CoreWebView2 != null)
+                {
+                    WebViewControl.CoreWebView2.ShowPrintUI(
+                        Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // WebView non prêt.
+                Log.Warning(ex, "Impression WebView2 impossible.");
             }
         }
     }
 
     private async void OnReadAloudClicked(object sender, RoutedEventArgs e)
     {
-        RestartIdleTimer();
-
         if (ReadAloudRequested != null)
         {
             ReadAloudRequested(this, EventArgs.Empty);
@@ -349,28 +488,101 @@ public sealed partial class PreviewHost : UserControl
     }
 
     // ------------------------------------------------------------------
-    // API publique WebView
+    // Actions WebView2 Manquant (UX-04)
     // ------------------------------------------------------------------
 
-    /// <summary>Garantit l'initialisation du contrôle WebView2.</summary>
-    public async Task EnsureWebViewReadyAsync()
+    private async void OnInstallWebView2Clicked(object sender, RoutedEventArgs e)
     {
-        if (WebViewControl.CoreWebView2 == null)
+        try
         {
-            await WebViewControl.EnsureCoreWebView2Async();
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("https://go.microsoft.com/fwlink/p/?LinkId=2124703"));
         }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Impossible d'ouvrir le lien de téléchargement WebView2.");
+        }
+    }
+
+    private void OnCopyWebView2LinkClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dataPackage = new DataPackage();
+            dataPackage.SetText("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
+            Clipboard.SetContent(dataPackage);
+            if (WebView2LinkCopiedNotice != null) WebView2LinkCopiedNotice.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Impossible de copier le lien dans le presse-papiers.");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Initialisation & Navigation WebView2
+    // ------------------------------------------------------------------
+
+    private async Task<bool> EnsureWebViewReadyAsync()
+    {
+        if (_isWebView2Initialized) return true;
+        if (_isWebView2Failed || WebViewControl == null) return false;
+
+        try
+        {
+            var version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                _isWebView2Failed = true;
+                State = PreviewState.Error;
+                return false;
+            }
+
+            await WebViewControl.EnsureCoreWebView2Async();
+            _isWebView2Initialized = true;
+            _isWebView2Failed = false;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _isWebView2Failed = true;
+            State = PreviewState.Error;
+            Log.Error(ex, "Échec de l'initialisation de WebView2.");
+            return false;
+        }
+    }
+
+    /// <summary>Réinitialise l'état d'échec et retente l'initialisation de WebView2.</summary>
+    public async Task<bool> RetryWebView2Async()
+    {
+        _isWebView2Failed = false;
+        _isWebView2Initialized = false;
+        return await EnsureWebViewReadyAsync();
     }
 
     /// <summary>Charge un document HTML dans l'aperçu et passe à l'état <see cref="PreviewState.Ready"/>.</summary>
     public async Task NavigateToStringAsync(string html)
     {
-        await EnsureWebViewReadyAsync();
-        WebViewControl.NavigateToString(html ?? string.Empty);
-        State = PreviewState.Ready;
+        try
+        {
+            var ready = await EnsureWebViewReadyAsync();
+            if (!ready || WebViewControl == null)
+            {
+                State = PreviewState.Error;
+                return;
+            }
+
+            WebViewControl.NavigateToString(html ?? string.Empty);
+            State = PreviewState.Ready;
+        }
+        catch (Exception ex)
+        {
+            State = PreviewState.Error;
+            Log.Error(ex, "Erreur lors du rendu HTML dans WebView2.");
+        }
     }
 
     /// <summary>Accès avancé au WebView2 sous-jacent (impression, scripts, etc.).</summary>
-    public WebView2 PreviewWebView => WebViewControl;
+    public WebView2? PreviewWebView => WebViewControl;
 
     // ------------------------------------------------------------------
     // Solutions de repli autonomes
@@ -380,7 +592,9 @@ public sealed partial class PreviewHost : UserControl
     {
         try
         {
-            await EnsureWebViewReadyAsync();
+            var ready = await EnsureWebViewReadyAsync();
+            if (!ready || WebViewControl == null) return;
+
             var json = await WebViewControl.ExecuteScriptAsync("document.body ? document.body.innerText : ''");
             var text = JsonSerializer.Deserialize<string>(json);
 
@@ -401,15 +615,39 @@ public sealed partial class PreviewHost : UserControl
     {
         try
         {
-            await EnsureWebViewReadyAsync();
-            await WebViewControl.ExecuteScriptAsync(
-                "(function(){var t=document.body?document.body.innerText:'';" +
-                "if(t){var u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';" +
-                "speechSynthesis.cancel();speechSynthesis.speak(u);}})()");
+            var ready = await EnsureWebViewReadyAsync();
+            if (!ready || WebViewControl == null) return;
+
+            if (_isSpeaking)
+            {
+                await WebViewControl.ExecuteScriptAsync("window.speechSynthesis && window.speechSynthesis.cancel();");
+                _isSpeaking = false;
+                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = "🔊 Lire à voix haute";
+                if (ReadAloudMenuIcon != null) ReadAloudMenuIcon.Glyph = "\uE995";
+            }
+            else
+            {
+                _isSpeaking = true;
+                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = "⏹ Arrêter la lecture";
+                if (ReadAloudMenuIcon != null) ReadAloudMenuIcon.Glyph = "\uE71A";
+
+                await WebViewControl.ExecuteScriptAsync(
+                    "(function(){" +
+                    "  var t = document.body ? document.body.innerText : '';" +
+                    "  if(t && window.speechSynthesis){" +
+                    "    var u = new SpeechSynthesisUtterance(t);" +
+                    "    u.lang = 'fr-FR';" +
+                    "    u.onend = function() { window.speechSynthesis.cancel(); };" +
+                    "    window.speechSynthesis.cancel();" +
+                    "    window.speechSynthesis.speak(u);" +
+                    "  }" +
+                    "})()");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Synthèse vocale indisponible dans le contexte WebView.
+            Log.Warning(ex, "Synthèse vocale indisponible dans le contexte WebView.");
+            _isSpeaking = false;
         }
     }
 }

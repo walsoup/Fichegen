@@ -25,8 +25,8 @@ public sealed partial class SettingsPage : Page
 
     public SettingsPage()
     {
-        // Adapter ici si votre conteneur DI diffère (ex. App.Services.GetRequiredService<...>()).
         ViewModel = App.Services.GetRequiredService<SettingsViewModel>();
+        DataContext = ViewModel;
 
         InitializeComponent();
 
@@ -72,7 +72,14 @@ public sealed partial class SettingsPage : Page
         }
 
         ApplyAppTheme();
-        await InitializePreviewAsync();
+        try
+        {
+            await InitializePreviewAsync();
+        }
+        catch
+        {
+            // Ignore non-fatal initialization errors
+        }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -210,16 +217,26 @@ public sealed partial class SettingsPage : Page
 
     private async System.Threading.Tasks.Task InitializePreviewAsync()
     {
+        if (StylePreviewWebView == null) return;
+
         try
         {
+            var version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                StylePreviewWebView.Visibility = Visibility.Collapsed;
+                if (WebViewFallback != null) WebViewFallback.Visibility = Visibility.Visible;
+                return;
+            }
+
             await StylePreviewWebView.EnsureCoreWebView2Async();
             _webViewReady = true;
             RefreshPreview();
         }
         catch (Exception)
         {
-            StylePreviewWebView.Visibility = Visibility.Collapsed;
-            WebViewFallback.Visibility = Visibility.Visible;
+            if (StylePreviewWebView != null) StylePreviewWebView.Visibility = Visibility.Collapsed;
+            if (WebViewFallback != null) WebViewFallback.Visibility = Visibility.Visible;
         }
     }
 

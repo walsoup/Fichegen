@@ -71,7 +71,7 @@ public sealed record DocumentMetadata(
 
 public sealed record GeneratedDocument(
     DocumentMetadata Metadata,
-    List<Block> Blocks,
+    IReadOnlyList<Block> Blocks,
     string? SourceJson = null)
 {
     public string ToPlainText()

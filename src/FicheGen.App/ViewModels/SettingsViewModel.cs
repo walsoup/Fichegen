@@ -26,17 +26,18 @@ public sealed record LanguageOption(string Code, string Label, string Icon);
 
 public sealed class AccentOption
 {
+    private Brush? _brush;
+
     public string Name { get; }
     public string Hex { get; }
     public Color Color { get; }
-    public Brush Brush { get; }
+    public Brush? Brush => _brush ??= BrushHelper.TryCreateBrush(Color);
 
     public AccentOption(string name, string hex)
     {
         Name = name;
         Hex = hex;
         Color = ParseHex(hex);
-        Brush = new SolidColorBrush(Color);
     }
 
     public static Color ParseHex(string hex)
@@ -49,9 +50,28 @@ public sealed class AccentOption
     }
 }
 
+internal static class BrushHelper
+{
+    public static Brush? TryCreateBrush(Color color)
+    {
+        try
+        {
+            return new SolidColorBrush(color);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+
 /// <summary>Préréglage de style de document (galerie de l'onglet Styles).</summary>
 public sealed class StylePresetItem
 {
+    private Brush? _primaryBrush;
+    private Brush? _secondaryBrush;
+    private Brush? _accentBrush;
+
     public string Id { get; }
     public string Name { get; }
     public string Description { get; }
@@ -61,9 +81,9 @@ public sealed class StylePresetItem
     public string AccentHex { get; }
     public string FontFamily { get; }
     public double CornerRadius { get; }
-    public Brush PrimaryBrush { get; }
-    public Brush SecondaryBrush { get; }
-    public Brush AccentBrush { get; }
+    public Brush? PrimaryBrush => _primaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(PrimaryHex));
+    public Brush? SecondaryBrush => _secondaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(SecondaryHex));
+    public Brush? AccentBrush => _accentBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(AccentHex));
 
     public StylePresetItem(string id, string name, string description, string icon,
         string primaryHex, string secondaryHex, string accentHex, string fontFamily, double cornerRadius)
@@ -71,9 +91,6 @@ public sealed class StylePresetItem
         Id = id; Name = name; Description = description; Icon = icon;
         PrimaryHex = primaryHex; SecondaryHex = secondaryHex; AccentHex = accentHex;
         FontFamily = fontFamily; CornerRadius = cornerRadius;
-        PrimaryBrush = new SolidColorBrush(AccentOption.ParseHex(primaryHex));
-        SecondaryBrush = new SolidColorBrush(AccentOption.ParseHex(secondaryHex));
-        AccentBrush = new SolidColorBrush(AccentOption.ParseHex(accentHex));
     }
 }
 
@@ -126,25 +143,24 @@ public enum ConnectionHealth { Unknown, Ok, Warning, Error }
 /// <summary>État temps réel du test de connexion d'un fournisseur.</summary>
 public partial class ProviderConnectionState : ObservableObject
 {
-    private static readonly Brush NeutralBrush = new SolidColorBrush(Color.FromArgb(255, 110, 110, 118));
-    private static readonly Brush OkBrush = new SolidColorBrush(Color.FromArgb(255, 16, 124, 16));
-    private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromArgb(255, 202, 80, 16));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromArgb(255, 196, 43, 28));
-
     public string ProviderKey { get; }
     public ConnectionHealth Health { get; private set; } = ConnectionHealth.Unknown;
 
     [ObservableProperty] public partial string StatusText { get; set; } = "Jamais testé";
-    [ObservableProperty] public partial Brush StatusBrush { get; set; } = NeutralBrush;
+    [ObservableProperty] public partial Brush? StatusBrush { get; set; }
     [ObservableProperty] public partial bool IsTesting { get; set; }
 
-    public ProviderConnectionState(string providerKey) => ProviderKey = providerKey;
+    public ProviderConnectionState(string providerKey)
+    {
+        ProviderKey = providerKey;
+        StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118));
+    }
 
-    public void SetPending() { IsTesting = true; StatusText = "Test en cours…"; StatusBrush = NeutralBrush; }
-    public void SetOk(int latencyMs) { IsTesting = false; Health = ConnectionHealth.Ok; StatusText = $"✔ Connecté · {latencyMs} ms"; StatusBrush = OkBrush; }
-    public void SetWarning(string message) { IsTesting = false; Health = ConnectionHealth.Warning; StatusText = $"⚠ {message}"; StatusBrush = WarningBrush; }
-    public void SetError(string message) { IsTesting = false; Health = ConnectionHealth.Error; StatusText = $"✖ {message}"; StatusBrush = ErrorBrush; }
-    public void SetNeutral(string message) { IsTesting = false; Health = ConnectionHealth.Unknown; StatusText = message; StatusBrush = NeutralBrush; }
+    public void SetPending() { IsTesting = true; StatusText = "Test en cours…"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118)); }
+    public void SetOk(int latencyMs) { IsTesting = false; Health = ConnectionHealth.Ok; StatusText = $"✔ Connecté · {latencyMs} ms"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 16, 124, 16)); }
+    public void SetWarning(string message) { IsTesting = false; Health = ConnectionHealth.Warning; StatusText = $"⚠ {message}"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 202, 80, 16)); }
+    public void SetError(string message) { IsTesting = false; Health = ConnectionHealth.Error; StatusText = $"✖ {message}"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 196, 43, 28)); }
+    public void SetNeutral(string message) { IsTesting = false; Health = ConnectionHealth.Unknown; StatusText = message; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118)); }
 }
 
 /// <summary>Modèle de prompt personnalisable (onglet Prompts &amp; Raccourcis).</summary>
@@ -182,7 +198,6 @@ internal static class ProviderCatalog
     {
         new("aistudio", "Google AI Studio", "💠"),
         new("openai", "OpenAI", "🤖"),
-        new("anthropic", "Anthropic (Claude)", "🧠"),
         new("proxy", "Proxy local / Ollama", "🦙"),
         new("vertex", "Vertex AI (GCP)", "☁️"),
         new("vercel", "Vercel AI Gateway", "▲"),
@@ -629,7 +644,7 @@ public partial class SettingsViewModel : ObservableObject
     // ─────────────── Enregistrement ───────────────
 
     [RelayCommand]
-    private async Task SaveSettingsAsync()
+    public async Task SaveSettingsAsync()
     {
         IsSaving = true;
         StatusMessage = "Enregistrement en cours…";
@@ -703,23 +718,27 @@ public partial class SettingsViewModel : ObservableObject
 
     private void PersistCredentials()
     {
-        void SetIfNotEmpty(string resource, string value)
+        void SetOrRemove(string resource, string? value)
         {
-            if (!string.IsNullOrEmpty(value))
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                try { _credentialStore.Remove(resource); } catch { /* journalisé côté Core */ }
+            }
+            else
             {
                 try { _credentialStore.Set(resource, value); } catch { /* journalisé côté Core */ }
             }
         }
 
-        SetIfNotEmpty("gemini_api_key", GeminiApiKey);
-        SetIfNotEmpty("openai_api_key", OpenAiApiKey);
-        SetIfNotEmpty("anthropic_api_key", AnthropicApiKey);
-        SetIfNotEmpty("proxy_api_key", ProxyApiKey);
-        SetIfNotEmpty("vercel_api_key", VercelApiKey);
+        SetOrRemove("gemini_api_key", GeminiApiKey);
+        SetOrRemove("openai_api_key", OpenAiApiKey);
+        SetOrRemove("anthropic_api_key", AnthropicApiKey);
+        SetOrRemove("proxy_api_key", ProxyApiKey);
+        SetOrRemove("vercel_api_key", VercelApiKey);
 
         foreach (var resource in _clearedCredentials)
         {
-            try { _credentialStore.Set(resource, string.Empty); } catch { }
+            try { _credentialStore.Remove(resource); } catch { }
         }
         _clearedCredentials.Clear();
     }
@@ -1157,15 +1176,20 @@ public partial class SettingsViewModel : ObservableObject
         var line = darkMode ? "#55565E" : "#CBD5E1";
         var preset = SelectedPreset?.Name ?? "Personnalisé";
 
+        var safeClassLevel = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(DefaultClassLevel) ? "CM2" : DefaultClassLevel);
+        var safeSubject = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(DefaultSubject) ? "Mathématiques" : DefaultSubject);
+        var safeFontFamily = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(BuilderFontFamily) ? "Segoe UI" : BuilderFontFamily).Replace("\"", "");
+
         return $$"""
         <!DOCTYPE html>
         <html lang="fr">
         <head>
         <meta charset="utf-8"/>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'self' https: data:;"/>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { background: {{pageBg}}; color: {{text}};
-                 font-family: '{{BuilderFontFamily}}', 'Segoe UI', sans-serif;
+                 font-family: '{{safeFontFamily}}', 'Segoe UI', sans-serif;
                  padding: 18px; font-size: 13.5px; }
           .sheet { background: {{sheetBg}}; border-radius: {{radius}};
                    padding: {{padding}}; max-width: 760px; margin: 0 auto;
@@ -1197,7 +1221,7 @@ public partial class SettingsViewModel : ObservableObject
             <header class="band">
               <div class="ecole">École primaire Louise-Michel</div>
               <h1>Les fractions simples</h1>
-              <div class="chips"><span>{{DefaultClassLevel}}</span><span>{{DefaultSubject}}</span><span>45 min</span><span>Séquence 4 · Séance 2</span></div>
+              <div class="chips"><span>{{safeClassLevel}}</span><span>{{safeSubject}}</span><span>45 min</span><span>Séquence 4 · Séance 2</span></div>
             </header>
 
             <h2>🎯 Objectifs d'apprentissage</h2>

@@ -6,10 +6,12 @@ namespace FicheGen.Infrastructure.Pdf;
 public sealed class PdfPigPageWordSource : IPageWordSource, IDisposable
 {
     private readonly PdfDocument _document;
+    private readonly bool _ownsDocument;
 
-    public PdfPigPageWordSource(PdfDocument document)
+    public PdfPigPageWordSource(PdfDocument document, bool ownsDocument = false)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
+        _ownsDocument = ownsDocument;
     }
 
     public int PageCount => _document.NumberOfPages;
@@ -41,6 +43,9 @@ public sealed class PdfPigPageWordSource : IPageWordSource, IDisposable
 
     public void Dispose()
     {
-        _document.Dispose();
+        if (_ownsDocument)
+        {
+            _document.Dispose();
+        }
     }
 }

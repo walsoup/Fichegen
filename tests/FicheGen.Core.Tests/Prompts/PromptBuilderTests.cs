@@ -31,4 +31,19 @@ public class PromptBuilderTests
         req.UserPrompt.Should().Contain("3e");
         req.UserPrompt.Should().Contain("20 points");
     }
+
+    [Fact]
+    public void BuildQuizPrompt_IncludesQuestionTypesAndCount()
+    {
+        var p = new QuizParameters("CM1", "Sciences", "Le cycle de l'eau", QuestionCount: 10, DurationMinutes: 15, IncludeQcm: true, IncludeTrueFalse: true, IncludeShortAnswer: true);
+
+        var req = PromptBuilder.BuildQuizPrompt(p);
+
+        req.Purpose.Should().Be("quiz");
+        req.UserPrompt.Should().Contain("CM1");
+        req.UserPrompt.Should().Contain("10 questions");
+        req.UserPrompt.Should().Contain("QCM");
+        req.UserPrompt.Should().Contain("Vrai/Faux");
+        req.UserPrompt.Should().Contain("Réponse courte");
+    }
 }

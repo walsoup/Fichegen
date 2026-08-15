@@ -36,9 +36,9 @@ public class LlmRouter
             model = GetFallbackModel(providerKind);
         }
 
-        var (endpoint, authStrategy, secretKeyName) = BuildEndpointAndAuth(providerKind, model, cfg, isStreaming);
+        var (endpoint, authStrategy, secretKeyName) = BuildEndpointAndAuth(providerStr, providerKind, model, cfg, isStreaming);
 
-        return new ProviderRoute(providerKind, model, endpoint, authStrategy, secretKeyName);
+        return new ProviderRoute(providerKind, model, endpoint, authStrategy, secretKeyName, isStreaming);
     }
 
     private static ProviderAdapterKind NormalizeProvider(string provider)
@@ -53,8 +53,11 @@ public class LlmRouter
         };
     }
 
-    private static string GetFallbackModel(ProviderAdapterKind kind)
+    private static string GetFallbackModel(ProviderAdapterKind kind, string providerStr = "")
     {
+        if (providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase))
+            return "gpt-4o-mini";
+
         return kind switch
         {
             ProviderAdapterKind.Gemini => "gemini-3.6-flash",
@@ -66,7 +69,7 @@ public class LlmRouter
     }
 
     private static (string Endpoint, AuthStrategyKind AuthStrategy, string SecretKeyName) BuildEndpointAndAuth(
-        ProviderAdapterKind kind, string model, AiRequestConfig cfg, bool isStreaming)
+        string providerStr, ProviderAdapterKind kind, string model, AiRequestConfig cfg, bool isStreaming)
     {
         return kind switch
         {
@@ -80,20 +83,20 @@ public class LlmRouter
 
             ProviderAdapterKind.Vertex => (
                 isStreaming
-                    ? $"https://{cfg.VertexRegion}-aiplatform.googleapis.com/v1/projects/{cfg.VertexProject}/locations/{cfg.VertexRegion}/publishers/google/models/{model}:streamGenerateContent"
+                    ? $"https://{cfg.VertexRegion}-aiplatform.googleapis.com/v1/projects/{cfg.VertexProject}/locations/{cfg.VertexRegion}/publishers/google/models/{model}:streamGenerateContent?alt=sse"
                     : $"https://{cfg.VertexRegion}-aiplatform.googleapis.com/v1/projects/{cfg.VertexProject}/locations/{cfg.VertexRegion}/publishers/google/models/{model}:generateContent",
                 AuthStrategyKind.BearerToken,
                 "vertex_service_account"
             ),
 
             ProviderAdapterKind.OpenAiCompatible => (
-                BuildProxyUrl(cfg.ProxyBaseUrl, "/chat/completions"),
+                BuildProxyUrl(cfg.ProxyBaseUrl, "/chat/completions", providerStr),
                 AuthStrategyKind.BearerToken,
-                "proxy_api_key"
+                providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase) ? "openai_api_key" : "proxy_api_key"
             ),
 
             ProviderAdapterKind.Vercel => (
-                BuildProxyUrl(cfg.ProxyBaseUrl, "/api/chat"),
+                BuildProxyUrl(cfg.ProxyBaseUrl, "/api/chat", providerStr),
                 AuthStrategyKind.BearerToken,
                 "vercel_api_key"
             ),
@@ -102,10 +105,14 @@ public class LlmRouter
         };
     }
 
-    private static string BuildProxyUrl(string baseUrl, string path)
+    private static string BuildProxyUrl(string baseUrl, string path, string providerStr = "")
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
-            baseUrl = "http://localhost:11434/v1";
+        {
+            baseUrl = providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase)
+                ? "https://api.openai.com/v1"
+                : "http://localhost:11434/v1";
+        }
 
         var trimmed = baseUrl.TrimEnd('/');
         if (trimmed.EndsWith(path, StringComparison.OrdinalIgnoreCase))

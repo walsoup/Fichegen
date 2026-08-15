@@ -5,7 +5,7 @@ namespace FicheGen.Core.Documents;
 public static partial class CssSanitizer
 {
     private static readonly Regex DangerousConstructsRegex = new(
-        @"(?i)(@import|url\s*\(|javascript\s*:|expression\s*\(|<script|position\s*:\s*fixed|position\s*:\s*absolute|behavior\s*:)",
+        @"(?i)(</style|<script|@import|url\s*\(|javascript\s*:|expression\s*\(|position\s*:\s*fixed|position\s*:\s*absolute|behavior\s*:|-moz-binding)",
         RegexOptions.Compiled);
 
     public static string SanitizeCss(string? css)

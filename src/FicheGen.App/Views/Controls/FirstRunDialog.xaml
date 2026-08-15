@@ -36,11 +36,16 @@
 
                 <Border Grid.Column="1" Padding="12" CornerRadius="10" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="🔒 100% Confidentiel" FontWeight="SemiBold"/>
-                        <TextBlock Text="Vos cours et données d'élèves restent sur votre ordinateur." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                        <TextBlock Text="🔒 Vos documents restent chez vous" FontWeight="SemiBold"/>
+                        <TextBlock Text="Vos documents sont enregistrés uniquement sur cet ordinateur. Aucun compte requis." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <Border Padding="12" CornerRadius="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <TextBlock Text="ℹ️ Pour rédiger un document, votre demande (matière, sujet, consignes) est transmise au service d'IA sélectionné. N'y indiquez pas de nom d'élève."
+                           FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+            </Border>
 
             <TextBlock Text="En 2 petites étapes, configurons votre espace de travail !" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
         </StackPanel>
@@ -78,17 +83,10 @@
             </RadioButtons>
 
             <StackPanel x:Name="ApiKeySection" Spacing="6">
-                <TextBlock Text="Votre clé d'accès (API Key) :" FontWeight="SemiBold"/>
+                <TextBlock Text="Votre clé de connexion :" FontWeight="SemiBold"/>
                 <PasswordBox x:Name="ApiKeyPasswordBox" PlaceholderText="Collez votre clé ici…" PasswordRevealMode="Peek"/>
                 <HyperlinkButton x:Name="GetKeyHyperlink" Content="Obtenir une clé gratuite Google AI Studio ↗" NavigateUri="https://aistudio.google.com/app/apikey"/>
             </StackPanel>
-
-            <!-- Télémétrie anonyme -->
-            <Border Padding="10" CornerRadius="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
-                <ToggleSwitch x:Name="TelemetryToggleSwitch"
-                              Header="Autoriser la télémétrie anonyme d'erreurs (désactivé par défaut)"
-                              IsOn="False"/>
-            </Border>
         </StackPanel>
     </Grid>
 </ContentDialog>

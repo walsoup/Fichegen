@@ -50,8 +50,19 @@ public sealed class AiSettings
     public TemperatureSettings Temperatures { get; set; } = new();
 
     // Transient key storage for UI binding; extracted & saved to CredentialStore, stripped from disk JSON
+    [System.Text.Json.Serialization.JsonIgnore]
     public string GeminiApiKey { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string OpenAiApiKey { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string AnthropicApiKey { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonIgnore]
     public string ProxyApiKey { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonIgnore]
     public string VercelApiKey { get; set; } = string.Empty;
 }
 

@@ -4,7 +4,7 @@ namespace FicheGen.Core.Documents;
 
 public static class HtmlRenderer
 {
-    public static string RenderToFragment(GeneratedDocument doc)
+    public static string RenderToFragment(GeneratedDocument doc, bool isStudentVersion = false)
     {
         if (doc == null) return string.Empty;
 
@@ -15,7 +15,8 @@ public static class HtmlRenderer
         sb.AppendLine("  <header class=\"document-header\">");
         if (!string.IsNullOrWhiteSpace(doc.Metadata.Title))
         {
-            sb.AppendLine($"    <h1 class=\"doc-title\">{EncodeText(doc.Metadata.Title)}</h1>");
+            var titleSuffix = isStudentVersion ? " — Version Élève" : string.Empty;
+            sb.AppendLine($"    <h1 class=\"doc-title\">{EncodeText(doc.Metadata.Title + titleSuffix)}</h1>");
         }
         if (!string.IsNullOrWhiteSpace(doc.Metadata.Subtitle))
         {
@@ -41,12 +42,59 @@ public static class HtmlRenderer
             }
             sb.AppendLine("    </div>");
         }
+
+        if (isStudentVersion)
+        {
+            sb.AppendLine("    <div class=\"student-header-box\">");
+            sb.AppendLine("      <div><strong>Nom :</strong> .......................................... &nbsp;&nbsp; <strong>Prénom :</strong> ..........................................</div>");
+            sb.AppendLine("      <div><strong>Classe :</strong> ................ &nbsp;&nbsp; <strong>Note :</strong> ..... / 20</div>");
+            sb.AppendLine("    </div>");
+        }
+
         sb.AppendLine("  </header>");
 
         // Document Body Blocks
         sb.AppendLine("  <main class=\"document-body\">");
+        var skippingCorrectionSection = false;
         foreach (var block in doc.Blocks)
         {
+            if (isStudentVersion)
+            {
+                if (block is HeadingBlock hb)
+                {
+                    var headingText = string.Concat(hb.Runs.Select(r => r.Text)).ToLowerInvariant();
+                    if (headingText.Contains("corrigé") || headingText.Contains("correction") || headingText.Contains("solutions"))
+                    {
+                        skippingCorrectionSection = true;
+                        continue;
+                    }
+                    else
+                    {
+                        skippingCorrectionSection = false;
+                    }
+                }
+
+                if (skippingCorrectionSection)
+                {
+                    continue;
+                }
+
+                if (block is CalloutBoxBlock cb)
+                {
+                    var kind = cb.Kind.ToLowerInvariant();
+                    if (kind.Contains("corrige") || kind.Contains("correction") || kind.Contains("solution") || kind.Contains("reponse"))
+                    {
+                        // Remplacer le corrigé par une zone de réponse élève pointillée
+                        sb.AppendLine("    <div class=\"student-answer-box\">");
+                        sb.AppendLine("      <div class=\"dots-line\"></div>");
+                        sb.AppendLine("      <div class=\"dots-line\"></div>");
+                        sb.AppendLine("      <div class=\"dots-line\"></div>");
+                        sb.AppendLine("    </div>");
+                        continue;
+                    }
+                }
+            }
+
             RenderBlock(block, sb, indent: "    ");
         }
         sb.AppendLine("  </main>");
@@ -55,23 +103,24 @@ public static class HtmlRenderer
         return sb.ToString();
     }
 
-    public static string RenderToHtml(GeneratedDocument doc, StylePreset? preset = null)
+    public static string RenderToHtml(GeneratedDocument doc, StylePreset? preset = null, bool isStudentVersion = false)
     {
         var css = preset?.CustomCss ?? DefaultCss;
-        return RenderToFullHtml(doc, css);
+        return RenderToFullHtml(doc, css, isStudentVersion);
     }
 
-    public static string RenderToFullHtml(GeneratedDocument doc, string? customCss = null)
+    public static string RenderToFullHtml(GeneratedDocument doc, string? customCss = null, bool isStudentVersion = false)
     {
-        var fragment = RenderToFragment(doc);
+        var fragment = RenderToFragment(doc, isStudentVersion);
 
-        var css = customCss ?? DefaultCss;
+        var css = CssSanitizer.SanitizeCss(customCss ?? DefaultCss);
 
         return $@"<!DOCTYPE html>
 <html lang=""fr"">
 <head>
     <meta charset=""UTF-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <meta http-equiv=""Content-Security-Policy"" content=""default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'self' https: data:;"">
     <title>{EncodeText(doc.Metadata.Title)}</title>
     <style>
 {css}
@@ -300,6 +349,29 @@ public static class HtmlRenderer
             page-break-before: always;
             border-top: 1px dashed var(--border);
             margin: 2rem 0;
+        }
+        .student-header-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px dashed #94a3b8;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 1rem 0 1.5rem 0;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        .student-answer-box {
+            margin: 12px 0 18px 0;
+            padding: 10px 14px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .dots-line {
+            border-bottom: 1px dotted #94a3b8;
+            height: 24px;
         }
     ";
 }

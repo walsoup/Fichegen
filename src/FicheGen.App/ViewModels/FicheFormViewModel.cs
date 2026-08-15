@@ -32,17 +32,6 @@ public enum StatusSeverity
 }
 
 /// <summary>
-/// Contrat minimal de persistance des brouillons de formulaires.
-/// Implémenté dans la couche Infrastructure (un fichier JSON par clé de brouillon).
-/// </summary>
-public interface IDraftStore
-{
-    Task SaveDraftAsync(string draftKey, IReadOnlyDictionary<string, string?> fields, CancellationToken cancellationToken = default);
-    Task<IReadOnlyDictionary<string, string?>?> LoadDraftAsync(string draftKey, CancellationToken cancellationToken = default);
-    Task ClearDraftAsync(string draftKey, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
 /// Service de maintenance de l'historique : purge les éléments plus anciens que la
 /// durée de rétention configurée et retourne le nombre d'éléments supprimés.
 /// </summary>
@@ -68,10 +57,12 @@ public partial class FicheFormViewModel : ObservableValidator
 
     private readonly GenerationOrchestrator _orchestrator;
     private readonly ISettingsStore _settingsStore;
+    private readonly ICredentialStore? _credentialStore;
     private readonly IHistoryRepository _historyRepository;
     private readonly StylePresetService _stylePresetService;
     private readonly IDraftStore? _draftStore;
     private readonly IHistoryRetentionService? _historyRetentionService;
+    private readonly IReadinessService? _readinessService;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly DispatcherQueueTimer? _draftTimer;
     private readonly DispatcherQueueTimer? _elapsedTimer;
@@ -201,16 +192,20 @@ public partial class FicheFormViewModel : ObservableValidator
         IHistoryRepository historyRepository,
         StylePresetService stylePresetService,
         ResultViewModel resultViewModel,
+        ICredentialStore? credentialStore = null,
         IDraftStore? draftStore = null,
-        IHistoryRetentionService? historyRetentionService = null)
+        IHistoryRetentionService? historyRetentionService = null,
+        IReadinessService? readinessService = null)
     {
         _orchestrator = orchestrator;
         _settingsStore = settingsStore;
+        _credentialStore = credentialStore;
         _historyRepository = historyRepository;
         _stylePresetService = stylePresetService;
         ResultViewModel = resultViewModel;
         _draftStore = draftStore;
         _historyRetentionService = historyRetentionService;
+        _readinessService = readinessService;
 
         // Les propriétés partielles ne peuvent pas avoir d'initialiseur :
         // les valeurs par défaut sont donc fixées ici.
@@ -234,7 +229,7 @@ public partial class FicheFormViewModel : ObservableValidator
         ClearErrors();
 
         // Minuteurs UI (anti-rebond du brouillon + chronomètre de génération).
-        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        try { _dispatcherQueue = DispatcherQueue.GetForCurrentThread(); } catch { _dispatcherQueue = null; }
         if (_dispatcherQueue is not null)
         {
             _draftTimer = _dispatcherQueue.CreateTimer();
@@ -271,6 +266,9 @@ public partial class FicheFormViewModel : ObservableValidator
         }
 
         IsGenerating = true;
+        ResultViewModel.IsBusy = true;
+        ResultViewModel.CurrentHtml = string.Empty;
+        ResultViewModel.SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
         SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
@@ -295,6 +293,7 @@ public partial class FicheFormViewModel : ObservableValidator
             );
 
             SetStatus("Rédaction de la fiche pédagogique par l'IA…", StatusSeverity.Info);
+            ResultViewModel.SetStatus("Rédaction de la fiche pédagogique par l'IA…", StatusSeverity.Info);
             var result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
             var document = result.Document;
             var html = result.PreviewHtml;
@@ -317,6 +316,7 @@ public partial class FicheFormViewModel : ObservableValidator
             };
 
             await _historyRepository.SaveAsync(historyItem);
+            _readinessService?.ReportExecutionOutcome(true);
             SetStatus($"Fiche « {document.Metadata.Title} » générée en {result.Elapsed.TotalSeconds:F1} s.", StatusSeverity.Success);
         }
         catch (OperationCanceledException)
@@ -325,12 +325,14 @@ public partial class FicheFormViewModel : ObservableValidator
         }
         catch (Exception ex)
         {
-            SetStatus($"Une erreur est survenue : {ex.Message}", StatusSeverity.Error);
+            _readinessService?.ReportExecutionOutcome(false, ex);
+            SetStatus(ErrorMessageTranslator.ToUserFriendlyMessage(ex), StatusSeverity.Error);
         }
         finally
         {
             _elapsedTimer?.Stop();
             IsGenerating = false;
+            ResultViewModel.IsBusy = false;
             _cts?.Dispose();
             _cts = null;
         }
@@ -529,7 +531,7 @@ public partial class FicheFormViewModel : ObservableValidator
             : "⚠️ " + string.Join(" ", errors);
     }
 
-    private static AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
+    private AiRequestConfig BuildAiConfig(AppSettings appSettings) => new(
         appSettings.Ai.GlobalProvider,
         appSettings.Ai.Models,
         appSettings.Ai.RoutingOverrides.ToDictionary(k => k.Key, v => new RoutingOverride(v.Value.Provider, v.Value.Model)),
@@ -537,7 +539,7 @@ public partial class FicheFormViewModel : ObservableValidator
         appSettings.Ai.Vertex.Project,
         appSettings.Ai.Vertex.Region,
         new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation } },
-        (_, _) => ValueTask.FromResult<string?>(null));
+        (k, _) => ValueTask.FromResult(_credentialStore?.Get(k)));
 
     private static string GetPlainText(GeneratedDocument doc)
     {

@@ -26,48 +26,55 @@
             <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
         </Style>
 
-        <!-- Ligne de diff : + ajout / − suppression / @@ plage condensée / contexte -->
+        <!-- Ligne de proposition : Texte ajouté (vert) / Texte remplacé (rouge barré) / Contexte -->
         <DataTemplate x:Key="DiffLineTemplate">
-            <Grid Margin="0,1">
+            <Grid Margin="0,2">
+                <!-- Texte proposé / ajouté -->
                 <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=added}"
                         Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
-                        CornerRadius="4" Padding="8,3">
+                        BorderBrush="{ThemeResource SystemFillColorSuccessBrush}"
+                        BorderThickness="1,0,0,0"
+                        CornerRadius="4" Padding="10,6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="+" Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                                   FontWeight="Bold" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
-                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                        <TextBlock Text="✓" FontSize="12" FontWeight="Bold"
+                                   Foreground="{ThemeResource SystemFillColorSuccessBrush}" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Text}" FontSize="12"
                                    TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
                     </StackPanel>
                 </Border>
 
+                <!-- Texte actuel / remplacé -->
                 <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=removed}"
                         Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
-                        CornerRadius="4" Padding="8,3">
+                        BorderBrush="{ThemeResource SystemFillColorCriticalBrush}"
+                        BorderThickness="1,0,0,0"
+                        CornerRadius="4" Padding="10,6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="−" Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                                   FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                                   TextWrapping="Wrap" TextDecorations="Strikethrough" IsTextSelectionEnabled="True"/>
+                        <TextBlock Text="✕" FontSize="12" FontWeight="Bold"
+                                   Foreground="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Text}" FontSize="12"
+                                   TextWrapping="Wrap" TextDecorations="Strikethrough"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   IsTextSelectionEnabled="True"/>
                     </StackPanel>
                 </Border>
 
+                <!-- Lignes inchangées masquées -->
                 <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=collapsed}"
                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                         CornerRadius="4" Padding="8,3">
-                    <TextBlock Text="{Binding CollapsedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='@@ {0} lignes inchangées @@'}"
-                               FontFamily="Cascadia Mono, Consolas" FontSize="11" FontStyle="Italic"
+                    <TextBlock Text="{Binding CollapsedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='… {0} lignes inchangées …'}"
+                               FontSize="11" FontStyle="Italic"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                 </Border>
 
+                <!-- Contexte neutre -->
                 <Border Visibility="{Binding Kind, Converter={StaticResource DiffKindVis}, ConverterParameter=context}"
-                        Padding="8,3">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text=" " Width="12" FontFamily="Cascadia Mono, Consolas" FontSize="12"/>
-                        <TextBlock Text="{Binding Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
-                    </StackPanel>
+                        Padding="10,3">
+                    <TextBlock Text="{Binding Text}" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
                 </Border>
             </Grid>
         </DataTemplate>
@@ -221,65 +228,73 @@
                                                 BorderThickness="1"
                                                 Visibility="{Binding HasDiff, Converter={StaticResource BoolToVis}}">
                                             <StackPanel>
-                                                <!-- En-tête avec compteurs -->
-                                                <Border Padding="10,7" CornerRadius="8,8,0,0"
+                                                <!-- En-tête avec compteurs bienveillants -->
+                                                <Border Padding="12,8" CornerRadius="8,8,0,0"
                                                         Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <FontIcon Glyph="&#xE70F;" FontSize="12" VerticalAlignment="Center"
-                                                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                                                        <TextBlock Text="Modifications proposées" FontSize="12" FontWeight="SemiBold"
-                                                                   VerticalAlignment="Center"/>
-                                                        <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
-                                                                CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding AddedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='+{0}'}" FontSize="11"
-                                                                       FontWeight="SemiBold"
-                                                                       Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
-                                                        </Border>
-                                                        <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
-                                                                CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding RemovedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='−{0}'}" FontSize="11"
-                                                                       FontWeight="SemiBold"
-                                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                                                        </Border>
-                                                    </StackPanel>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE70F;" FontSize="13" VerticalAlignment="Center"
+                                                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                            <TextBlock Text="Proposition d'ajustement" FontSize="12" FontWeight="SemiBold"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                                                    CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding AddedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='+{0} ajouts'}" FontSize="11"
+                                                                           FontWeight="Medium"
+                                                                           Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                                            </Border>
+                                                            <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                                                                    CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding RemovedCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='−{0} retraits'}" FontSize="11"
+                                                                           FontWeight="Medium"
+                                                                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
                                                 </Border>
 
                                                 <!-- Lignes du diff -->
                                                 <ItemsControl ItemsSource="{Binding DiffLines}"
                                                               ItemTemplate="{StaticResource DiffLineTemplate}"
-                                                              Margin="4"/>
+                                                              Margin="6"/>
 
                                                 <!-- Barre d'actions -->
-                                                <StackPanel Orientation="Horizontal" Spacing="6" Padding="8">
-                                                    <Button Style="{ThemeResource AccentButtonStyle}" Padding="10,5"
+                                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="10,8">
+                                                    <Button Style="{ThemeResource AccentButtonStyle}" Padding="12,6"
                                                             Click="OnApplyDiffClicked"
-                                                            ToolTipService.ToolTip="Appliquer ces modifications au document (annulation possible via Ctrl+Z)"
-                                                            AutomationProperties.Name="Appliquer les modifications">
+                                                            ToolTipService.ToolTip="Appliquer cette révision au document (annulation possible avec Ctrl+Z)"
+                                                            AutomationProperties.Name="Appliquer la révision">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE8FB;" FontSize="12"/>
-                                                            <TextBlock Text="Appliquer" FontSize="12" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Appliquer la révision" FontSize="12" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Button>
-                                                    <Button Padding="10,5" Click="OnRejectDiffClicked"
-                                                            ToolTipService.ToolTip="Rejeter ces modifications"
-                                                            AutomationProperties.Name="Rejeter les modifications">
+                                                    <Button Padding="12,6" Click="OnRejectDiffClicked"
+                                                            ToolTipService.ToolTip="Ignorer cette proposition"
+                                                            AutomationProperties.Name="Ignorer la proposition">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE711;" FontSize="11"/>
-                                                            <TextBlock Text="Rejeter" FontSize="12" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Ignorer" FontSize="12" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Button>
-                                                    <Button Style="{ThemeResource SubtleButtonStyle}" Padding="10,5"
+                                                    <Button Style="{ThemeResource SubtleButtonStyle}" Padding="8,6"
                                                             Click="OnCopyDiffClicked"
-                                                            ToolTipService.ToolTip="Copier le texte modifié"
-                                                            AutomationProperties.Name="Copier le texte modifié">
+                                                            ToolTipService.ToolTip="Copier le texte"
+                                                            AutomationProperties.Name="Copier le texte">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE8C8;" FontSize="12"/>
                                                             <TextBlock Text="Copier" FontSize="12" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Button>
-                                                    <TextBlock Text="Ctrl+Z : annuler après application" FontSize="10"
+                                                    <TextBlock Text="Annulable (Ctrl+Z)" FontSize="11"
                                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                               VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                                               VerticalAlignment="Center" Margin="6,0,0,0"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>

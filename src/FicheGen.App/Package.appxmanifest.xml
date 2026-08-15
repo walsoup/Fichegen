@@ -7,13 +7,14 @@
   IgnorableNamespaces="uap rescap desktop">
 
   <Identity
-    Name="FicheGen.App"
+    Name="PROFstudio.App"
     Publisher="CN=FicheGen"
-    Version="1.0.0.0" />
+    Version="1.0.0.0"
+    ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>FicheGen for Windows</DisplayName>
-    <PublisherDisplayName>FicheGen Team</PublisherDisplayName>
+    <DisplayName>PROFstudio</DisplayName>
+    <PublisherDisplayName>PROFstudio Team</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -24,14 +25,15 @@
 
   <Resources>
     <Resource Language="fr-FR"/>
+    <Resource Language="en-US"/>
   </Resources>
 
   <Applications>
     <Application Id="App"
-      Executable="$targetnametoken$.exe"
-      EntryPoint="$targetentrypoint$">
+      Executable="FicheGen.App.exe"
+      EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="FicheGen"
+        DisplayName="PROFstudio"
         Description="Générateur IA de fiches pédagogiques, évaluations et quiz pour enseignants"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -41,7 +43,7 @@
       </uap:VisualElements>
       <Extensions>
         <desktop:Extension Category="windows.startupTask" Executable="FicheGen.App.exe" EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="FicheGenStartupTask" Enabled="false" DisplayName="FicheGen Quick Start" />
+          <desktop:StartupTask TaskId="FicheGenStartupTask" Enabled="false" DisplayName="PROFstudio Quick Start" />
         </desktop:Extension>
       </Extensions>
     </Application>
@@ -49,6 +51,7 @@
 
   <Capabilities>
     <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
     <rescap:Capability Name="privateNetworkClientServer" />
   </Capabilities>
 </Package>

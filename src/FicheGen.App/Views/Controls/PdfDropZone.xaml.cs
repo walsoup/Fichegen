@@ -1,16 +1,20 @@
-using Windows.ApplicationModel.DataTransfer;
+using System;
+using System.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace FicheGen.App.Views.Controls;
 
 public sealed partial class PdfDropZone : UserControl
 {
     public static readonly DependencyProperty GuideFilePathProperty =
-        DependencyProperty.Register(nameof(GuideFilePath), typeof(string), typeof(PdfDropZone), new PropertyMetadata(string.Empty, OnGuideFilePathChanged));
-
-    public static readonly DependencyProperty DisplayTextProperty =
-        DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PdfDropZone), new PropertyMetadata("Déposez un guide PDF ici"));
+        DependencyProperty.Register(
+            nameof(GuideFilePath),
+            typeof(string),
+            typeof(PdfDropZone),
+            new PropertyMetadata(string.Empty, OnGuideFilePathChanged));
 
     public string GuideFilePath
     {
@@ -18,28 +22,74 @@ public sealed partial class PdfDropZone : UserControl
         set => SetValue(GuideFilePathProperty, value);
     }
 
-    public string DisplayText
-    {
-        get => (string)GetValue(DisplayTextProperty);
-        set => SetValue(DisplayTextProperty, value);
-    }
-
     public PdfDropZone()
     {
         InitializeComponent();
+        UpdateState();
     }
 
     private static void OnGuideFilePathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is PdfDropZone zone && e.NewValue is string path)
+        if (d is PdfDropZone zone)
         {
-            if (!string.IsNullOrWhiteSpace(path))
+            zone.UpdateState();
+        }
+    }
+
+    public void SetError(string title, string message)
+    {
+        EmptyStatePanel.Visibility = Visibility.Collapsed;
+        DragOverPanel.Visibility = Visibility.Collapsed;
+        LoadedStatePanel.Visibility = Visibility.Collapsed;
+        ProcessingPanel.Visibility = Visibility.Collapsed;
+        ErrorStatePanel.Visibility = Visibility.Visible;
+
+        ErrorTitleText.Text = title;
+        ErrorMessageText.Text = message;
+    }
+
+    private void UpdateState()
+    {
+        var path = GuideFilePath;
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            EmptyStatePanel.Visibility = Visibility.Visible;
+            DragOverPanel.Visibility = Visibility.Collapsed;
+            LoadedStatePanel.Visibility = Visibility.Collapsed;
+            ErrorStatePanel.Visibility = Visibility.Collapsed;
+            ProcessingPanel.Visibility = Visibility.Collapsed;
+
+            DropBorder.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+            DropBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+        }
+        else
+        {
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            DragOverPanel.Visibility = Visibility.Collapsed;
+            LoadedStatePanel.Visibility = Visibility.Visible;
+            ErrorStatePanel.Visibility = Visibility.Collapsed;
+            ProcessingPanel.Visibility = Visibility.Collapsed;
+
+            FileNameText.Text = Path.GetFileName(path);
+            try
             {
-                zone.DisplayText = $"Guide chargé : {System.IO.Path.GetFileName(path)}";
+                if (File.Exists(path))
+                {
+                    var fileInfo = new FileInfo(path);
+                    var sizeKb = fileInfo.Length / 1024;
+                    FileMetaText.Text = sizeKb > 1024
+                        ? $"{sizeKb / 1024.0:F1} Mo · Prêt pour l'ancrage pédagogique"
+                        : $"{sizeKb} Ko · Prêt pour l'ancrage pédagogique";
+                }
+                else
+                {
+                    FileMetaText.Text = "Guide PDF sélectionné";
+                }
             }
-            else
+            catch
             {
-                zone.DisplayText = "Déposez un guide PDF ici";
+                FileMetaText.Text = "Guide PDF sélectionné";
             }
         }
     }
@@ -47,25 +97,53 @@ public sealed partial class PdfDropZone : UserControl
     private void OnDragOver(object sender, DragEventArgs e)
     {
         e.AcceptedOperation = DataPackageOperation.Copy;
-        DropBorder.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"];
+        DragOverPanel.Visibility = Visibility.Visible;
+        EmptyStatePanel.Visibility = Visibility.Collapsed;
+        LoadedStatePanel.Visibility = Visibility.Collapsed;
+        ErrorStatePanel.Visibility = Visibility.Collapsed;
+
+        DropBorder.BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+        DropBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"];
     }
 
     private void OnDragLeave(object sender, DragEventArgs e)
     {
-        DropBorder.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["LayerOnAcrylicFillColorDefaultBrush"];
+        UpdateState();
     }
 
     private async void OnDrop(object sender, DragEventArgs e)
     {
-        DropBorder.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["LayerOnAcrylicFillColorDefaultBrush"];
+        UpdateState();
 
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
         {
-            var items = await e.DataView.GetStorageItemsAsync();
-            if (items.Count > 0 && items[0].Path.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                GuideFilePath = items[0].Path;
+                var items = await e.DataView.GetStorageItemsAsync();
+                if (items.Count > 0)
+                {
+                    var item = items[0];
+                    if (item.Path.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        GuideFilePath = item.Path;
+                    }
+                    else
+                    {
+                        SetError("Format non supporté", "Seuls les fichiers PDF (.pdf) sont acceptés pour les guides.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SetError("Lecture impossible", "Le fichier n'a pas pu être lu. Vérifiez qu'il n'est pas verrouillé.");
+                Serilog.Log.Warning(ex, "Erreur lors du dépôt de fichier PDF.");
             }
         }
+    }
+
+    private void OnClearFileClicked(object sender, RoutedEventArgs e)
+    {
+        GuideFilePath = string.Empty;
+        UpdateState();
     }
 }

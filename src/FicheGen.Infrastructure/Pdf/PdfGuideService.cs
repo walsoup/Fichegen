@@ -87,15 +87,27 @@ public sealed class PdfGuideService : IPdfGuideService
                 return scannedResult;
             }
 
-            // Extract ToC text from first 12 pages
-            var tocPagesCount = Math.Min(12, pageCount);
+            // Extract ToC text from first 15 pages
+            var tocPagesCount = Math.Min(15, pageCount);
             var sb = new StringBuilder();
             for (var p = 1; p <= tocPagesCount; p++)
             {
-                sb.AppendLine(document.GetPage(p).Text);
+                sb.AppendLine(ExtractPageTextWithLines(document.GetPage(p)));
             }
 
             var parsedToc = TocParser.ParseToc(sb.ToString());
+
+            // If no ToC found in front matter, check the back matter (last 15 pages)
+            if (parsedToc.Count == 0 && pageCount > tocPagesCount)
+            {
+                var startBack = Math.Max(tocPagesCount + 1, pageCount - 15);
+                var backSb = new StringBuilder();
+                for (var p = startBack; p <= pageCount; p++)
+                {
+                    backSb.AppendLine(ExtractPageTextWithLines(document.GetPage(p)));
+                }
+                parsedToc = TocParser.ParseToc(backSb.ToString());
+            }
 
             // Detect page offset
             using var wordSource = new PdfPigPageWordSource(document);
@@ -163,5 +175,19 @@ public sealed class PdfGuideService : IPdfGuideService
     public Task<byte[]> GetPageThumbnailAsync(string pdfPath, int physicalPage, int width = 300, CancellationToken ct = default)
     {
         return WinRtPdfThumbnailRenderer.RenderPageThumbnailAsync(pdfPath, physicalPage, width, ct);
+    }
+
+    private static string ExtractPageTextWithLines(UglyToad.PdfPig.Content.Page page)
+    {
+        var words = page.GetWords();
+        if (words == null || !words.Any())
+            return page.Text ?? string.Empty;
+
+        var lines = words
+            .GroupBy(w => Math.Round(w.BoundingBox.Bottom / 4.0) * 4.0)
+            .OrderByDescending(g => g.Key)
+            .Select(g => string.Join(" ", g.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)));
+
+        return string.Join("\n", lines);
     }
 }

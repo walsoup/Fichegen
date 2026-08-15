@@ -10,342 +10,317 @@
     d:DesignWidth="1440"
     d:DesignHeight="900">
 
-    <Page.Resources>
-        <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12"/>
-        </Style>
+    <Grid x:Name="RootGrid" Padding="16,12,16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- AppCommandBar (§6.2) -->
+            <RowDefinition Height="*"/>    <!-- Contenu Workspace -->
+        </Grid.RowDefinitions>
 
-        <Style x:Key="CaptionSecondaryStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-        </Style>
+        <!-- ═══════════ Ligne 0 : Barre de commandes unifiée (§6.2) ═══════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <DataTemplate x:Key="SubjectItemTemplate">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="{Binding Icon}" FontSize="16" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+            <!-- Titre de la page -->
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
+                <TextBlock Text="Nouvelle évaluation" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"/>
+                <TextBlock Text="Créez un contrôle avec exercices progressifs et barème de correction."
+                           Style="{StaticResource CaptionSecondaryStyle}"/>
             </StackPanel>
-        </DataTemplate>
 
-        <!-- Case à cocher de notion (ItemsRepeater) -->
-        <DataTemplate x:Key="LessonCheckTemplate">
-            <CheckBox Tag="{Binding}" MinHeight="30"
-                      Loaded="LessonCheck_Loaded"
-                      Checked="LessonCheck_Changed"
-                      Unchecked="LessonCheck_Changed"
-                      AutomationProperties.Name="{Binding}">
-                <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
-            </CheckBox>
-        </DataTemplate>
+            <!-- CommandBar persistante -->
+            <CommandBar Grid.Column="1" HorizontalAlignment="Right" DefaultLabelPosition="Right"
+                        Background="Transparent" BorderThickness="0" IsOpen="False">
+                <!-- Groupe Primaire : Générer / Annuler -->
+                <AppBarButton x:Name="CmdGenerate" Label="Générer (Ctrl+G)" Icon="Play"
+                              Command="{Binding GenerateEvaluationCommand}"
+                              ToolTipService.ToolTip="Lancer la rédaction de l'évaluation par l'assistant IA (Ctrl+G)"/>
 
-        <!-- Puce de notion sélectionnée -->
-        <Style x:Key="ChipButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorTertiaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="14"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="MinWidth" Value="0"/>
-        </Style>
-    </Page.Resources>
+                <AppBarButton x:Name="CmdCancel" Label="Annuler" Icon="Stop"
+                              Command="{Binding CancelCommand}"
+                              Visibility="Collapsed"
+                              ToolTipService.ToolTip="Arrêter la génération en cours"/>
 
-    <Grid x:Name="RootGrid" Padding="16">
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="AdaptiveStates" CurrentStateChanged="AdaptiveStates_CurrentStateChanged">
-                <VisualState x:Name="WideState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="1280"/>
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="AssistantColumn.Width" Value="360"/>
-                        <Setter Target="AssistantOverlay.Visibility" Value="Collapsed"/>
-                    </VisualState.Setters>
-                </VisualState>
-                <VisualState x:Name="NarrowState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0"/>
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="AssistantColumn.Width" Value="0"/>
-                        <Setter Target="AssistantFab.Visibility" Value="Visible"/>
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
+                <AppBarSeparator/>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="FormColumn" Width="400" MinWidth="340" MaxWidth="560"/>
-            <ColumnDefinition x:Name="PreviewColumn" Width="*" MinWidth="420"/>
-            <ColumnDefinition x:Name="AssistantColumn" Width="360"/>
-        </Grid.ColumnDefinitions>
+                <!-- Groupe Vue & Format -->
+                <AppBarButton x:Name="CmdStudentView"
+                              Label="{Binding ResultViewModel.StudentViewButtonLabel, FallbackValue='Version Élève'}"
+                              Command="{Binding ResultViewModel.ToggleStudentViewCommand}"
+                              ToolTipService.ToolTip="Basculer entre la version élève et le corrigé">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="&#xE77B;"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
 
-        <!-- ═══════════ Colonne 0 : Formulaire ═══════════ -->
-        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,18,0">
-            <StackPanel x:Name="FormPanel" Spacing="14" Margin="0,0,0,8">
-                <StackPanel.ChildrenTransitions>
-                    <TransitionCollection>
-                        <EntranceThemeTransition FromVerticalOffset="20"/>
-                    </TransitionCollection>
-                </StackPanel.ChildrenTransitions>
+                <AppBarButton x:Name="CmdZoomOut" Label="Zoom -" Icon="ZoomOut"
+                              Command="{Binding ResultViewModel.ZoomOutCommand}"
+                              ToolTipService.ToolTip="Réduire l'affichage"/>
 
-                <!-- En-tête -->
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Border Width="44" Height="44" CornerRadius="12" Background="{ThemeResource AccentFillColorTertiaryBrush}">
-                        <TextBlock Text="📝" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center" Spacing="2">
-                        <TextBlock Text="Évaluation" Style="{ThemeResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"/>
-                        <TextBlock Text="Créez une évaluation diagnostique, formative ou sommative, avec barème maîtrisé."
-                                   Style="{StaticResource CaptionSecondaryStyle}"/>
-                    </StackPanel>
+                <AppBarButton x:Name="CmdZoomIn" Label="Zoom +" Icon="ZoomIn"
+                              Command="{Binding ResultViewModel.ZoomInCommand}"
+                              ToolTipService.ToolTip="Agrandir l'affichage"/>
+
+                <AppBarSeparator/>
+
+                <!-- Groupe Exportation -->
+                <AppBarButton x:Name="CmdExportDocx" Label="Word" Icon="Document"
+                              Command="{Binding ResultViewModel.ExportDocxCommand}"
+                              ToolTipService.ToolTip="Exporter au format Microsoft Word (.docx)"/>
+
+                <AppBarButton x:Name="CmdExportPdf" Label="PDF" Icon="OpenFile"
+                              Command="{Binding ResultViewModel.ExportPdfCommand}"
+                              ToolTipService.ToolTip="Exporter au format PDF imprimable"/>
+
+                <AppBarButton x:Name="CmdPrint" Label="Imprimer" Icon="Print"
+                              Command="{Binding ResultViewModel.PrintCommand}"
+                              ToolTipService.ToolTip="Imprimer l'évaluation (Ctrl+P)"/>
+
+                <!-- Commandes secondaires dans le menu dépassement (⋯) -->
+                <CommandBar.SecondaryCommands>
+                    <AppBarButton Label="Exporter en RTF" Icon="Document"
+                                  Command="{Binding ResultViewModel.ExportRtfCommand}"/>
+                    <AppBarButton Label="Copier le texte brut" Icon="Copy"
+                                  Command="{Binding ResultViewModel.CopyPlainTextCommand}"/>
+                    <AppBarButton Label="Rechercher dans le document" Icon="Find"
+                                  Command="{Binding ResultViewModel.ToggleFindBarCommand}"/>
+                    <AppBarSeparator/>
+                    <AppBarButton Label="Ouvrir le dossier d'exportation" Icon="Folder"
+                                  Command="{Binding ResultViewModel.OpenLastExportedFolderCommand}"/>
+                </CommandBar.SecondaryCommands>
+            </CommandBar>
+
+            <!-- Bouton Assistant à droite -->
+            <Button Grid.Column="2" x:Name="AssistantToggleButton" Margin="8,0,0,0"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Click="OnToggleAssistantClicked"
+                    VerticalAlignment="Center"
+                    ToolTipService.ToolTip="Afficher ou masquer l'assistant IA latéral">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock Text="Assistant" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
-
-                <!-- Classe et matière -->
-                <StackPanel Spacing="10">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center" Background="{ThemeResource AccentFillColorDefaultBrush}"/>
-                        <TextBlock Text="Classe et matière" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
-                    </StackPanel>
-
-                    <ComboBox x:Name="LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
-                              SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
-                              SelectionChanged="LevelCombo_SelectionChanged"
-                              AutomationProperties.Name="Niveau scolaire">
-                        <x:String>CP</x:String>
-                        <x:String>CE1</x:String>
-                        <x:String>CE2</x:String>
-                        <x:String>CM1</x:String>
-                        <x:String>CM2</x:String>
-                        <x:String>6e</x:String>
-                    </ComboBox>
-
-                    <ComboBox x:Name="SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
-                              IsEditable="True"
-                              PlaceholderText="Choisir ou saisir une matière"
-                              ItemTemplate="{StaticResource SubjectItemTemplate}"
-                              Text="{Binding Subject, Mode=TwoWay}"
-                              SelectionChanged="SubjectCombo_SelectionChanged"
-                              TextSubmitted="SubjectCombo_TextSubmitted"
-                              AutomationProperties.Name="Matière"/>
-                </StackPanel>
-
-                <!-- Leçons et compétences -->
-                <Expander Header="📚 Leçons et compétences ciblées"
-                          IsExpanded="True"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Cochez les notions à évaluer ou créez vos propres étiquettes : elles structurent le sujet généré."
-                                   Style="{StaticResource CaptionSecondaryStyle}"/>
-
-                        <ItemsRepeater x:Name="SuggestedLessonsRepeater" ItemTemplate="{StaticResource LessonCheckTemplate}">
-                            <ItemsRepeater.Layout>
-                                <UniformGridLayout Orientation="Horizontal" MinItemWidth="168" MinColumnSpacing="8" MinRowSpacing="2"/>
-                            </ItemsRepeater.Layout>
-                        </ItemsRepeater>
-
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="NewTagBox"
-                                     PlaceholderText="Notion personnalisée… (Entrée pour ajouter)"
-                                     KeyDown="NewTagBox_KeyDown"
-                                     TextChanged="NewTagBox_TextChanged"
-                                     AutomationProperties.Name="Ajouter une notion personnalisée"/>
-                            <Button x:Name="AddTagButton" Grid.Column="1" Content="Ajouter"
-                                    IsEnabled="False" Click="AddTag_Click"
-                                    AutomationProperties.Name="Ajouter l'étiquette"/>
-                        </Grid>
-
-                        <TextBlock x:Name="LessonsCountText" Text="Aucune notion sélectionnée"
-                                   Style="{StaticResource CaptionSecondaryStyle}"/>
-
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                            <StackPanel x:Name="SelectedChipsPanel" Orientation="Horizontal" Spacing="8"/>
-                        </ScrollViewer>
-
-                        <!-- Miroir de synchronisation vers le ViewModel (Topics, chaîne CSV) -->
-                        <TextBox x:Name="TopicsMirror" Visibility="Collapsed"
-                                 Text="{Binding Topics, Mode=TwoWay}"
-                                 AutomationProperties.Name="Sujets sélectionnés"/>
-                    </StackPanel>
-                </Expander>
-
-                <!-- Type d'évaluation -->
-                <StackPanel Spacing="10">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center" Background="{ThemeResource AccentFillColorDefaultBrush}"/>
-                        <TextBlock Text="Format de l'évaluation" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
-                    </StackPanel>
-
-                    <ComboBox x:Name="EvalTypeCombo" Header="Type d'évaluation" HorizontalAlignment="Stretch"
-                              SelectedValuePath="Tag"
-                              SelectedValue="{Binding EvaluationType, Mode=TwoWay}"
-                              AutomationProperties.Name="Type d'évaluation">
-                        <ComboBoxItem Tag="diagnostique" Content="🧭 Diagnostique"/>
-                        <ComboBoxItem Tag="formative" Content="🌱 Formative"/>
-                        <ComboBoxItem Tag="sommative" Content="🎓 Sommative"/>
-                    </ComboBox>
-                    <TextBlock Text="La tonalité des consignes et la formulation des exercices s'adaptent au type choisi."
-                               Style="{StaticResource CaptionSecondaryStyle}"/>
-
-                    <!-- Difficulté -->
-                    <Grid Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Niveau de difficulté" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="DifficultyLabel" Grid.Column="1" Text="🌳 Intermédiaire"
-                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
-                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-                    <Slider x:Name="DifficultySlider" Minimum="1" Maximum="5" StepFrequency="1" TickFrequency="1"
-                            SnapsTo="StepValues"
-                            Value="{Binding DifficultyLevel, Mode=TwoWay}"
-                            ValueChanged="DifficultySlider_ValueChanged"
-                            AutomationProperties.Name="Niveau de difficulté, de 1 à 5"/>
-                    <Grid Margin="0,-6,0,0">
-                        <TextBlock Text="🌱 Découverte" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="🏆 Expert" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right"/>
-                    </Grid>
-
-                    <NumberBox x:Name="DurationBox" Header="Durée (minutes)"
-                               Minimum="10" Maximum="120" SmallChange="5" LargeChange="15"
-                               SpinButtonPlacementMode="Inline"
-                               Value="{Binding DurationMinutes, Mode=TwoWay}"
-                               ValueChanged="DurationBox_ValueChanged"
-                               AutomationProperties.Name="Durée de l'évaluation en minutes"/>
-                </StackPanel>
-
-                <!-- Barème -->
-                <Border Style="{StaticResource CardBorderStyle}">
-                    <StackPanel Spacing="10">
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center" Spacing="2">
-                                <TextBlock Text="Barème" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
-                                <TextBlock Text="Total des points, réparti automatiquement entre les exercices."
-                                           Style="{StaticResource CaptionSecondaryStyle}"/>
-                            </StackPanel>
-                            <NumberBox x:Name="TotalPointsBox" Grid.Column="1" Width="118"
-                                       Minimum="5" Maximum="100" SmallChange="5" LargeChange="10"
-                                       SpinButtonPlacementMode="Inline"
-                                       Value="{Binding TotalPoints, Mode=TwoWay, FallbackValue=20, TargetNullValue=20}"
-                                       ValueChanged="TotalPointsBox_ValueChanged"
-                                       AutomationProperties.Name="Total des points de l'évaluation"/>
-                        </Grid>
-                        <Border Background="{ThemeResource AccentFillColorTertiaryBrush}" CornerRadius="12"
-                                Padding="10,4" HorizontalAlignment="Left">
-                            <TextBlock x:Name="PointsBadge" Text="Évaluation notée sur 20 points"
-                                       Style="{ThemeResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        </Border>
-                        <ToggleSwitch Header="Personnaliser les points par exercice"
-                                      IsOn="{Binding CustomizePointsPerExercise, Mode=TwoWay}"
-                                      AutomationProperties.Name="Personnaliser le barème par exercice"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Ressources -->
-                <controls:PdfDropZone x:Name="PdfDropZoneControl"
-                                      GuideFilePath="{Binding GuideFilePath, Mode=TwoWay}"
-                                      Tapped="PdfDropZoneControl_Tapped"
-                                      Drop="PdfDropZoneControl_Drop"/>
-
-                <!-- Validation en ligne -->
-                <InfoBar x:Name="FormInfoBar"
-                         IsOpen="False" IsClosable="False"
-                         Severity="Informational"
-                         Message=""/>
-
-                <controls:GenerateButton x:Name="GenButton"
-                                         ButtonText="Générer l'évaluation (Ctrl+G)"
-                                         IsGenerating="{Binding IsGenerating}"
-                                         Command="{Binding GenerateEvaluationCommand}"
-                                         CancelCommand="{Binding CancelCommand}"/>
-
-                <controls:StatusBar StatusMessage="{Binding StatusMessage}" IsBusy="{Binding IsGenerating}"/>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- Séparateur redimensionnable -->
-        <Border x:Name="SplitterGrip" Grid.Column="0" Width="4" Height="36" CornerRadius="2" Opacity="0.45"
-                Background="{ThemeResource ControlStrongFillColorDefaultBrush}"
-                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" IsHitTestVisible="False"/>
-
-        <toolkit:GridSplitter x:Name="FormSplitter" Grid.Column="0"
-                              Width="14" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                              Background="Transparent"
-                              ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
-                              AutomationProperties.Name="Redimensionner les panneaux"
-                              PointerEntered="FormSplitter_PointerEntered"
-                              PointerExited="FormSplitter_PointerExited"
-                              PointerCaptureLost="FormSplitter_PointerCaptureLost"/>
-
-
-        <!-- ═══════════ Colonne 1 : Aperçu ═══════════ -->
-        <controls:PreviewHost Grid.Column="1" DataContext="{Binding ResultViewModel}"/>
-
-        <!-- ═══════════ Colonne 2 : Assistant ancré (grand écran) ═══════════ -->
-        <Grid x:Name="AssistantInlineHost" Grid.Column="2">
-            <controls:AssistantPane x:Name="AssistantPaneControl"/>
+            </Button>
         </Grid>
 
-        <!-- Bouton flottant Assistant (petit écran) -->
-        <Button x:Name="AssistantFab" Grid.Column="1"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Margin="0,0,20,20" Visibility="Collapsed"
-                Style="{ThemeResource AccentButtonStyle}" CornerRadius="22" Padding="16,10"
-                Click="AssistantFab_Click"
-                AutomationProperties.Name="Ouvrir l'assistant pédagogique"
-                ToolTipService.ToolTip="Poser une question à l'assistant IA">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
-                <TextBlock Text="Assistant" VerticalAlignment="Center"/>
-            </StackPanel>
-        </Button>
+        <!-- ═══════════ Ligne 1 : Workspace 3 colonnes ═══════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="FormColumn" Width="380" MinWidth="320" MaxWidth="560"/>
+                <ColumnDefinition x:Name="PreviewColumn" Width="*" MinWidth="400"/>
+                <ColumnDefinition x:Name="AssistantColumn" Width="0"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Assistant en superposition (petit écran) -->
-        <Grid x:Name="AssistantOverlay" Grid.ColumnSpan="3" Visibility="Collapsed">
-            <Border Background="#59000000" Tapped="OverlayBackdrop_Tapped"/>
-            <Border HorizontalAlignment="Right" Width="380"
-                    Background="{ThemeResource LayerFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1,0,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <Grid Padding="14,10">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
-                            <TextBlock Text="Assistant pédagogique" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center"/>
+            <!-- ═══════════ Colonne 0 : Formulaire de création ═══════════ -->
+            <ScrollViewer Grid.Column="0" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="0,0,14,0">
+                <StackPanel x:Name="FormPanel" Spacing="12" Margin="0,0,0,12">
+
+                    <!-- Étape 1 : Classe et Matière -->
+                    <Border Style="{StaticResource FormCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
+                                          SelectedValuePath="Content"
+                                          SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
+                                          SelectionChanged="LevelCombo_SelectionChanged"
+                                          AutomationProperties.Name="Niveau scolaire">
+                                    <ComboBoxItem Content="CP"/>
+                                    <ComboBoxItem Content="CE1"/>
+                                    <ComboBoxItem Content="CE2"/>
+                                    <ComboBoxItem Content="CM1"/>
+                                    <ComboBoxItem Content="CM2"/>
+                                    <ComboBoxItem Content="6e"/>
+                                    <ComboBoxItem Content="5e"/>
+                                    <ComboBoxItem Content="4e"/>
+                                    <ComboBoxItem Content="3e"/>
+                                </ComboBox>
+                                <ComboBox x:Name="SubjectCombo" Grid.Column="1" Header="Matière" HorizontalAlignment="Stretch"
+                                          IsEditable="True"
+                                          PlaceholderText="Sélectionner ou saisir"
+                                          Text="{Binding Subject, Mode=TwoWay}"
+                                          SelectionChanged="SubjectCombo_SelectionChanged"
+                                          TextSubmitted="SubjectCombo_TextSubmitted"
+                                          AutomationProperties.Name="Matière"/>
+                            </Grid>
                         </StackPanel>
-                        <Button x:Name="OverlayCloseButton"
-                                HorizontalAlignment="Right" VerticalAlignment="Center"
-                                Background="Transparent" BorderThickness="0" Padding="10,6" CornerRadius="6"
-                                Click="OverlayClose_Click"
-                                AutomationProperties.Name="Fermer l'assistant"
-                                ToolTipService.ToolTip="Fermer">
-                            <FontIcon Glyph="&#xE8BB;" FontSize="12"/>
-                        </Button>
+                    </Border>
+
+                    <!-- Étape 2 : Notions ciblées -->
+                    <Border Style="{StaticResource FormCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="2. Notions à évaluer" Style="{StaticResource CardHeaderStyle}"/>
+                            <TextBlock Text="Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :"
+                                       Style="{StaticResource CaptionSecondaryStyle}"/>
+
+                            <ItemsRepeater x:Name="SuggestedLessonsRepeater">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout Orientation="Horizontal" MinItemWidth="150" MinColumnSpacing="6" MinRowSpacing="4"/>
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="NewTagBox"
+                                         PlaceholderText="Autre notion… (ex: Calcul d'angles)"
+                                         KeyDown="NewTagBox_KeyDown"
+                                         TextChanged="NewTagBox_TextChanged"
+                                         AutomationProperties.Name="Ajouter une notion"/>
+                                <Button x:Name="AddTagButton" Grid.Column="1" Content="Ajouter"
+                                        IsEnabled="False" Click="AddTag_Click"
+                                        AutomationProperties.Name="Ajouter la notion"/>
+                            </Grid>
+
+                            <ScrollViewer ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="SelectedChipsPanel" Orientation="Horizontal" Spacing="6"/>
+                            </ScrollViewer>
+
+                            <!-- Miroir synchronisé -->
+                            <TextBox x:Name="TopicsMirror" Visibility="Collapsed"
+                                     Text="{Binding Topics, Mode=TwoWay}"
+                                     AutomationProperties.Name="Sujets sélectionnés"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Étape 3 : Format & Barème -->
+                    <Border Style="{StaticResource FormCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="3. Format et Barème" Style="{StaticResource CardHeaderStyle}"/>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="EvalTypeCombo" Header="Type" HorizontalAlignment="Stretch"
+                                          SelectedValuePath="Tag"
+                                          SelectedValue="{Binding EvaluationType, Mode=TwoWay}"
+                                          AutomationProperties.Name="Type d'évaluation">
+                                    <ComboBoxItem Tag="formative" Content="🌱 Formative (bilan)"/>
+                                    <ComboBoxItem Tag="diagnostique" Content="🧭 Diagnostique"/>
+                                    <ComboBoxItem Tag="sommative" Content="🎓 Sommative (examen)"/>
+                                </ComboBox>
+                                <NumberBox x:Name="TotalPointsBox" Grid.Column="1" Header="Total points"
+                                           Minimum="5" Maximum="100" SmallChange="5" LargeChange="10"
+                                           Value="{Binding TotalPoints, Mode=TwoWay}"
+                                           ValueChanged="TotalPointsBox_ValueChanged"
+                                           AutomationProperties.Name="Total des points"/>
+                            </Grid>
+
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Niveau de difficulté" Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="DifficultyLabel" Grid.Column="1" Text="🌳 Intermédiaire"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                            <Slider x:Name="DifficultySlider" Minimum="1" Maximum="5" StepFrequency="1" TickFrequency="1"
+                                    SnapsTo="StepValues"
+                                    Value="{Binding DifficultyLevel, Mode=TwoWay}"
+                                    ValueChanged="DifficultySlider_ValueChanged"
+                                    AutomationProperties.Name="Niveau de difficulté"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Étape 4 : Manuel PDF optionnel -->
+                    <Border Style="{StaticResource FormCardStyle}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="4. Guide ou manuel PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
+                            <controls:PdfDropZone x:Name="PdfDropZoneControl"
+                                                  GuideFilePath="{Binding GuideFilePath, Mode=TwoWay}"
+                                                  Tapped="PdfDropZoneControl_Tapped"
+                                                  Drop="PdfDropZoneControl_Drop"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Validation en ligne -->
+                    <InfoBar x:Name="FormInfoBar"
+                             IsOpen="False" IsClosable="False"
+                             Severity="Informational"
+                             Message=""
+                             AutomationProperties.LiveSetting="Assertive"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Séparateur redimensionnable -->
+            <Border x:Name="SplitterGrip" Grid.Column="0" Width="4" Height="36" CornerRadius="2" Opacity="0.45"
+                    Background="{ThemeResource ControlStrongFillColorDefaultBrush}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" IsHitTestVisible="False"/>
+
+            <toolkit:GridSplitter x:Name="FormSplitter" Grid.Column="0"
+                                  Width="14" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                                  Background="Transparent"
+                                  ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
+                                  AutomationProperties.Name="Redimensionner les panneaux"
+                                  PointerEntered="FormSplitter_PointerEntered"
+                                  PointerExited="FormSplitter_PointerExited"
+                                  PointerCaptureLost="FormSplitter_PointerCaptureLost"/>
+
+            <!-- ═══════════ Colonne 1 : Aperçu ═══════════ -->
+            <controls:PreviewHost Grid.Column="1" DataContext="{Binding ResultViewModel}"/>
+
+            <!-- ═══════════ Colonne 2 : Assistant ancré (grand écran) ═══════════ -->
+            <Grid x:Name="AssistantInlineHost" Grid.Column="2">
+                <controls:AssistantPane x:Name="AssistantPaneControl"/>
+            </Grid>
+
+            <!-- Bouton flottant Assistant (petit écran) -->
+            <Button x:Name="AssistantFab" Grid.Column="1"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,20,20" Visibility="Collapsed"
+                    Style="{ThemeResource AccentButtonStyle}" CornerRadius="22" Padding="16,10"
+                    Click="AssistantFab_Click"
+                    AutomationProperties.Name="Ouvrir l'assistant pédagogique"
+                    ToolTipService.ToolTip="Poser une question à l'assistant IA">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock Text="Assistant" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Assistant en superposition (petit écran) -->
+            <Grid x:Name="AssistantOverlay" Grid.ColumnSpan="3" Visibility="Collapsed">
+                <Border Background="{ThemeResource ScrimBrush}" Tapped="OverlayBackdrop_Tapped"/>
+                <Border HorizontalAlignment="Right" Width="380"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Padding="14,10">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
+                                <TextBlock Text="Assistant pédagogique" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button x:Name="OverlayCloseButton"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Background="Transparent" BorderThickness="0" Padding="10,6" CornerRadius="6"
+                                    Click="OverlayClose_Click"
+                                    AutomationProperties.Name="Fermer l'assistant"
+                                    ToolTipService.ToolTip="Fermer">
+                                <FontIcon Glyph="&#xE8BB;" FontSize="12"/>
+                            </Button>
+                        </Grid>
+                        <Grid x:Name="OverlayHost" Grid.Row="1"/>
                     </Grid>
-                    <Grid x:Name="OverlayHost" Grid.Row="1"/>
-                </Grid>
-            </Border>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Page>

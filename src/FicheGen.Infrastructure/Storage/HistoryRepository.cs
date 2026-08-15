@@ -32,6 +32,10 @@ public sealed class HistoryRepository : IHistoryRepository
         }.ConnectionString;
     }
 
+    public void InitializeDatabase() => InitializeAsync().GetAwaiter().GetResult();
+    public Task<IReadOnlyList<HistoryItem>> GetAllAsync(CancellationToken ct = default) => SearchAsync(limit: 1000, ct: ct);
+    public Task<IReadOnlyList<HistoryItem>> ListAsync(CancellationToken ct = default) => SearchAsync(limit: 1000, ct: ct);
+
     public async Task InitializeAsync(CancellationToken ct = default)
     {
         if (_initialized) return;
@@ -196,7 +200,21 @@ public sealed class HistoryRepository : IHistoryRepository
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct).ConfigureAwait(false);
 
-        var hasQuery = !string.IsNullOrWhiteSpace(query);
+        var validTerms = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var rawWords = query.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var word in rawWords)
+            {
+                var clean = System.Text.RegularExpressions.Regex.Replace(word, @"[^\w\d\u00C0-\u017F]", "").Trim();
+                if (!string.IsNullOrWhiteSpace(clean))
+                {
+                    validTerms.Add($"\"{clean}\"*");
+                }
+            }
+        }
+
+        var hasQuery = validTerms.Count > 0;
         using var cmd = connection.CreateCommand();
 
         var sql = hasQuery
@@ -224,8 +242,7 @@ public sealed class HistoryRepository : IHistoryRepository
 
         if (hasQuery)
         {
-            var sanitizedQuery = query!.Replace("\"", "").Trim();
-            cmd.Parameters.AddWithValue("@query", $"{sanitizedQuery}*");
+            cmd.Parameters.AddWithValue("@query", string.Join(" ", validTerms));
         }
 
         cmd.Parameters.AddWithValue("@limit", limit);
@@ -314,7 +331,7 @@ public sealed class HistoryRepository : IHistoryRepository
             Title = reader.GetString(reader.GetOrdinal("title")),
             ClassLevel = reader.IsDBNull(reader.GetOrdinal("class_level")) ? null : reader.GetString(reader.GetOrdinal("class_level")),
             Subject = reader.IsDBNull(reader.GetOrdinal("subject")) ? null : reader.GetString(reader.GetOrdinal("subject")),
-            CreatedUtc = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_utc"))),
+            CreatedUtc = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_utc")), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal),
             IsFavorite = reader.GetInt32(reader.GetOrdinal("is_favorite")) == 1,
             PlainText = reader.GetString(reader.GetOrdinal("plain_text")),
             Html = reader.GetString(reader.GetOrdinal("html")),

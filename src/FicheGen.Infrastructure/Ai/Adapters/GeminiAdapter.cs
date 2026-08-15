@@ -65,6 +65,12 @@ public sealed class GeminiAdapter : IProviderAdapter
 
     public async IAsyncEnumerable<string> ParseStreamAsync(HttpResponseMessage response, [EnumeratorCancellation] CancellationToken ct)
     {
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            EnsureSuccess(response, errorContent);
+        }
+
         var contentStream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
 
         await foreach (var sseData in SseStreamParser.ReadDataEventsAsync(contentStream, ct).ConfigureAwait(false))
@@ -76,6 +82,11 @@ public sealed class GeminiAdapter : IProviderAdapter
             try
             {
                 using var doc = JsonDocument.Parse(sseData);
+                if (doc.RootElement.TryGetProperty("error", out var errorEl))
+                {
+                    var errorMsg = errorEl.TryGetProperty("message", out var m) ? m.GetString() : errorEl.ToString();
+                    throw new LlmException(LlmExceptionKind.Provider, $"Erreur de stream Gemini: {errorMsg}");
+                }
                 chunkText = ExtractTextFromCandidates(doc.RootElement);
             }
             catch (JsonException)

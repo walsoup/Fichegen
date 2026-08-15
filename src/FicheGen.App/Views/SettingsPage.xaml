@@ -67,9 +67,11 @@
             </StackPanel>
 
             <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}"
-                    Background="{ThemeResource AccentFillColorSecondaryBrush}">
-                <TextBlock Text="placeholder" FontSize="12" FontWeight="SemiBold"
-                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <TextBlock Text="v1.0" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </Border>
         </Grid>
 
@@ -160,21 +162,9 @@
                     </controls:SettingsCard>
 
                     <controls:SettingsCard Header="Langue de l'interface"
-                                           Description="La langue de l'application — nécessite un redémarrage pour être pleinement appliquée.">
+                                           Description="PROFstudio est conçu et optimisé pour le système éducatif francophone (Français uniquement).">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE774;"/></controls:SettingsCard.HeaderIcon>
-                        <ComboBox MinWidth="260"
-                                  ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneWay}"
-                                  SelectedValuePath="Code"
-                                  SelectedValue="{x:Bind ViewModel.Language, Mode=TwoWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="viewmodels:LanguageOption">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="{x:Bind Icon}" FontSize="14"/>
-                                        <TextBlock Text="{x:Bind Label}" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <TextBlock Text="🇫🇷 Français" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </controls:SettingsCard>
 
                     <TextBlock Text="Préférences pédagogiques" Style="{StaticResource SectionHeaderStyle}"/>
@@ -341,10 +331,11 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- ══ Anthropic ══ -->
+                            <!-- ══ Anthropic (Masqué jusqu'à implémentation de l'adaptateur) ══ -->
                             <Border Padding="14" CornerRadius="8" BorderThickness="1"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    Visibility="Collapsed">
                                 <StackPanel Spacing="10">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -512,10 +503,10 @@
                         </StackPanel>
                     </controls:SettingsExpander>
 
-                    <!-- ───── Matrice de routage 7 tâches ───── -->
-                    <controls:SettingsExpander Header="Matrice de routage — 7 tâches"
-                                               Description="Choisissez le fournisseur et le modèle utilisés pour chaque tâche de génération."
-                                               IsExpanded="True">
+                    <!-- ───── Matrice de routage 7 tâches (Avancé) ───── -->
+                    <controls:SettingsExpander Header="Matrice de routage détaillée (Mode avancé)"
+                                               Description="Personnalisez le modèle utilisé pour chaque tâche spécifique (rédaction, quiz, assistant)."
+                                               IsExpanded="False">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
                             <Grid ColumnSpacing="12" Margin="4,0,4,0">
@@ -864,8 +855,8 @@
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="💬" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Votre saisie" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Reste sur ce poste" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Votre demande" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Transmise à l'IA" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -873,23 +864,23 @@
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="🔒" FontSize="20" HorizontalAlignment="Center"/>
                                         <TextBlock Text="HTTPS chiffré" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="TLS 1.3 uniquement" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Connexion sécurisée" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="☁️" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Fournisseur IA" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Celui que vous avez routé" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Service IA" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Rédaction du cours" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="📄" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Fiche générée" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Stockée localement" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Vos documents" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Uniquement sur ce PC" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

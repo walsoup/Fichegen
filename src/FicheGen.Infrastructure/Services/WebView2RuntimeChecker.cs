@@ -5,22 +5,37 @@ namespace FicheGen.Infrastructure.Services;
 public class WebView2RuntimeChecker
 {
     public const string EvergreenBootstrapperUrl = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
+    private const string WebView2Guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
     public virtual bool IsWebView2Available()
     {
         try
         {
-            // Check 64-bit & 32-bit registry keys for WebView2 Evergreen Runtime
-            const string webView2Guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
-            using var key64 = Registry.LocalMachine.OpenSubKey($@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{webView2Guid}");
-            using var key32 = Registry.LocalMachine.OpenSubKey($@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{webView2Guid}");
-            using var keyUser = Registry.CurrentUser.OpenSubKey($@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{webView2Guid}");
+            static bool CheckRegistryKey(RegistryKey root, string subPath)
+            {
+                try
+                {
+                    using var key = root.OpenSubKey(subPath);
+                    if (key == null) return false;
+                    var pv = key.GetValue("pv") as string;
+                    return !string.IsNullOrWhiteSpace(pv) && pv != "0.0.0.0";
+                }
+                catch
+                {
+                    return false;
+                }
+            }
 
-            return key64 != null || key32 != null || keyUser != null;
+            return CheckRegistryKey(Registry.LocalMachine, $@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{WebView2Guid}")
+                || CheckRegistryKey(Registry.LocalMachine, $@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{WebView2Guid}")
+                || CheckRegistryKey(Registry.CurrentUser, $@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{WebView2Guid}")
+                || CheckRegistryKey(Registry.LocalMachine, $@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState\{WebView2Guid}")
+                || CheckRegistryKey(Registry.LocalMachine, $@"SOFTWARE\Microsoft\EdgeUpdate\ClientState\{WebView2Guid}")
+                || CheckRegistryKey(Registry.CurrentUser, $@"SOFTWARE\Microsoft\EdgeUpdate\ClientState\{WebView2Guid}");
         }
         catch
         {
-            return true; // Fallback to true if registry check is restricted
+            return false;
         }
     }
 
