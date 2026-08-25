@@ -19,7 +19,7 @@ public static class MyersDiffMapper
         {
             return new List<DiffLine>
             {
-                new(DiffKind.Collapsed, "@@ Document volumineux — comparaison ligne à ligne désactivée @@")
+                new(DiffKind.Collapsed, "Document volumineux — comparaison ligne à ligne désactivée", CollapsedCount: oldLinesCount)
             };
         }
 
@@ -70,7 +70,7 @@ public static class MyersDiffMapper
                 if (runLength >= 4)
                 {
                     result.Add(lines[runStart]); // keep first
-                    result.Add(new DiffLine(DiffKind.Collapsed, $"@@ {runLength - 2} lignes inchangées @@"));
+                    result.Add(new DiffLine(DiffKind.Collapsed, "...", CollapsedCount: runLength - 2));
                     result.Add(lines[i - 1]); // keep last
                 }
                 else

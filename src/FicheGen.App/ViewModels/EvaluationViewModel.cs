@@ -285,7 +285,7 @@ public partial class EvaluationViewModel : ObservableValidator
                 EvaluationType,
                 TotalPoints,
                 DifficultyLevel / 5.0,
-                UsePedagogicalGuide: !string.IsNullOrWhiteSpace(GuideFilePath)
+                UsePedagogicalGuide: UsePedagogicalGuide
             );
 
             SetStatus("Rédaction des exercices par l'IA…", StatusSeverity.Info);
@@ -305,7 +305,7 @@ public partial class EvaluationViewModel : ObservableValidator
                 Subject = document.Metadata.Subject,
                 CreatedUtc = DateTime.UtcNow,
                 IsFavorite = false,
-                PlainText = document.Metadata.Title,
+                PlainText = document.ToPlainText(),
                 Html = html,
                 SourceJson = document.SourceJson,
                 StylePresetId = appSettings.Defaults.StylePresetId

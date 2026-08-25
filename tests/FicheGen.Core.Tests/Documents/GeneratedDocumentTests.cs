@@ -144,5 +144,43 @@ public class GeneratedDocumentTests
 
     }
 
+
+
+    [Fact]
+
+    public void ToPlainText_WithPageBreak_EmitsMarker()
+
+    {
+
+        var doc = new GeneratedDocument(
+
+            Metadata: new DocumentMetadata("Fiche avec saut"),
+
+            Blocks: new List<Block>
+
+            {
+
+                new ParagraphBlock("Page un."),
+
+                new PageBreakBlock(),
+
+                new ParagraphBlock("Page deux.")
+
+            }
+
+        );
+
+
+        var text = doc.ToPlainText();
+
+
+        text.Should().Contain("[SAUT DE PAGE]");
+
+        text.IndexOf("[SAUT DE PAGE]").Should().BeGreaterThan(text.IndexOf("Page un."));
+
+        text.IndexOf("[SAUT DE PAGE]").Should().BeLessThan(text.IndexOf("Page deux."));
+
+    }
+
 }
 

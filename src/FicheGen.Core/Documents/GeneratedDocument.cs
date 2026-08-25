@@ -144,6 +144,10 @@ public sealed record GeneratedDocument(
                     AppendBlockPlainText(inner, sb);
                 }
                 break;
+            case PageBreakBlock:
+                // Marker preserved so LLM edit prompts can round-trip page breaks.
+                sb.AppendLine("[SAUT DE PAGE]");
+                break;
         }
     }
 }

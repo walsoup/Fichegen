@@ -67,6 +67,10 @@ public sealed class AssistantService : IAssistantService
                     return new AssistantIntentResult(kind, confidence, "Classification AI.");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch
             {
                 // Fallback heuristic scoring

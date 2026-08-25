@@ -4,6 +4,7 @@ public sealed class UiSettings
 {
     public string Theme { get; set; } = "system";
     public string Language { get; set; } = "fr-FR";
+    public string AccentColor { get; set; } = string.Empty;
     public bool AssistantPaneOpen { get; set; } = true;
     public double SplitRatio { get; set; } = 0.38;
 }

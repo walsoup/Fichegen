@@ -1,0 +1,117 @@
+<UserControl
+    x:Class="FicheGen.App.Views.Controls.CreationWorkspace"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:FicheGen.App.Views.Controls"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d"
+    d:DesignWidth="1200"
+    d:DesignHeight="800">
+
+    <!-- ═══════════ Workspace 3 colonnes partagé par les pages de création (§6.3) ═══════════ -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="FormColumnDef" Width="380" MinWidth="320" MaxWidth="560"/>
+            <ColumnDefinition x:Name="PreviewColumnDef" Width="*" MinWidth="400"/>
+            <ColumnDefinition x:Name="AssistantColumnDef" Width="0"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══════════ Colonne 0 : Formulaire de création + CTA ═══════════ -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ScrollViewer Grid.Row="0" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="0,0,14,0">
+                <StackPanel x:Name="FormPanelRoot" Spacing="12" Margin="0,0,0,12">
+                    <!-- Contenu spécifique à la page (cartes du formulaire) -->
+                    <ContentPresenter x:Name="FormHost"/>
+
+                    <!-- Validation en ligne -->
+                    <InfoBar x:Name="FormInfoBarControl"
+                             IsOpen="False" IsClosable="False"
+                             Severity="Informational"
+                             Message=""
+                             AutomationProperties.LiveSetting="Assertive"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- CTA principal : toujours visible, en bas du formulaire -->
+            <controls:GenerateCta x:Name="CtaButton" Grid.Row="1"
+                                  Margin="0,10,14,2"
+                                  IsGenerating="{Binding IsGenerating, Mode=OneWay}"
+                                  GenerateRequested="CtaButton_GenerateRequested"
+                                  CancelRequested="CtaButton_CancelRequested"/>
+        </Grid>
+
+        <!-- Séparateur redimensionnable -->
+        <Border x:Name="SplitterGrip" Grid.Column="0" Width="4" Height="36" CornerRadius="2" Opacity="0.45"
+                Background="{ThemeResource ControlStrongFillColorDefaultBrush}"
+                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" IsHitTestVisible="False"/>
+
+        <toolkit:GridSplitter x:Name="FormSplitter" Grid.Column="0"
+                              Width="14" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                              Background="Transparent"
+                              ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
+                              x:Uid="CW_Splitter" AutomationProperties.Name="Redimensionner les panneaux"
+                              PointerEntered="FormSplitter_PointerEntered"
+                              PointerExited="FormSplitter_PointerExited"
+                              PointerCaptureLost="FormSplitter_PointerCaptureLost"/>
+
+        <!-- ═══════════ Colonne 1 : Aperçu ═══════════ -->
+        <controls:PreviewHost x:Name="PreviewHostControl" Grid.Column="1" DataContext="{Binding ResultViewModel}"/>
+
+        <!-- ═══════════ Colonne 2 : Assistant ancré (grand écran) ═══════════ -->
+        <Grid x:Name="InlineAssistantHost" Grid.Column="2">
+            <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,0,0">
+                <controls:AssistantPane x:Name="AssistantPaneHost"/>
+            </Border>
+        </Grid>
+
+        <!-- Bouton flottant Assistant (petit écran) -->
+        <Button x:Name="AssistantFabButton" x:Uid="CW_Fab" Grid.Column="1"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,20,20" Visibility="Collapsed"
+                Style="{ThemeResource AccentButtonStyle}" CornerRadius="22" Padding="16,10"
+                Click="AssistantFab_Click"
+                AutomationProperties.Name="Ouvrir l'assistant pédagogique"
+                ToolTipService.ToolTip="Poser une question à l'assistant IA">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock x:Uid="CW_FabLabel" Text="Assistant" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+
+        <!-- Assistant en superposition (petit écran) : le volet possède déjà son
+             propre en-tête « Assistant IA » — la couche n'ajoute qu'un voile léger
+             et un bouton de fermeture, sans double barre de titre. -->
+        <Grid x:Name="AssistantOverlayLayer" Grid.ColumnSpan="3" Visibility="Collapsed">
+            <Border Background="{ThemeResource ScrimBrush}" Tapped="OverlayBackdrop_Tapped"/>
+            <Border HorizontalAlignment="Right" Width="380"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Padding="8,6">
+                        <Button x:Name="OverlayCloseButton"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Background="Transparent" BorderThickness="0" Padding="10,6" CornerRadius="6"
+                                Click="OverlayClose_Click"
+                                x:Uid="CW_CloseOverlay">
+                            <FontIcon Glyph="&#xE8BB;" FontSize="12"/>
+                        </Button>
+                    </Grid>
+                    <Grid x:Name="OverlayHostGrid" Grid.Row="1"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

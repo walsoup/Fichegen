@@ -32,7 +32,7 @@
         </Style>
     </Page.Resources>
 
-    <Grid>
+    <Grid KeyboardAcceleratorPlacementMode="Hidden">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -57,12 +57,12 @@
 
             <Border Grid.Column="0" Width="52" Height="52" CornerRadius="14" VerticalAlignment="Center"
                     Background="{ThemeResource AccentFillColorDefaultBrush}">
-                <FontIcon Glyph="&#xE713;" FontSize="24" Foreground="White"/>
+                <FontIcon Glyph="&#xE713;" FontSize="24" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                <TextBlock Text="Paramètres" Style="{ThemeResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"/>
-                <TextBlock Text="Configurez PROFstudio : apparence, intelligence artificielle, styles de documents et confidentialité."
+                <TextBlock x:Uid="SP_Title" Text="Paramètres" Style="{ThemeResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"/>
+                <TextBlock x:Uid="SP_Subtitle" Text="Configurez PROFstudio : apparence, intelligence artificielle, styles de documents et confidentialité."
                            Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
@@ -81,22 +81,22 @@
         <SelectorBar x:Name="SettingsTabs" Grid.Row="1" Margin="24,10,24,0"
                      SelectionChanged="SettingsTabs_SelectionChanged"
                      AutomationProperties.Name="Sections des paramètres">
-            <SelectorBarItem x:Name="TabGeneral" Text="Général">
+            <SelectorBarItem x:Name="TabGeneral" x:Uid="SP_TabGeneral" Text="Général">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE771;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
-            <SelectorBarItem x:Name="TabAi" Text="IA &amp; Routage">
+            <SelectorBarItem x:Name="TabAi" x:Uid="SP_TabAi" Text="IA &amp; Routage">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE99A;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
-            <SelectorBarItem x:Name="TabFolders" Text="Dossiers">
+            <SelectorBarItem x:Name="TabFolders" x:Uid="SP_TabFolders" Text="Dossiers">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE8B7;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
-            <SelectorBarItem x:Name="TabStyles" Text="Styles">
+            <SelectorBarItem x:Name="TabStyles" x:Uid="SP_TabStyles" Text="Styles">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE790;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
-            <SelectorBarItem x:Name="TabPrivacy" Text="Confidentialité">
+            <SelectorBarItem x:Name="TabPrivacy" x:Uid="SP_TabPrivacy" Text="Confidentialité">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE72E;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
-            <SelectorBarItem x:Name="TabPrompts" Text="Prompts &amp; Raccourcis">
+            <SelectorBarItem x:Name="TabPrompts" x:Uid="SP_TabPrompts" Text="Prompts &amp; Raccourcis">
                 <SelectorBarItem.Icon><FontIcon Glyph="&#xE70F;" FontSize="14"/></SelectorBarItem.Icon>
             </SelectorBarItem>
         </SelectorBar>
@@ -104,7 +104,7 @@
         <!-- ═══════════════════════════════════════════════════════ -->
         <!-- ZONE DE CONTENU                                          -->
         <!-- ═══════════════════════════════════════════════════════ -->
-        <ScrollViewer Grid.Row="2" Padding="24,14,24,20">
+        <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="2" Padding="24,14,24,20">
             <Grid MaxWidth="1020" HorizontalAlignment="Left">
 
                 <!-- ══════════════════════════════════════════════ -->
@@ -145,7 +145,7 @@
                     </controls:SettingsCard>
 
                     <controls:SettingsCard Header="Couleur d'accentuation"
-                                           Description="Teinte de marque PROFstudio — appliquée globalement au prochain démarrage.">
+                                           Description="Teinte de marque PROFstudio — appliquée immédiatement à toute l'interface.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
                                   ItemsSource="{x:Bind ViewModel.AccentOptions, Mode=OneWay}"
@@ -219,9 +219,9 @@
 
                     <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
                              Title="Routage intelligent par tâche"
-                             Message="Chaque tâche de PROFstudio peut utiliser un fournisseur et un modèle différents. Vos clés sont chiffrées dans le Coffre d'identification Windows (DPAPI) — jamais dans les fichiers de configuration."/>
+                             Message="Chaque tâche de PROFstudio peut utiliser un fournisseur et un modèle différents. Vos clés sont protégées par le Coffre d'identification Windows — jamais dans les fichiers de configuration."/>
 
-                    <controls:SettingsCard Header="Fournisseur IA principal (Global Provider)"
+                    <controls:SettingsCard Header="Fournisseur IA principal"
                                            Description="Utilisé par défaut pour toute nouvelle tâche ou nouveau modèle.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="300"
@@ -240,7 +240,7 @@
 
                     <!-- ───── Clés d'API ───── -->
                     <controls:SettingsExpander Header="Clés d'API — sécurisées par Windows"
-                                               Description="Chiffrement DPAPI via le Coffre d'identification Windows (Credential Locker)."
+                                               Description="Vos clés sont chiffrées et conservées dans le Coffre d'identification Windows."
                                                IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8D7;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
@@ -257,15 +257,15 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="💠" FontSize="18" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="Google AI Studio (Gemini)" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10">
+                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="#107C10"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
-                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10"
+                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsGeminiKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
                                     <PasswordBox x:Name="GeminiPasswordBox" PlaceholderText="Collez votre clé d'API Google AI Studio…"
@@ -300,15 +300,15 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="🤖" FontSize="18" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="OpenAI (GPT)" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10">
+                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="#107C10"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
-                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10"
+                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsOpenAiKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
                                     <PasswordBox x:Name="OpenAiPasswordBox" PlaceholderText="sk-…"
@@ -344,15 +344,15 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="🧠" FontSize="18" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="Anthropic (Claude)" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10">
+                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="#107C10"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
-                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10"
+                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsAnthropicKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
                                     <PasswordBox x:Name="AnthropicPasswordBox" PlaceholderText="sk-ant-…"
@@ -386,19 +386,19 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="🦙" FontSize="18" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="Custom endpoint" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="#1F006CFF">
-                                            <TextBlock Text="Aucune donnée ne quitte le poste" FontSize="11" Foreground="#0063B1" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="Serveur local (Ollama, LM Studio…)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
+                                            <TextBlock Text="Aucune donnée ne quitte le poste" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <TextBox Header="URL du point de terminaison (compatible OpenAI)"
+                                    <TextBox Header="Adresse du serveur (compatible OpenAI)"
                                              Text="{x:Bind ViewModel.ProxyBaseUrl, Mode=TwoWay}"
                                              PlaceholderText="http://localhost:11434/v1"/>
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Header="Modèle personnalisé (tag Ollama, ex : mistral:7b)"
+                                        <TextBox Grid.Column="0" Header="Modèle utilisé (ex : mistral)"
                                                  Text="{x:Bind ViewModel.CustomEndpointModel, Mode=TwoWay}"/>
                                         <PasswordBox Grid.Column="1" x:Name="ProxyPasswordBox" Header="Clé d'API (optionnelle)"
                                                      PasswordRevealMode="Peek" PasswordChanged="ProxyPasswordBox_PasswordChanged"/>
@@ -409,7 +409,7 @@
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <Button Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="proxy"/>
-                                        <Button Grid.Column="1" Content="🔍 Charger les modèles (/models)" Command="{x:Bind ViewModel.ScanProxyModelsCommand}"/>
+                                        <Button Grid.Column="1" Content="🔍 Charger les modèles disponibles" Command="{x:Bind ViewModel.ScanProxyModelsCommand}"/>
                                         <Button Grid.Column="2" Content="Effacer la clé" Tag="proxy" Click="ClearApiKey_Click"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.ProxyState.IsTesting, Mode=OneWay}"/>
@@ -436,7 +436,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Header="ID du projet GCP" Text="{x:Bind ViewModel.VertexProject, Mode=TwoWay}"/>
+                                        <TextBox Grid.Column="0" Header="Identifiant du projet Google Cloud" Text="{x:Bind ViewModel.VertexProject, Mode=TwoWay}"/>
                                         <TextBox Grid.Column="1" Header="Région" Text="{x:Bind ViewModel.VertexRegion, Mode=TwoWay}"/>
                                     </Grid>
                                     <Grid ColumnSpacing="10">
@@ -466,15 +466,15 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="▲" FontSize="18" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="Vercel AI Gateway — un point d'accès multi-modèles" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10">
+                                        <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="#107C10"/>
-                                                <TextBlock Text="Coffre Windows" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                                <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                                <TextBlock Text="Coffre Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
-                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="#1F107C10"
+                                        <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsVercelKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
                                     <PasswordBox x:Name="VercelPasswordBox" PlaceholderText="Clé Vercel AI Gateway…"
@@ -513,9 +513,9 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="2.2*"/><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="1.7*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="TÂCHE" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock Grid.Column="1" Text="FOURNISSEUR" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock Grid.Column="2" Text="MODÈLE (modifiable à la main)" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="TÂCHE" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="FOURNISSEUR" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="2" Text="MODÈLE (modifiable à la main)" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             </Grid>
                             <ListView ItemsSource="{x:Bind ViewModel.RoutingMatrix, Mode=OneWay}"
                                       SelectionMode="None">
@@ -535,7 +535,7 @@
                                                 <TextBlock Text="{x:Bind Icon}" FontSize="18" VerticalAlignment="Center"/>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{x:Bind Description}" FontSize="11"
+                                                    <TextBlock Text="{x:Bind Description}" FontSize="12"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                                 </StackPanel>
                                             </StackPanel>
@@ -562,9 +562,9 @@
                         </StackPanel>
                     </controls:SettingsExpander>
 
-                    <!-- ───── Températures ───── -->
-                    <controls:SettingsExpander Header="Créativité des modèles (température)"
-                                               Description="Contrôle fin du niveau de créativité : 0 = déterministe, 2 = très créatif.">
+                    <!-- ───── Créativité ───── -->
+                    <controls:SettingsExpander Header="Créativité des réponses"
+                                               Description="Réglage fin du niveau de créativité : 0 = réponse fidèle, 2 = réponse très libre.">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE9CA;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
                             <StackPanel Spacing="4">
@@ -633,14 +633,12 @@
                             </Grid>
                             <StackPanel Orientation="Horizontal" Spacing="8"
                                         Visibility="{x:Bind ViewModel.IsGuidesAccessPersistent, Mode=OneWay}">
-                                <Border Style="{StaticResource PillBadgeStyle}" Background="#1F107C10">
+                                <Border Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="#107C10"/>
-                                        <TextBlock Text="Accès persistant accordé (FutureAccessList WinRT)" FontSize="11" Foreground="#107C10" FontWeight="SemiBold"/>
+                                        <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                        <TextBlock Text="Accès permanent accordé" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Border>
-                                <TextBlock Text="{x:Bind ViewModel.GuidesAccessToken, Mode=OneWay}" FontSize="11"
-                                           FontFamily="Consolas" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </controls:SettingsExpander>
@@ -673,163 +671,11 @@
                         </StackPanel>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Journaux de l'application (Serilog)"
+                    <controls:SettingsCard Header="Journaux de l'application"
                                            Description="Consultez les journaux locaux en cas de comportement inattendu.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsCard.HeaderIcon>
                         <Button Content="Ouvrir le dossier des journaux" Command="{x:Bind ViewModel.OpenLogsFolderCommand}"/>
                     </controls:SettingsCard>
-                </StackPanel>
-
-                <!-- ══════════════════════════════════════════════ -->
-                <!-- ONGLET 4 · STYLES &amp; PERSONNALISATION         -->
-                <!-- ══════════════════════════════════════════════ -->
-                <StackPanel x:Name="PanelStyles" Spacing="12" Visibility="Collapsed">
-
-                    <TextBlock Text="Galerie de préréglages" Style="{StaticResource SectionHeaderStyle}"/>
-                    <TextBlock Text="Sélectionner un préréglage charge instantanément sa palette dans le StyleBuilder ci-dessous."
-                               Style="{StaticResource CaptionNoteStyle}"/>
-
-                    <GridView ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
-                              SelectedItem="{x:Bind ViewModel.SelectedPreset, Mode=TwoWay}"
-                              SelectionMode="Single" IsItemClickEnabled="False" MaxHeight="230">
-                        <GridView.ItemTemplate>
-                            <DataTemplate x:DataType="viewmodels:StylePresetItem">
-                                <Border Width="176" CornerRadius="8" BorderThickness="1" Padding="0,0,0,10"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                    <StackPanel>
-                                        <Grid Height="64" CornerRadius="8,8,0,0" Background="{x:Bind PrimaryBrush}">
-                                            <TextBlock Text="{x:Bind Icon}" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{x:Bind Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
-                                                       VerticalAlignment="Bottom" Margin="10,0,0,6"/>
-                                        </Grid>
-                                        <StackPanel Padding="10,8,10,0" Spacing="6">
-                                            <TextBlock Text="{x:Bind Description}" FontSize="11" TextWrapping="Wrap" MaxHeight="34"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="12" Height="12" Fill="{x:Bind PrimaryBrush}"/>
-                                                <Ellipse Width="12" Height="12" Fill="{x:Bind SecondaryBrush}"/>
-                                                <Ellipse Width="12" Height="12" Fill="{x:Bind AccentBrush}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </GridView.ItemTemplate>
-                    </GridView>
-
-                    <!-- ───── StyleBuilder ───── -->
-                    <controls:SettingsExpander Header="StyleBuilder — personnalisation avancée"
-                                               Description="Couleurs, typographie et marges du document généré. L'aperçu se met à jour en direct."
-                                               IsExpanded="True">
-                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsExpander.HeaderIcon>
-                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
-
-                            <TextBlock Text="Palette du document" FontWeight="SemiBold"/>
-                            <Grid ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0" Padding="10" CornerRadius="8" BorderThickness="1"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="Primaire" FontWeight="SemiBold" FontSize="12"/>
-                                        <ColorPicker Color="{x:Bind ViewModel.BuilderPrimaryColor, Mode=TwoWay}"
-                                                     IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="1" Padding="10" CornerRadius="8" BorderThickness="1"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="Secondaire" FontWeight="SemiBold" FontSize="12"/>
-                                        <ColorPicker Color="{x:Bind ViewModel.BuilderSecondaryColor, Mode=TwoWay}"
-                                                     IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="2" Padding="10" CornerRadius="8" BorderThickness="1"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="Accentuation" FontWeight="SemiBold" FontSize="12"/>
-                                        <ColorPicker Color="{x:Bind ViewModel.BuilderAccentColor, Mode=TwoWay}"
-                                                     IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <TextBlock Text="Typographie &amp; mise en page" FontWeight="SemiBold"/>
-                            <Grid ColumnSpacing="12" RowSpacing="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox Grid.Column="0" Header="Police du document" HorizontalAlignment="Stretch"
-                                          ItemsSource="{x:Bind ViewModel.FontOptions, Mode=OneWay}"
-                                          SelectedItem="{x:Bind ViewModel.BuilderFontFamily, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="1" Header="Arrondi des encadrés (px)" Minimum="0" Maximum="24"
-                                           SpinButtonPlacementMode="Inline"
-                                           Value="{x:Bind ViewModel.BuilderCornerRadius, Mode=TwoWay}"/>
-                            </Grid>
-                            <Grid ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <NumberBox Grid.Column="0" Header="Marge haute (mm)" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
-                                           Value="{x:Bind ViewModel.BuilderMarginTop, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="1" Header="Marge basse (mm)" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
-                                           Value="{x:Bind ViewModel.BuilderMarginBottom, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="2" Header="Marge gauche (mm)" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
-                                           Value="{x:Bind ViewModel.BuilderMarginLeft, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="3" Header="Marge droite (mm)" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
-                                           Value="{x:Bind ViewModel.BuilderMarginRight, Mode=TwoWay}"/>
-                            </Grid>
-                        </StackPanel>
-                    </controls:SettingsExpander>
-
-                    <!-- ───── Générateur de style par IA ───── -->
-                    <controls:SettingsExpander Header="✨ Générateur de style par IA"
-                                               Description="Analysez un PDF modèle : PROFstudio en déduit l'identité visuelle (palette, typographie, CSS).">
-                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsExpander.HeaderIcon>
-                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
-                            <TextBlock Style="{StaticResource CaptionNoteStyle}"
-                                       Text="Fournissez une fiche PDF dont vous appréciez la charte graphique. Le pipeline d'analyse extrait la palette dominante, la hiérarchie typographique et génère une feuille de style CSS propre, injectée dans le moteur de rendu."/>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Content="📄 Analyser un PDF de référence…" Click="AnalyzeStylePdf_Click"
-                                        Style="{ThemeResource DefaultButtonStyle}"/>
-                                <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsAnalyzingStyle, Mode=OneWay}"/>
-                                <TextBlock Text="{x:Bind ViewModel.StyleAnalysisStatus, Mode=OneWay}"
-                                           FontSize="12" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                            </StackPanel>
-                            <TextBox Text="{x:Bind ViewModel.GeneratedCss, Mode=OneWay}" IsReadOnly="True"
-                                     FontFamily="Cascadia Code, Consolas" FontSize="12" AcceptsReturn="True"
-                                     TextWrapping="NoWrap" MinHeight="150"
-                                     Visibility="{x:Bind ViewModel.HasGeneratedCss, Mode=OneWay}"
-                                     Header="Feuille de style générée"/>
-                        </StackPanel>
-                    </controls:SettingsExpander>
-
-                    <!-- ───── Aperçu en direct ───── -->
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Aperçu en direct" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
-                        <ToggleSwitch Grid.Column="1" x:Name="DarkPreviewToggle" Toggled="DarkPreviewToggle_Toggled"
-                                      OnContent="Sombre" OffContent="Clair" MinWidth="0"
-                                      ToolTipService.ToolTip="Prévisualiser la fiche en mode sombre"/>
-                        <Button Grid.Column="2" Content="🔄 Actualiser" Click="RefreshPreview_Click" Margin="8,0,0,0"/>
-                    </Grid>
-
-                    <Border CornerRadius="8" BorderThickness="1" Padding="1"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                        <WebView2 x:Name="StylePreviewWebView" Height="440"/>
-                    </Border>
-                    <StackPanel x:Name="WebViewFallback" Visibility="Collapsed" Spacing="6" Padding="20"
-                                HorizontalAlignment="Stretch">
-                        <TextBlock Text="⚠ Le runtime WebView2 est requis pour l'aperçu en direct." FontWeight="SemiBold"/>
-                        <HyperlinkButton Content="Télécharger WebView2 Runtime ↗"
-                                         NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/"/>
-                    </StackPanel>
                 </StackPanel>
 
                 <!-- ══════════════════════════════════════════════ -->
@@ -856,7 +702,7 @@
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="💬" FontSize="20" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Votre demande" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Transmise à l'IA" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Transmise à l'IA" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -864,7 +710,7 @@
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="🔒" FontSize="20" HorizontalAlignment="Center"/>
                                         <TextBlock Text="HTTPS chiffré" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Connexion sécurisée" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Connexion sécurisée" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -872,7 +718,7 @@
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="☁️" FontSize="20" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Service IA" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Rédaction du cours" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Rédaction du cours" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -880,14 +726,14 @@
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="📄" FontSize="20" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Vos documents" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Uniquement sur ce PC" FontSize="11" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="Uniquement sur ce PC" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
 
                             <StackPanel Spacing="4">
                                 <TextBlock Text="• Aucune donnée n'est vendue, partagée ou utilisée pour entraîner des modèles tiers par PROFstudio." Style="{StaticResource CaptionNoteStyle}"/>
-                                <TextBlock Text="• Vos clés d'API ne quittent jamais le Coffre d'identification Windows (chiffrement DPAPI)." Style="{StaticResource CaptionNoteStyle}"/>
+                                <TextBlock Text="• Vos clés d'API ne quittent jamais le Coffre d'identification Windows." Style="{StaticResource CaptionNoteStyle}"/>
                                 <TextBlock Text="• Recommandation : ne saisissez jamais de données nominatives d'élèves dans les prompts." Style="{StaticResource CaptionNoteStyle}"/>
                                 <TextBlock Text="• Option 100 % hors-ligne disponible via le fournisseur « Proxy local / Ollama »." Style="{StaticResource CaptionNoteStyle}"/>
                             </StackPanel>
@@ -900,14 +746,14 @@
                         <ToggleSwitch IsOn="{x:Bind ViewModel.TelemetryEnabled, Mode=TwoWay}" OnContent="Autorisée" OffContent="Refusée"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Génération multi-passe (expérimental)"
-                                           Description="Deux passes de rédaction + relecture automatique pour une qualité contextuelle accrue. Consomme environ 2× plus de jetons.">
+                    <controls:SettingsCard Header="Génération en deux passes (expérimental)"
+                                           Description="Deux passages de rédaction + une relecture automatique pour une meilleure qualité. Consomme environ deux fois plus de ressources.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE945;"/></controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch IsOn="{x:Bind ViewModel.ExpMultiPassGen, Mode=TwoWay}" OnContent="Activé" OffContent="Désactivé"/>
                     </controls:SettingsCard>
 
                     <controls:SettingsCard Header="Niveau de journalisation (diagnostic)"
-                                           Description="Verbosité des journaux Serilog locaux. « Information » recommandé au quotidien.">
+                                           Description="Verbosité des journaux locaux. « Information » recommandé au quotidien.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="200" SelectedItem="{x:Bind ViewModel.DiagnosticLogLevel, Mode=TwoWay}"
                                   ItemsSource="{x:Bind ViewModel.LogLevels, Mode=OneWay}"/>
@@ -925,7 +771,7 @@
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8D7;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
                             <TextBlock Style="{StaticResource CaptionNoteStyle}"
-                                       Text="Le pack (.zip) contient les journaux Serilog, la configuration et l'état du routage IA. Les clés d'API et tous les secrets sont systématiquement expurgés avant l'archivage."/>
+                                       Text="Le pack (.zip) contient les journaux, la configuration et l'état du routage IA. Les clés d'API et tous les secrets sont systématiquement expurgés avant l'archivage."/>
                             <Button Content="📦 Exporter le pack de diagnostic (.zip)"
                                     Command="{x:Bind ViewModel.ExportDiagnosticBundleCommand}"
                                     HorizontalAlignment="Left"/>
@@ -933,13 +779,13 @@
                     </controls:SettingsExpander>
 
                     <!-- Zone de danger -->
-                    <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="#C42B1C" Background="#0FC42B1C">
+                    <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{ThemeResource StatusCriticalFgBrush}" Background="{ThemeResource StatusCriticalBgBrush}">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="⚠ Zone de danger" FontWeight="SemiBold" Foreground="#C42B1C"/>
-                            <TextBlock Text="Rétablit tous les paramètres d'usine (thème, routage IA, styles, promptes). Vos clés d'API du coffre Windows et vos dossiers sont conservés."
+                            <TextBlock Text="⚠ Zone de danger" FontWeight="SemiBold" Foreground="{ThemeResource StatusCriticalFgBrush}"/>
+                            <TextBlock Text="Rétablit tous les paramètres d'usine (thème, routage IA, styles, prompts). Vos clés d'API du coffre Windows et vos dossiers sont conservés."
                                        Style="{StaticResource CaptionNoteStyle}"/>
                             <Button Content="Réinitialiser tous les paramètres" Click="ResetAll_Click" HorizontalAlignment="Left"
-                                    Foreground="#C42B1C"/>
+                                    Foreground="{ThemeResource StatusCriticalFgBrush}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -965,7 +811,7 @@
                                 <DataTemplate x:DataType="viewmodels:PromptTemplateItem">
                                     <StackPanel Padding="6,4" Spacing="2">
                                         <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{x:Bind Description}" FontSize="11" TextWrapping="Wrap"
+                                        <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </DataTemplate>
@@ -1025,6 +871,384 @@
         </ScrollViewer>
 
         <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- ONGLET 4 · STYLES & PERSONNALISATION (STUDIO 2 COLONNES) -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <Grid x:Name="PanelStyles" Grid.Row="2" Margin="24,8,24,14" ColumnSpacing="20" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <!-- Colonne gauche : Thèmes & Personnalisation (470px) -->
+                <ColumnDefinition Width="470" MinWidth="380" MaxWidth="540"/>
+                <!-- Colonne droite : Aperçu en direct temps réel (*) -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── COLONNE GAUCHE (Scrollable) ── -->
+            <ScrollViewer Grid.Column="0" Padding="0,0,12,12">
+                <StackPanel Spacing="14">
+
+                    <!-- En-tête de section -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Galerie de thèmes" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
+                        <TextBlock Text="Choisissez une direction artistique complète ou ajustez chaque détail ci-dessous."
+                                   Style="{StaticResource CaptionNoteStyle}"/>
+                    </StackPanel>
+
+                    <!-- Galerie de thèmes prédéfinis -->
+                    <GridView ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedPreset, Mode=TwoWay}"
+                              SelectionMode="Single" IsItemClickEnabled="False">
+                        <GridView.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:StylePresetItem">
+                                <Border Width="138" Height="144" CornerRadius="8" BorderThickness="1"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="52"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <Border Grid.Row="0" CornerRadius="7,7,0,0" Background="{x:Bind PrimaryBrush}">
+                                            <Grid Padding="8,4">
+                                                <TextBlock Text="{x:Bind Icon}" FontSize="18" VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                                                <Ellipse Width="10" Height="10" Fill="{x:Bind AccentBrush}"
+                                                         HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                         Stroke="White" StrokeThickness="1"/>
+                                                <TextBlock Text="{x:Bind Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
+                                                           VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <StackPanel Grid.Row="1" Padding="8,6" Spacing="4">
+                                            <TextBlock Text="{x:Bind Description}" FontSize="11" TextWrapping="Wrap" MaxHeight="48"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,0" VerticalAlignment="Bottom">
+                                                <Ellipse Width="9" Height="9" Fill="{x:Bind PrimaryBrush}"/>
+                                                <Ellipse Width="9" Height="9" Fill="{x:Bind SecondaryBrush}"/>
+                                                <Ellipse Width="9" Height="9" Fill="{x:Bind AccentBrush}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </GridView.ItemTemplate>
+                    </GridView>
+
+                    <!-- Info Style par défaut -->
+                    <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
+                             Title="Style par défaut"
+                             Message="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}"/>
+
+                    <!-- ───── StyleBuilder — Personnalisation avancée ───── -->
+                    <controls:SettingsExpander Header="StyleBuilder — personnalisation"
+                                               Description="Ajustez les couleurs, l'en-tête, la typographie et les marges."
+                                               IsExpanded="True">
+                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsExpander.HeaderIcon>
+                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
+
+                            <!-- Palette -->
+                            <TextBlock Text="Palette de couleurs" FontWeight="SemiBold" FontSize="13"/>
+                            
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Primaire -->
+                                <Button Grid.Column="0" HorizontalAlignment="Stretch" Padding="8,6"
+                                        BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="Couleur primaire" FontWeight="SemiBold" FontSize="13"/>
+                                                <ColorPicker Color="{x:Bind ViewModel.BuilderPrimaryColor, Mode=TwoWay}"
+                                                             IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="20" Height="20" CornerRadius="4" BorderThickness="1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{x:Bind ViewModel.BuilderPrimaryColor, Mode=OneWay}"/>
+                                            </Border.Background>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Primaire" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{x:Bind ViewModel.BuilderPrimaryHex, Mode=OneWay}" FontSize="10"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Secondaire -->
+                                <Button Grid.Column="1" HorizontalAlignment="Stretch" Padding="8,6"
+                                        BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="Couleur secondaire" FontWeight="SemiBold" FontSize="13"/>
+                                                <ColorPicker Color="{x:Bind ViewModel.BuilderSecondaryColor, Mode=TwoWay}"
+                                                             IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="20" Height="20" CornerRadius="4" BorderThickness="1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{x:Bind ViewModel.BuilderSecondaryColor, Mode=OneWay}"/>
+                                            </Border.Background>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Secondaire" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{x:Bind ViewModel.BuilderSecondaryHex, Mode=OneWay}" FontSize="10"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Accent -->
+                                <Button Grid.Column="2" HorizontalAlignment="Stretch" Padding="8,6"
+                                        BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="Accentuation" FontWeight="SemiBold" FontSize="13"/>
+                                                <ColorPicker Color="{x:Bind ViewModel.BuilderAccentColor, Mode=TwoWay}"
+                                                             IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="20" Height="20" CornerRadius="4" BorderThickness="1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{x:Bind ViewModel.BuilderAccentColor, Mode=OneWay}"/>
+                                            </Border.Background>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Accent" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{x:Bind ViewModel.BuilderAccentHex, Mode=OneWay}" FontSize="10"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+
+                            <!-- Palettes rapides prédéfinies -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Suggestions de palettes :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ocean" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#1E3A8A"/>
+                                                <Ellipse Width="10" Height="10" Fill="#2563EB"/>
+                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Océan" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="forest" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#064E3B"/>
+                                                <Ellipse Width="10" Height="10" Fill="#059669"/>
+                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Émeraude" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="purple" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#311042"/>
+                                                <Ellipse Width="10" Height="10" Fill="#6D28D9"/>
+                                                <Ellipse Width="10" Height="10" Fill="#F59E0B"/>
+                                                <TextBlock Text="Pourpre" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="terracotta" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#7C2D12"/>
+                                                <Ellipse Width="10" Height="10" Fill="#C2410C"/>
+                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Terracotta" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="slate" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#0F172A"/>
+                                                <Ellipse Width="10" Height="10" Fill="#334155"/>
+                                                <Ellipse Width="10" Height="10" Fill="#0284C7"/>
+                                                <TextBlock Text="Ardoise" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ruby" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#881337"/>
+                                                <Ellipse Width="10" Height="10" Fill="#BE123C"/>
+                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Rubis" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </StackPanel>
+
+                            <!-- En-tête -->
+                            <TextBlock Text="Style de l'en-tête" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <ComboBox HorizontalAlignment="Stretch"
+                                      ItemsSource="{x:Bind ViewModel.HeaderLayoutOptions, Mode=OneWay}"
+                                      SelectedValue="{x:Bind ViewModel.BuilderHeaderLayout, Mode=TwoWay}"
+                                      SelectedValuePath="Key">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:HeaderLayoutOption">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{x:Bind Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="—" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{x:Bind Description}" FontSize="11" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <!-- Typographie & Arrondis -->
+                            <TextBlock Text="Typographie &amp; Encadrés" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1.2*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" Header="Police du document" HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Bind ViewModel.FontOptions, Mode=OneWay}"
+                                          SelectedItem="{x:Bind ViewModel.BuilderFontFamily, Mode=TwoWay}"/>
+                                <NumberBox Grid.Column="1" Header="Arrondi (px)" Minimum="0" Maximum="24"
+                                           SpinButtonPlacementMode="Inline"
+                                           Value="{x:Bind ViewModel.BuilderCornerRadius, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <!-- Marges -->
+                            <TextBlock Text="Marges de page (mm)" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <NumberBox Grid.Column="0" Header="Haut" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                           Value="{x:Bind ViewModel.BuilderMarginTop, Mode=TwoWay}"/>
+                                <NumberBox Grid.Column="1" Header="Bas" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                           Value="{x:Bind ViewModel.BuilderMarginBottom, Mode=TwoWay}"/>
+                                <NumberBox Grid.Column="2" Header="Gauche" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                           Value="{x:Bind ViewModel.BuilderMarginLeft, Mode=TwoWay}"/>
+                                <NumberBox Grid.Column="3" Header="Droite" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                           Value="{x:Bind ViewModel.BuilderMarginRight, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <TextBlock Text="Toute retouche crée un style « Personnalisé » enregistré avec Ctrl+S."
+                                       Style="{StaticResource CaptionNoteStyle}"/>
+                        </StackPanel>
+                    </controls:SettingsExpander>
+
+                    <!-- ───── Générateur de style par IA ───── -->
+                    <controls:SettingsExpander Header="✨ Déduire le style depuis un PDF"
+                                               Description="PROFstudio analyse un PDF modèle et génère une feuille de style sur-mesure.">
+                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsExpander.HeaderIcon>
+                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
+                            <TextBlock Style="{StaticResource CaptionNoteStyle}"
+                                       Text="Fournissez une fiche PDF dont vous appréciez la charte graphique pour déduire la palette et la typographie."/>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Content="📄 Analyser un PDF de référence…" Click="AnalyzeStylePdf_Click"
+                                        Style="{ThemeResource DefaultButtonStyle}"/>
+                                <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsAnalyzingStyle, Mode=OneWay}"/>
+                                <TextBlock Text="{x:Bind ViewModel.StyleAnalysisStatus, Mode=OneWay}"
+                                           FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBox Text="{x:Bind ViewModel.GeneratedCss, Mode=OneWay}" IsReadOnly="True"
+                                     FontFamily="Cascadia Code, Consolas" FontSize="12" AcceptsReturn="True"
+                                     TextWrapping="NoWrap" MinHeight="120"
+                                     Visibility="{x:Bind ViewModel.HasGeneratedCss, Mode=OneWay}"
+                                     Header="Feuille de style générée"/>
+                        </StackPanel>
+                    </controls:SettingsExpander>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ── COLONNE DROITE : APERÇU TEMPS RÉEL ── -->
+            <Border Grid.Column="1" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- En-tête de l'aperçu -->
+                    <Border Grid.Row="0" Padding="14,10" BorderThickness="0,0,0,1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="9,9,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE890;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <TextBlock Text="Aperçu en direct" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                                <Border Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource LayerFillColorAltBrush}">
+                                    <TextBlock Text="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+
+                            <Button Grid.Column="1" Style="{ThemeResource SubtleButtonStyle}" Padding="8,5"
+                                    Click="RefreshPreview_Click" ToolTipService.ToolTip="Actualiser le rendu">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="12"/>
+                                    <TextBlock Text="Actualiser" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Zone de document WebView2 -->
+                    <Border Grid.Row="1" Padding="12" Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="0,0,9,9">
+                        <Grid>
+                            <Border CornerRadius="6" BorderThickness="1"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    Background="White">
+                                <WebView2 x:Name="StylePreviewWebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                            </Border>
+
+                            <!-- Fallback runtime WebView2 -->
+                            <StackPanel x:Name="WebViewFallback" Visibility="Collapsed" Spacing="8" Padding="24"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE7BA;" FontSize="32" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                                <TextBlock Text="Runtime WebView2 requis pour l'aperçu en direct." FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <HyperlinkButton Content="Télécharger le runtime WebView2 ↗" HorizontalAlignment="Center"
+                                                 NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
         <!-- BARRE D'ACTION INFÉRIEURE                                -->
         <!-- ═══════════════════════════════════════════════════════ -->
         <Border Grid.Row="3" Padding="24,12" BorderThickness="0,1,0,0"
@@ -1044,10 +1268,10 @@
                     <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsSaving, Mode=OneWay}"/>
                     <Button Style="{ThemeResource AccentButtonStyle}" Padding="24,10"
                             Command="{x:Bind ViewModel.SaveSettingsCommand}"
-                            ToolTipService.ToolTip="Enregistrer (Ctrl+S)">
+                            ToolTipService.ToolTip="Enregistrer (Ctrl+S)" x:Uid="SP_SaveButton">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE74E;" FontSize="14"/>
-                            <TextBlock Text="Enregistrer les paramètres"/>
+                            <TextBlock x:Uid="SP_SaveLabel" Text="Enregistrer les paramètres"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

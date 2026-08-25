@@ -7,7 +7,9 @@ public sealed class ShellStateSettings
     public int Width { get; set; } = 1280;
     public int Height { get; set; } = 840;
     public bool IsMaximized { get; set; } = false;
-    public bool IsAssistantVisible { get; set; } = true;
+    // Caché par défaut : le volet Assistant ne doit s'ouvrir que sur demande
+    // explicite de l'utilisateur, jamais « tout seul » au premier lancement.
+    public bool IsAssistantVisible { get; set; } = false;
     public string Theme { get; set; } = "System";
     public string LastNavigationTag { get; set; } = "fiche";
 }

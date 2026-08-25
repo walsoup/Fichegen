@@ -12,7 +12,8 @@ public sealed record DiffLine(
     DiffKind Kind,
     string Text,
     int? OldLineNo = null,
-    int? NewLineNo = null)
+    int? NewLineNo = null,
+    int CollapsedCount = 0)
 {
 }
 

@@ -66,8 +66,9 @@ public static class TocParser
 
         foreach (var line in lines)
         {
-            // Normalize tabs and multi-spaces to 2 spaces so column gaps are preserved
-            var replaced = line.Replace('\t', ' ');
+            // Normalize tabs and multi-spaces to 2 spaces so column gaps are preserved.
+            // Unicode ellipsis (…) is what PDF extraction usually yields for dot leaders.
+            var replaced = line.Replace('\t', ' ').Replace("…", "..");
             var collapsed = Regex.Replace(replaced, @" {3,}", "  ").Trim();
             if (collapsed.Length > 0)
             {

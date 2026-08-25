@@ -1,5 +1,10 @@
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using FicheGen.Core.Abstractions;
+using FicheGen.Core.Toc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -22,6 +27,12 @@ public sealed partial class PdfDropZone : UserControl
         set => SetValue(GuideFilePathProperty, value);
     }
 
+    /// <summary>Chapitre sélectionné dans la table des matières du guide (peut être null).</summary>
+    public event EventHandler<ToCEntry>? ChapterSelected;
+
+    private CancellationTokenSource? _tocLoadCts;
+    private bool _suppressChapterSelection;
+
     public PdfDropZone()
     {
         InitializeComponent();
@@ -33,6 +44,7 @@ public sealed partial class PdfDropZone : UserControl
         if (d is PdfDropZone zone)
         {
             zone.UpdateState();
+            zone.LoadChapterListAsync();
         }
     }
 
@@ -79,17 +91,17 @@ public sealed partial class PdfDropZone : UserControl
                     var fileInfo = new FileInfo(path);
                     var sizeKb = fileInfo.Length / 1024;
                     FileMetaText.Text = sizeKb > 1024
-                        ? $"{sizeKb / 1024.0:F1} Mo · Prêt pour l'ancrage pédagogique"
-                        : $"{sizeKb} Ko · Prêt pour l'ancrage pédagogique";
+                        ? string.Format(System.Globalization.CultureInfo.CurrentCulture, Services.L10n.Get("PDZ_MetaMb"), sizeKb / 1024.0)
+                        : string.Format(System.Globalization.CultureInfo.CurrentCulture, Services.L10n.Get("PDZ_MetaKb"), sizeKb);
                 }
                 else
                 {
-                    FileMetaText.Text = "Guide PDF sélectionné";
+                    FileMetaText.Text = Services.L10n.Get("PDZ_FileSelected");
                 }
             }
             catch
             {
-                FileMetaText.Text = "Guide PDF sélectionné";
+                FileMetaText.Text = Services.L10n.Get("PDZ_FileSelected");
             }
         }
     }
@@ -129,13 +141,13 @@ public sealed partial class PdfDropZone : UserControl
                     }
                     else
                     {
-                        SetError("Format non supporté", "Seuls les fichiers PDF (.pdf) sont acceptés pour les guides.");
+                        SetError(Services.L10n.Get("PDZ_ErrorTitle.Text"), Services.L10n.Get("PDZ_ErrorPdfOnly"));
                     }
                 }
             }
             catch (Exception ex)
             {
-                SetError("Lecture impossible", "Le fichier n'a pas pu être lu. Vérifiez qu'il n'est pas verrouillé.");
+                SetError(Services.L10n.Get("PDZ_ErrorReadTitle"), Services.L10n.Get("PDZ_ErrorReadMessage"));
                 Serilog.Log.Warning(ex, "Erreur lors du dépôt de fichier PDF.");
             }
         }
@@ -145,5 +157,92 @@ public sealed partial class PdfDropZone : UserControl
     {
         GuideFilePath = string.Empty;
         UpdateState();
+    }
+
+    // ───────────────────────── Chapitres du guide (cache ToC) ─────────────────────────
+
+    /// <summary>Charge la table des matières du guide (depuis le cache lorsqu'elle existe)
+    /// et alimente le sélecteur de chapitres. Silencieux en cas d'échec.</summary>
+    private async void LoadChapterListAsync()
+    {
+        _tocLoadCts?.Cancel();
+        _tocLoadCts?.Dispose();
+        _tocLoadCts = new CancellationTokenSource();
+        var ct = _tocLoadCts.Token;
+
+        var path = GuideFilePath;
+        ChapterPanel.Visibility = Visibility.Collapsed;
+
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var guideService = App.Services.GetService<IPdfGuideService>();
+            if (guideService is null)
+            {
+                return;
+            }
+
+            var toc = await Task.Run(async () =>
+            {
+                try
+                {
+                    return await guideService.GetTocAsync(path, ct);
+                }
+                catch (OperationCanceledException) { return null; }
+                catch (Exception ex)
+                {
+                    Serilog.Log.Debug(ex, "Table des matières du guide indisponible (chemin {Path}).", path);
+                    return null;
+                }
+            });
+
+            if (ct.IsCancellationRequested || toc is null || toc.Entries.Count == 0)
+            {
+                return;
+            }
+
+            _suppressChapterSelection = true;
+            var items = new System.Collections.Generic.List<ChapterOption>(toc.Entries.Count);
+            foreach (var entry in toc.Entries)
+            {
+                items.Add(new ChapterOption(entry));
+            }
+            ChapterCombo.ItemsSource = items;
+            ChapterCombo.SelectedIndex = -1;
+            _suppressChapterSelection = false;
+
+            // La zone peut avoir été vidée pendant l'analyse asynchrone.
+            if (string.Equals(GuideFilePath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                ChapterPanel.Visibility = Visibility.Visible;
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Debug(ex, "Affichage des chapitres du guide impossible.");
+        }
+    }
+
+    private void OnChapterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressChapterSelection) return;
+        if (ChapterCombo.SelectedItem is not ChapterOption option) return;
+
+        ChapterSelected?.Invoke(this, option.Entry);
+    }
+
+    /// <summary>Élément affichable du sélecteur : « p. 42 · Titre du chapitre ».</summary>
+    public sealed class ChapterOption
+    {
+        public ToCEntry Entry { get; }
+
+        public ChapterOption(ToCEntry entry) => Entry = entry;
+
+        public override string ToString() =>
+            $"p. {Entry.PrintedPage} · {Entry.Title}";
     }
 }

@@ -8,40 +8,52 @@ using WinRT.Interop;
 
 namespace FicheGen.App.Views.Controls;
 
+/// <summary>
+/// Parcours de première exécution (3 étapes) rédigé pour des enseignants
+/// sans bagage technique : vocabulaire courant, progression visible,
+/// étapes facultatives clairement identifiées et sortie douce possible à tout moment.
+/// </summary>
 public sealed partial class FirstRunDialog : ContentDialog
 {
     private int _currentStep = 1;
 
     public bool TelemetryEnabled => false;
     public string GuidesPath { get; private set; } = string.Empty;
-    public string SelectedProviderKey
-    {
-        get
+
+    public string SelectedProviderKey =>
+        ProviderRadioButtons.SelectedIndex switch
         {
-            return ProviderRadioButtons.SelectedIndex switch
-            {
-                1 => "openai",
-                2 => "proxy",
-                _ => "aistudio"
-            };
-        }
-    }
+            1 => "openai",
+            2 => "proxy",
+            _ => "aistudio"
+        };
+
     public string ApiKey => ApiKeyPasswordBox.Password;
 
     public FirstRunDialog()
     {
         InitializeComponent();
-        UpdateStepVisibility();
+        UpdateStepUi();
     }
 
-    private void UpdateStepVisibility()
+    // ───────────────────────── Navigation de l'assistant ─────────────────────────
+
+    private void UpdateStepUi()
     {
         Step1Panel.Visibility = _currentStep == 1 ? Visibility.Visible : Visibility.Collapsed;
         Step2Panel.Visibility = _currentStep == 2 ? Visibility.Visible : Visibility.Collapsed;
         Step3Panel.Visibility = _currentStep == 3 ? Visibility.Visible : Visibility.Collapsed;
 
+        StepIndicatorText.Text = string.Format(FicheGen.App.Services.L10n.Get("FRD_StepFormat"), _currentStep, 3);
+        StepProgress.Value = _currentStep;
+
         SecondaryButtonText = _currentStep > 1 ? "◄ Précédent" : string.Empty;
-        PrimaryButtonText = _currentStep < 3 ? "Suivant ➔" : "Terminer et lancer 🚀";
+        PrimaryButtonText = _currentStep switch
+        {
+            1 => "Commencer",
+            2 => "Continuer",
+            _ => "Terminer"
+        };
     }
 
     private void OnPrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
@@ -50,7 +62,7 @@ public sealed partial class FirstRunDialog : ContentDialog
         {
             args.Cancel = true;
             _currentStep++;
-            UpdateStepVisibility();
+            UpdateStepUi();
         }
     }
 
@@ -60,9 +72,11 @@ public sealed partial class FirstRunDialog : ContentDialog
         {
             args.Cancel = true;
             _currentStep--;
-            UpdateStepVisibility();
+            UpdateStepUi();
         }
     }
+
+    // ───────────────────────── Choix du dossier de documents ─────────────────────────
 
     private async void BrowseFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -72,9 +86,12 @@ public sealed partial class FirstRunDialog : ContentDialog
             picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
             picker.FileTypeFilter.Add("*");
 
-            if (XamlRoot?.Content is FrameworkElement root)
+            // The handle must come from the Window, not from a FrameworkElement:
+            // GetWindowHandle(root) returns a useless handle and the picker throws.
+            var mainWindow = App.CurrentMainWindow;
+            if (mainWindow != null)
             {
-                var hwnd = WindowNative.GetWindowHandle(root);
+                var hwnd = WindowNative.GetWindowHandle(mainWindow);
                 InitializeWithWindow.Initialize(picker, hwnd);
             }
 
@@ -85,9 +102,9 @@ public sealed partial class FirstRunDialog : ContentDialog
                 GuidesFolderTextBox.Text = folder.Path;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fail silently or keep default
+            Serilog.Log.Warning(ex, "Sélection du dossier guides (première exécution) impossible.");
         }
     }
 
@@ -112,9 +129,11 @@ public sealed partial class FirstRunDialog : ContentDialog
         }
     }
 
+    // ───────────────────────── Choix de l'assistant IA ─────────────────────────
+
     private void ProviderRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ProviderRadioButtons == null || ApiKeySection == null || GetKeyHyperlink == null)
+        if (ProviderRadioButtons == null || ApiKeySection == null || GetKeyHyperlink == null || KeyOptionalNote == null)
         {
             return;
         }
@@ -123,16 +142,22 @@ public sealed partial class FirstRunDialog : ContentDialog
         {
             case 0: // Google AI Studio
                 ApiKeySection.Visibility = Visibility.Visible;
-                GetKeyHyperlink.Content = "Obtenir une clé gratuite Google AI Studio ↗";
+                KeyOptionalNote.Visibility = Visibility.Visible;
+                GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLink.Content");
                 GetKeyHyperlink.NavigateUri = new Uri("https://aistudio.google.com/app/apikey");
                 break;
+
             case 1: // OpenAI
                 ApiKeySection.Visibility = Visibility.Visible;
-                GetKeyHyperlink.Content = "Obtenir une clé OpenAI ↗";
+                KeyOptionalNote.Visibility = Visibility.Visible;
+                GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLinkOpenAi");
                 GetKeyHyperlink.NavigateUri = new Uri("https://platform.openai.com/api-keys");
                 break;
-            case 2: // Proxy Local / Ollama
+
+            case 2: // Proxy local / Ollama — aucune clé requise pour l'essentiel
                 ApiKeySection.Visibility = Visibility.Collapsed;
+                KeyOptionalNote.Text = FicheGen.App.Services.L10n.Get("FRD_LocalKeyNote");
+                KeyOptionalNote.Visibility = Visibility.Visible;
                 break;
         }
     }

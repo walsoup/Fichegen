@@ -4,10 +4,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:FicheGen.App.Views.Controls"
     mc:Ignorable="d"
     Title="PROFstudio">
 
-    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <!-- Pas de Background opaque : laisse Mica / Acrylic (voir MainWindow.xaml.cs) visible. -->
+    <Grid x:Name="RootGrid" KeyboardAcceleratorPlacementMode="Hidden">
+        <Grid.Resources>
+            <!-- Pulsation du voyant IA pendant une génération -->
+            <Storyboard x:Key="AiPulseStoryboard" RepeatBehavior="Forever">
+                <DoubleAnimation Storyboard.TargetName="AiStatusGlyph"
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="1" To="0.35" Duration="0:0:0.9" AutoReverse="True"/>
+            </Storyboard>
+        </Grid.Resources>
         <!-- ===== Raccourcis clavier (voir aussi Ctrl+, ajouté dans le code) ===== -->
         <Grid.KeyboardAccelerators>
             <!-- Génération & annulation -->
@@ -16,6 +26,7 @@
             <!-- Volets & actions rapides -->
             <KeyboardAccelerator Key="B" Modifiers="Control" Invoked="OnCtrlBInvoked"/>
             <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="OnCtrlNInvoked"/>
+            <KeyboardAccelerator Key="K" Modifiers="Control" Invoked="OnCtrlKInvoked"/>
             <KeyboardAccelerator Key="E" Modifiers="Control, Shift" Invoked="OnCtrlShiftEInvoked"/>
             <KeyboardAccelerator Key="W" Modifiers="Control, Shift" Invoked="OnCtrlShiftWInvoked"/>
             <KeyboardAccelerator Key="P" Modifiers="Control" Invoked="OnCtrlPInvoked"/>
@@ -30,6 +41,7 @@
             <KeyboardAccelerator Key="Number4" Modifiers="Control" Invoked="OnCtrlNumberInvoked"/>
             <!-- Aide -->
             <KeyboardAccelerator Key="F1" Invoked="OnF1Invoked"/>
+            <KeyboardAccelerator Key="Number0" Modifiers="Control" Invoked="OnCtrlZeroInvoked"/>
         </Grid.KeyboardAccelerators>
 
         <Grid.RowDefinitions>
@@ -40,7 +52,7 @@
 
         <!-- ================= Barre de titre personnalisée (Fluent 2) ================= -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" Height="48" Background="Transparent"
-              AutomationProperties.Name="Barre de titre PROFstudio">
+              x:Uid="Shell_TitleBar">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -74,6 +86,7 @@
                     <TextBlock x:Name="AiStatusGlyph" Text="○" FontSize="11" FontWeight="Bold"
                                VerticalAlignment="Center"/>
                     <TextBlock x:Name="AiProviderChipText" Text="Assistant IA — vérification…" FontSize="12"
+                               x:Uid="Shell_AiChipText"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -85,8 +98,7 @@
 
                 <ToggleButton x:Name="AssistantToggleButton" CornerRadius="8" Padding="12,5"
                               Click="OnAssistantToggleClicked"
-                              ToolTipService.ToolTip="Afficher ou masquer l'Assistant IA (Ctrl+B)"
-                              AutomationProperties.Name="Assistant IA">
+                              x:Uid="Shell_AssistantToggle">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="💬" FontSize="13"/>
                         <TextBlock Text="Assistant" FontSize="12.5" VerticalAlignment="Center"/>
@@ -95,27 +107,30 @@
 
                 <Button x:Name="ThemeButton" Padding="8,5" CornerRadius="8"
                         Background="Transparent" BorderBrush="Transparent"
-                        ToolTipService.ToolTip="Thème d'affichage : Clair, Sombre ou Système"
-                        AutomationProperties.Name="Changer de thème">
+                        x:Uid="Shell_ThemeButton">
                     <FontIcon Glyph="&#xE793;" FontSize="14"/>
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <RadioMenuFlyoutItem x:Name="ThemeSystemItem" Text="🖥️  Système (par défaut)"
-                                                 Tag="System" IsChecked="True" Click="OnThemeItemClick"/>
-                            <RadioMenuFlyoutItem x:Name="ThemeLightItem" Text="☀️  Clair"
-                                                 Tag="Light" Click="OnThemeItemClick"/>
-                            <RadioMenuFlyoutItem x:Name="ThemeDarkItem" Text="🌙  Sombre"
-                                                 Tag="Dark" Click="OnThemeItemClick"/>
+                            <RadioMenuFlyoutItem x:Name="ThemeSystemItem" Tag="System" IsChecked="True" Click="OnThemeItemClick"
+                                                 x:Uid="Shell_ThemeSystemItem">
+                                <RadioMenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE771;"/>
+                                </RadioMenuFlyoutItem.Icon>
+                            </RadioMenuFlyoutItem>
+                            <RadioMenuFlyoutItem x:Name="ThemeLightItem" Tag="Light" Click="OnThemeItemClick"
+                                                 x:Uid="Shell_ThemeLightItem">
+                                <RadioMenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE793;"/>
+                                </RadioMenuFlyoutItem.Icon>
+                            </RadioMenuFlyoutItem>
+                            <RadioMenuFlyoutItem x:Name="ThemeDarkItem" Tag="Dark" Click="OnThemeItemClick"
+                                                 x:Uid="Shell_ThemeDarkItem">
+                                <RadioMenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE708;"/>
+                                </RadioMenuFlyoutItem.Icon>
+                            </RadioMenuFlyoutItem>
                         </MenuFlyout>
                     </Button.Flyout>
-                </Button>
-
-                <Button x:Name="SettingsButton" Padding="8,5" CornerRadius="8"
-                        Background="Transparent" BorderBrush="Transparent"
-                        Click="OnSettingsClicked"
-                        ToolTipService.ToolTip="Paramètres (Ctrl+,)"
-                        AutomationProperties.Name="Paramètres">
-                    <FontIcon Glyph="&#xE713;" FontSize="14"/>
                 </Button>
 
                 <Border Width="1" Height="18" Margin="2,0"
@@ -124,8 +139,7 @@
                 <!-- Profil enseignant -->
                 <Button x:Name="ProfileButton" Padding="2" CornerRadius="16"
                         Background="Transparent" BorderBrush="Transparent"
-                        ToolTipService.ToolTip="Profil enseignant"
-                        AutomationProperties.Name="Profil enseignant">
+                        x:Uid="Shell_ProfileButton">
                     <PersonPicture x:Name="TeacherPersonPicture" Width="28" Height="28"/>
                     <Button.Flyout>
                         <Flyout Placement="BottomEdgeAlignedRight">
@@ -136,35 +150,37 @@
                                         <TextBlock x:Name="ProfileNameText" Text="Enseignant·e"
                                                    FontWeight="SemiBold" FontSize="14"/>
                                         <TextBlock x:Name="ProfileSubtext" Text="Vos documents sont enregistrés sur cet ordinateur"
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                    </StackPanel>
+                                                   FontSize="12" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>                                    </StackPanel>
                                 </StackPanel>
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnProfileSettingsClicked"
-                                        AutomationProperties.Name="Paramètres">
+                                        x:Uid="Shell_ProfileSettingsButton">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="⚙️" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"/>
+                                        <FontIcon Glyph="&#xE713;" FontSize="13"/>
+                                        <TextBlock Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"
+                                                   x:Uid="Shell_ProfileSettingsLabel"/>
                                     </StackPanel>
                                 </Button>
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnProfileShortcutsClicked"
-                                        AutomationProperties.Name="Raccourcis clavier">
+                                        x:Uid="Shell_ProfileShortcutsButton">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="⌨️" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Raccourcis clavier (F1)" FontSize="12.5" VerticalAlignment="Center"/>
+                                        <FontIcon Glyph="&#xE765;" FontSize="13"/>
+                                        <TextBlock Text="Raccourcis clavier (F1)" FontSize="12.5" VerticalAlignment="Center"
+                                                   x:Uid="Shell_ProfileShortcutsLabel"/>
                                     </StackPanel>
                                 </Button>
                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
                                         Click="OnAboutClicked"
-                                        AutomationProperties.Name="À propos">
+                                        x:Uid="Shell_ProfileAboutButton">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="ℹ️" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="À propos de PROFstudio" FontSize="12.5" VerticalAlignment="Center"/>
+                                        <FontIcon Glyph="&#xE897;" FontSize="13"/>
+                                        <TextBlock Text="À propos de PROFstudio" FontSize="12.5" VerticalAlignment="Center"
+                                                   x:Uid="Shell_ProfileAboutLabel"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -192,35 +208,30 @@
                                 PlaceholderText="Rechercher un document…"
                                 QueryIcon="Find"
                                 QuerySubmitted="OnGlobalSearchSubmitted"
-                                ToolTipService.ToolTip="Rechercher dans mes documents (Ctrl+F)"
-                                AutomationProperties.Name="Recherche globale"/>
+                                x:Uid="Shell_GlobalSearchBox"/>
             </NavigationView.AutoSuggestBox>
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Fiche pédagogique" Tag="FichePage"
-                                    ToolTipService.ToolTip="Créer une fiche de séance (Ctrl+1)"
-                                    AutomationProperties.Name="Fiche pédagogique">
+                                    x:Uid="Nav_FicheItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8A5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="Évaluations &amp; Contrôles" Tag="EvaluationPage"
-                                    ToolTipService.ToolTip="Créer une évaluation avec barème (Ctrl+2)"
-                                    AutomationProperties.Name="Évaluations et Contrôles">
+                                    x:Uid="Nav_EvaluationItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE70F;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="Quiz rapides" Tag="QuizPage"
-                                    ToolTipService.ToolTip="Créer un quiz ou QCM (Ctrl+3)"
-                                    AutomationProperties.Name="Quiz rapides">
+                                    x:Uid="Nav_QuizItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="Mes documents" Tag="HistoryPage"
-                                    ToolTipService.ToolTip="Retrouver tous mes documents créés (Ctrl+4)"
-                                    AutomationProperties.Name="Mes documents">
+                                    x:Uid="Nav_HistoryItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;"/>
                     </NavigationViewItem.Icon>
@@ -237,7 +248,10 @@
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <Frame x:Name="ContentFrame"/>
+            <!-- Fond opaque : le contenu vit sur une surface solide, la transparence
+                 Mica reste réservée à la barre de titre et au volet de navigation
+                 (sinon le fond d'écran transparaît de façon incohérente). -->
+            <Frame x:Name="ContentFrame" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"/>
         </NavigationView>
 
         <!-- ================= Barre de notification & d'état active (§5.3) ================= -->
@@ -252,24 +266,26 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <TextBlock x:Name="NotificationIcon" Text="✨" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="StatusText" Text="Prêt pour une nouvelle séance" FontSize="11.5"
+                    <TextBlock x:Name="StatusText" Text="Prêt pour une nouvelle séance" FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               x:Uid="Shell_StatusText"
                                AutomationProperties.LiveSetting="Polite"/>
                     <Button x:Name="NotificationActionButton" Content="Configurer"
                             Visibility="Collapsed" Padding="8,2" Margin="8,0,0,0"
-                            Style="{ThemeResource AccentButtonStyle}" FontSize="11"
+                            Style="{ThemeResource AccentButtonStyle}" FontSize="12"
+                            x:Uid="Shell_NotificationAction"
                             Click="NotificationAction_Click"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <TextBlock x:Name="StatusSectionText" Text="Fiche pédagogique" FontSize="11"
+                    <TextBlock x:Name="StatusSectionText" Text="Fiche pédagogique" FontSize="12"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                VerticalAlignment="Center"/>
                     <Button x:Name="NotificationDismissButton" Visibility="Collapsed"
                             Style="{ThemeResource SubtleButtonStyle}" Padding="4"
                             Click="NotificationDismiss_Click"
-                            AutomationProperties.Name="Fermer la notification">
+                            x:Uid="Shell_NotificationDismiss">
                         <FontIcon Glyph="&#xE711;" FontSize="10"/>
                     </Button>
                 </StackPanel>
@@ -281,5 +297,8 @@
                      PreferredPlacement="Bottom"
                      IsLightDismissEnabled="True"
                      HorizontalAlignment="Center" VerticalAlignment="Top"/>
+
+        <!-- Palette de commandes (Ctrl+K) : au-dessus de tout le shell -->
+        <controls:CommandPalette x:Name="CommandPaletteOverlay" Grid.Row="0" Grid.RowSpan="3"/>
     </Grid>
 </Window>

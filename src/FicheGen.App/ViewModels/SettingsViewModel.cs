@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FicheGen.App.Services;
 using FicheGen.Core.Abstractions;
+using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
 using FicheGen.Core.Storage;
 using Microsoft.UI.Xaml.Media;
@@ -23,6 +24,7 @@ namespace FicheGen.App.ViewModels;
 public sealed record ProviderOption(string Key, string Label, string Icon);
 public sealed record ThemeOption(string Key, string Label, string Icon);
 public sealed record LanguageOption(string Code, string Label, string Icon);
+public sealed record HeaderLayoutOption(string Key, string Label, string Description);
 
 public sealed class AccentOption
 {
@@ -81,16 +83,18 @@ public sealed class StylePresetItem
     public string AccentHex { get; }
     public string FontFamily { get; }
     public double CornerRadius { get; }
+    public string HeaderLayout { get; }
     public Brush? PrimaryBrush => _primaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(PrimaryHex));
     public Brush? SecondaryBrush => _secondaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(SecondaryHex));
     public Brush? AccentBrush => _accentBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(AccentHex));
 
     public StylePresetItem(string id, string name, string description, string icon,
-        string primaryHex, string secondaryHex, string accentHex, string fontFamily, double cornerRadius)
+        string primaryHex, string secondaryHex, string accentHex, string fontFamily, double cornerRadius,
+        string headerLayout = FicheGen.Core.Documents.StylePreset.HeaderRule)
     {
         Id = id; Name = name; Description = description; Icon = icon;
         PrimaryHex = primaryHex; SecondaryHex = secondaryHex; AccentHex = accentHex;
-        FontFamily = fontFamily; CornerRadius = cornerRadius;
+        FontFamily = fontFamily; CornerRadius = cornerRadius; HeaderLayout = headerLayout;
     }
 }
 
@@ -245,12 +249,15 @@ public partial class SettingsViewModel : ObservableObject
     private readonly PickerService _pickerService;
     private readonly StylePresetService _stylePresetService;
     private readonly IDiagnosticBundleExporter? _diagnosticExporter;
+    private readonly IConnectionTester? _connectionTester;
+    private readonly IProxyModelScanner? _proxyScanner;
+    private readonly AccentColorService? _accentColorService;
 
     /// <summary>Déclenché quand l'aperçu WebView2 doit être régénéré.</summary>
     public event EventHandler? PreviewRefreshRequested;
 
     private readonly HashSet<string> _clearedCredentials = new();
-    private readonly Random _rng = new();
+    private bool _isLoadingSettings;
 
     // ─────────────── Onglet 1 · Général & Apparence ───────────────
 
@@ -381,26 +388,53 @@ public partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<StylePresetItem> StylePresets { get; } = new()
     {
-        new StylePresetItem("modern", "Moderne", "Dégradés bleus, encadrés arrondis, hiérarchie aérée.", "🌊", "#2563EB", "#60A5FA", "#F59E0B", "Segoe UI Variable Text", 10),
-        new StylePresetItem("classic", "Classique", "Bleu institutionnel, filets sobres, esprit manuel scolaire.", "📘", "#1F4E79", "#2E75B6", "#C00000", "Georgia", 4),
-        new StylePresetItem("minimal", "Minimal", "Noir & blanc maîtrisé, une seule touche de vert.", "⬜", "#111827", "#6B7280", "#10B981", "Segoe UI", 2),
-        new StylePresetItem("academic", "Académique", "Indigo profond et empattements, style universitaire.", "🎓", "#312E81", "#4F46E5", "#B45309", "Cambria", 6),
-        new StylePresetItem("playful", "Ludique", "Couleurs vives et formes douces pour le primaire.", "🎈", "#7C3AED", "#EC4899", "#FBBF24", "Trebuchet MS", 16),
+        new StylePresetItem("modern", "Moderne", "Édition contemporaine : bleu marine, accents ambre, filet asymétrique.", "🌊", "#1E3A8A", "#2563EB", "#D97706", "Segoe UI Variable Text", 8,
+            FicheGen.Core.Documents.StylePreset.HeaderRule),
+        new StylePresetItem("classic", "Classique", "Manuel scolaire : bleu nuit, rouge garance, lettrines et serif.", "📘", "#1E3A5F", "#475569", "#991B1B", "Georgia", 3,
+            FicheGen.Core.Documents.StylePreset.HeaderCentered),
+        new StylePresetItem("minimal", "Minimaliste", "Typographie suisse : noir pur, gris zinc, pastille émeraude.", "⬜", "#0F172A", "#475569", "#059669", "Segoe UI Variable Text", 2,
+            FicheGen.Core.Documents.StylePreset.HeaderMinimal),
+        new StylePresetItem("academic", "Académique", "Sorbonne & universités : pourpre profond, outremer et bronze.", "🎓", "#311042", "#4338CA", "#B45309", "Cambria", 4,
+            FicheGen.Core.Documents.StylePreset.HeaderCentered),
+        new StylePresetItem("playful", "Ludique", "Primaire & découverte : bandeau dégradé, formes douces et miel.", "🎈", "#4F46E5", "#DB2777", "#F59E0B", "Trebuchet MS", 14,
+            FicheGen.Core.Documents.StylePreset.HeaderBand),
     };
 
     [ObservableProperty] public partial StylePresetItem? SelectedPreset { get; set; }
     [ObservableProperty] public partial string SelectedStylePresetId { get; set; } = "modern";
 
+    /// <summary>Libellé du style réellement appliqué aux nouveaux documents.</summary>
+    [ObservableProperty] public partial string DefaultStyleLabel { get; set; } = "Moderne";
+
     // StyleBuilder
-    [ObservableProperty] public partial Color BuilderPrimaryColor { get; set; } = AccentOption.ParseHex("#2563EB");
-    [ObservableProperty] public partial Color BuilderSecondaryColor { get; set; } = AccentOption.ParseHex("#60A5FA");
-    [ObservableProperty] public partial Color BuilderAccentColor { get; set; } = AccentOption.ParseHex("#F59E0B");
+    [ObservableProperty] public partial Color BuilderPrimaryColor { get; set; } = AccentOption.ParseHex("#1E3A8A");
+    [ObservableProperty] public partial Color BuilderSecondaryColor { get; set; } = AccentOption.ParseHex("#2563EB");
+    [ObservableProperty] public partial Color BuilderAccentColor { get; set; } = AccentOption.ParseHex("#D97706");
+    [ObservableProperty] public partial string BuilderPrimaryHex { get; set; } = "#1E3A8A";
+    [ObservableProperty] public partial string BuilderSecondaryHex { get; set; } = "#2563EB";
+    [ObservableProperty] public partial string BuilderAccentHex { get; set; } = "#D97706";
     [ObservableProperty] public partial string BuilderFontFamily { get; set; } = "Segoe UI Variable Text";
-    [ObservableProperty] public partial double BuilderCornerRadius { get; set; } = 10;
-    [ObservableProperty] public partial double BuilderMarginTop { get; set; } = 18;
-    [ObservableProperty] public partial double BuilderMarginBottom { get; set; } = 18;
+    [ObservableProperty] public partial string BuilderHeaderLayout { get; set; } = FicheGen.Core.Documents.StylePreset.HeaderRule;
+    [ObservableProperty] public partial double BuilderCornerRadius { get; set; } = 8;
+    [ObservableProperty] public partial double BuilderMarginTop { get; set; } = 20;
+    [ObservableProperty] public partial double BuilderMarginBottom { get; set; } = 20;
     [ObservableProperty] public partial double BuilderMarginLeft { get; set; } = 20;
     [ObservableProperty] public partial double BuilderMarginRight { get; set; } = 20;
+
+    /// <summary>Vrai dès que le StyleBuilder diverge du préréglage de la galerie :
+    /// l'enregistrement crée alors un style « Personnalisé » appliqué aux nouveaux documents.</summary>
+    private bool _builderDirty;
+
+    /// <summary>Évite de marquer le builder « sale » pendant le chargement d'un préréglage.</summary>
+    private bool _isLoadingPresetIntoBuilder;
+
+    public IReadOnlyList<HeaderLayoutOption> HeaderLayoutOptions { get; } = new List<HeaderLayoutOption>
+    {
+        new(FicheGen.Core.Documents.StylePreset.HeaderRule, "Filet sous le titre", "Titre coloré souligné d'un filet bicolore."),
+        new(FicheGen.Core.Documents.StylePreset.HeaderBand, "Bandeau dégradé", "Bandeau de couleur pleine, titre en blanc."),
+        new(FicheGen.Core.Documents.StylePreset.HeaderCentered, "Titre centré", "Titre centré au-dessus d'un filet double."),
+        new(FicheGen.Core.Documents.StylePreset.HeaderMinimal, "Minimaliste", "Titre sobre avec pastille d'accentuation."),
+    };
 
     public IReadOnlyList<string> FontOptions { get; } = new List<string>
     {
@@ -467,7 +501,8 @@ public partial class SettingsViewModel : ObservableObject
     // DTO de sérialisation (stockage clé/valeur extensible — aucun changement de contrat Core requis)
     private sealed record RoutingDto(string Provider, string Model);
     private sealed record StyleBuilderDto(string Primary, string Secondary, string Accent, string Font,
-        double Radius, double MarginTop, double MarginBottom, double MarginLeft, double MarginRight);
+        double Radius, double MarginTop, double MarginBottom, double MarginLeft, double MarginRight,
+        string? Header = null);
     private sealed record PromptDto(string Name, string Content);
     private sealed record ShortcutDto(string Action, string Keys);
 
@@ -478,14 +513,25 @@ public partial class SettingsViewModel : ObservableObject
         ICredentialStore credentialStore,
         PickerService pickerService,
         StylePresetService stylePresetService,
-        IDiagnosticBundleExporter? diagnosticExporter = null)
+        IDiagnosticBundleExporter? diagnosticExporter = null,
+        IConnectionTester? connectionTester = null,
+        IProxyModelScanner? proxyScanner = null,
+        AccentColorService? accentColorService = null)
     {
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
         _pickerService = pickerService;
         _stylePresetService = stylePresetService;
         _diagnosticExporter = diagnosticExporter;
+        _connectionTester = connectionTester;
+        _proxyScanner = proxyScanner;
+        _accentColorService = accentColorService;
 
+        // État « chargement » : évite que les valeurs par défaut posées ici
+        // (accent, thème) déclenchent une application prématurée à l'interface —
+        // AccentColorService.ApplyFromSettings (démarrage) a déjà posé la teinte
+        // persistée, et LoadSettings rétablira les valeurs sauvegardées.
+        _isLoadingSettings = true;
         SelectedAccent = AccentOptions[0];
         SelectedGlobalProvider = ProviderCatalog.Find("aistudio");
         SelectedPromptTemplate = PromptTemplates[0];
@@ -512,14 +558,29 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadSettings()
     {
+        _isLoadingSettings = true;
         var appSettings = _settingsStore.GetSettings<AppSettings>();
 
-        Theme = appSettings.Ui.Theme;
+        // Le shell est la source de vérité pour le thème (menu de la barre de titre,
+        // Paramètres) : on reflète son état réel plutôt qu'un miroir potentiellement périmé.
+        var shellTheme = (App.CurrentMainWindow as MainWindow)?.CurrentShellTheme;
+        Theme = shellTheme switch
+        {
+            "Light" => "light",
+            "Dark" => "dark",
+            _ => "system"
+        };
         Language = appSettings.Ui.Language;
         TeacherName = string.IsNullOrWhiteSpace(appSettings.Defaults.TeacherName) ? "Enseignant·e" : appSettings.Defaults.TeacherName;
         SchoolName = string.IsNullOrWhiteSpace(appSettings.Defaults.SchoolName) ? "École / Établissement" : appSettings.Defaults.SchoolName;
         DefaultClassLevel = appSettings.Defaults.ClassLevel;
         DefaultSubject = appSettings.Defaults.Subject;
+
+        if (!string.IsNullOrWhiteSpace(appSettings.Ui.AccentColor))
+        {
+            SelectedAccent = AccentOptions.FirstOrDefault(
+                a => a.Hex.Equals(appSettings.Ui.AccentColor, StringComparison.OrdinalIgnoreCase)) ?? AccentOptions[0];
+        }
 
         GlobalProvider = appSettings.Ai.GlobalProvider;
         SelectedGlobalProvider = ProviderCatalog.Find(GlobalProvider);
@@ -549,6 +610,7 @@ public partial class SettingsViewModel : ObservableObject
         VercelApiKey = _credentialStore.Get("vercel_api_key") ?? string.Empty;
 
         LoadExtendedState(appSettings);
+        _isLoadingSettings = false;
     }
 
     /// <summary>Recharge l'état étendu persisté dans le magasin clé/valeur extensible.</summary>
@@ -575,7 +637,7 @@ public partial class SettingsViewModel : ObservableObject
             if (s.Ai.Models.TryGetValue("diag.logLevel", out var logLevel) && LogLevels.Contains(logLevel))
                 DiagnosticLogLevel = logLevel;
 
-            if (s.Ai.Models.TryGetValue("ui.accent", out var accentHex))
+            if (s.Ai.Models.TryGetValue("ui.accent", out var accentHex) && string.IsNullOrWhiteSpace(s.Ui.AccentColor))
                 SelectedAccent = AccentOptions.FirstOrDefault(a => a.Hex.Equals(accentHex, StringComparison.OrdinalIgnoreCase)) ?? AccentOptions[0];
 
             if (s.Ai.Models.TryGetValue("proxy.customModel", out var customModel) && !string.IsNullOrWhiteSpace(customModel))
@@ -592,12 +654,18 @@ public partial class SettingsViewModel : ObservableObject
                     BuilderPrimaryColor = AccentOption.ParseHex(b.Primary);
                     BuilderSecondaryColor = AccentOption.ParseHex(b.Secondary);
                     BuilderAccentColor = AccentOption.ParseHex(b.Accent);
+                    BuilderPrimaryHex = b.Primary;
+                    BuilderSecondaryHex = b.Secondary;
+                    BuilderAccentHex = b.Accent;
                     if (FontOptions.Contains(b.Font)) BuilderFontFamily = b.Font;
                     BuilderCornerRadius = Math.Clamp(b.Radius, 0, 24);
                     BuilderMarginTop = Math.Clamp(b.MarginTop, 5, 40);
                     BuilderMarginBottom = Math.Clamp(b.MarginBottom, 5, 40);
                     BuilderMarginLeft = Math.Clamp(b.MarginLeft, 5, 40);
                     BuilderMarginRight = Math.Clamp(b.MarginRight, 5, 40);
+                    BuilderHeaderLayout = string.IsNullOrWhiteSpace(b.Header)
+                        ? FicheGen.Core.Documents.StylePreset.HeaderRule
+                        : b.Header;
                 }
             }
 
@@ -629,6 +697,21 @@ public partial class SettingsViewModel : ObservableObject
         {
             // Toute donnée étendue corrompue est ignorée : les valeurs par défaut restent en place.
         }
+        finally
+        {
+            // L'état chargé correspond à ce qui a été enregistré : le builder repart propre.
+            _builderDirty = false;
+            _isLoadingPresetIntoBuilder = false;
+            RefreshDefaultStyleLabel(s.Defaults.StylePresetId);
+        }
+    }
+
+    /// <summary>Met à jour le libellé du style réellement appliqué aux nouveaux documents.</summary>
+    private void RefreshDefaultStyleLabel(string? stylePresetId)
+    {
+        DefaultStyleLabel = string.Equals(stylePresetId, "custom", StringComparison.Ordinal)
+            ? "Personnalisé (StyleBuilder)"
+            : StylePresets.FirstOrDefault(p => p.Id == stylePresetId)?.Name ?? "Moderne";
     }
 
     private void ApplyRoutingValue(string taskKey, string? provider, string model)
@@ -681,12 +764,23 @@ public partial class SettingsViewModel : ObservableObject
             s.Ai.Models["temp:intent"] = IntentTemperature.ToString(CultureInfo.InvariantCulture);
             s.Ai.Models["temp:assistant"] = AssistantTemperature.ToString(CultureInfo.InvariantCulture);
             s.Ai.Models["diag.logLevel"] = DiagnosticLogLevel;
-            s.Ai.Models["ui.accent"] = SelectedAccent?.Hex ?? "#2563EB";
+            s.Ui.AccentColor = SelectedAccent?.Hex ?? AccentColorService.DefaultHex;
+            s.Ai.Models["ui.accent"] = s.Ui.AccentColor; // clé héritée conservée pour compatibilité
             s.Ai.Models["proxy.customModel"] = CustomEndpointModel ?? string.Empty;
             s.Ai.Models["style.builder.json"] = JsonSerializer.Serialize(new StyleBuilderDto(
                 ToHex(BuilderPrimaryColor), ToHex(BuilderSecondaryColor), ToHex(BuilderAccentColor),
                 BuilderFontFamily, BuilderCornerRadius,
-                BuilderMarginTop, BuilderMarginBottom, BuilderMarginLeft, BuilderMarginRight));
+                BuilderMarginTop, BuilderMarginBottom, BuilderMarginLeft, BuilderMarginRight,
+                BuilderHeaderLayout));
+
+            // Style des nouveaux documents : si le StyleBuilder a été retouché,
+            // il devient un préréglage « Personnalisé » enregistré dans le moteur ;
+            // sinon le préréglage de la galerie s'applique tel quel.
+            if (_builderDirty)
+            {
+                RegisterCustomPreset();
+            }
+            s.Defaults.StylePresetId = SelectedStylePresetId;
             s.Ai.Models["prompts.json"] = JsonSerializer.Serialize(
                 PromptTemplates.Select(p => new PromptDto(p.Name, p.Content)));
             s.Ai.Models["shortcuts.json"] = JsonSerializer.Serialize(
@@ -785,7 +879,6 @@ public partial class SettingsViewModel : ObservableObject
         if (state is null || state.IsTesting) return;
 
         state.SetPending();
-        await Task.Delay(_rng.Next(280, 720)); // latence simulée du handshake
 
         switch (providerName)
         {
@@ -798,12 +891,24 @@ public partial class SettingsViewModel : ObservableObject
             case "vercel" when !IsVercelKeyConfigured:
                 state.SetWarning("Clé d'API manquante — test impossible"); return;
             case "proxy" when string.IsNullOrWhiteSpace(ProxyBaseUrl):
-                state.SetWarning("URL du point de terminaison requise"); return;
+                state.SetWarning("Adresse du serveur requise"); return;
             case "vertex" when string.IsNullOrWhiteSpace(VertexProject):
-                state.SetWarning("ID du projet GCP requis"); return;
+                state.SetWarning("Identifiant du projet Google Cloud requis"); return;
         }
 
-        state.SetOk(_rng.Next(68, 420));
+        if (_connectionTester is null)
+        {
+            state.SetNeutral("Testeur de connexion indisponible.");
+            return;
+        }
+
+        // Test réel : requête minimale de bout en bout (connectivité + auth).
+        var result = await _connectionTester.TestAsync(providerName!);
+
+        if (result.Success)
+            state.SetOk(Math.Max(1, result.LatencyMs));
+        else
+            state.SetError(result.Message);
     }
 
     [RelayCommand]
@@ -815,70 +920,16 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (_proxyScanner is null)
+        {
+            ProxyState.SetNeutral("Scanner de modèles indisponible.");
+            return;
+        }
+
         ProxyState.SetPending();
         try
         {
-            using var client = new System.Net.Http.HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(5);
-            if (!string.IsNullOrWhiteSpace(ProxyApiKey))
-            {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ProxyApiKey);
-            }
-
-            var baseUrl = ProxyBaseUrl.TrimEnd('/');
-            var requestUri = baseUrl.EndsWith("/models", StringComparison.OrdinalIgnoreCase)
-                ? baseUrl
-                : $"{baseUrl}/models";
-
-            var response = await client.GetAsync(requestUri);
-            string content = string.Empty;
-            if (!response.IsSuccessStatusCode && baseUrl.Contains("11434"))
-            {
-                var ollamaUri = "http://localhost:11434/api/tags";
-                var ollamaResp = await client.GetAsync(ollamaUri);
-                if (ollamaResp.IsSuccessStatusCode)
-                {
-                    content = await ollamaResp.Content.ReadAsStringAsync();
-                }
-            }
-            else if (response.IsSuccessStatusCode)
-            {
-                content = await response.Content.ReadAsStringAsync();
-            }
-
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                ProxyState.SetWarning($"Impossible d'accéder à {requestUri}");
-                return;
-            }
-
-            using var doc = System.Text.Json.JsonDocument.Parse(content);
-            var modelList = new List<string>();
-
-            if (doc.RootElement.TryGetProperty("data", out var dataElem) && dataElem.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var item in dataElem.EnumerateArray())
-                {
-                    if (item.TryGetProperty("id", out var idElem) && idElem.ValueKind == System.Text.Json.JsonValueKind.String)
-                    {
-                        var modelId = idElem.GetString();
-                        if (!string.IsNullOrWhiteSpace(modelId))
-                            modelList.Add(modelId);
-                    }
-                }
-            }
-            else if (doc.RootElement.TryGetProperty("models", out var modelsElem) && modelsElem.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var item in modelsElem.EnumerateArray())
-                {
-                    if (item.TryGetProperty("name", out var nameElem) && nameElem.ValueKind == System.Text.Json.JsonValueKind.String)
-                    {
-                        var modelName = nameElem.GetString();
-                        if (!string.IsNullOrWhiteSpace(modelName))
-                            modelList.Add(modelName);
-                    }
-                }
-            }
+            var modelList = await _proxyScanner.ScanAsync(ProxyBaseUrl, ProxyApiKey);
 
             if (modelList.Count > 0)
             {
@@ -898,9 +949,13 @@ public partial class SettingsViewModel : ObservableObject
                 ProxyState.SetWarning("Réponse reçue mais aucun modèle trouvé.");
             }
         }
+        catch (OperationCanceledException)
+        {
+            ProxyState.SetWarning("Scan annulé.");
+        }
         catch (Exception ex)
         {
-            ProxyState.SetWarning($"Erreur de connexion : {ex.Message}");
+            ProxyState.SetWarning(ex.Message);
         }
     }
 
@@ -948,12 +1003,12 @@ public partial class SettingsViewModel : ObservableObject
                 .AddOrReplace("FicheGen.GuidesDir", folder);
             GuidesAccessToken = "FicheGen.GuidesDir";
             IsGuidesAccessPersistent = true;
-            StatusMessage = "✅ Dossier des guides enregistré — accès persistant accordé.";
+            StatusMessage = "✅ Dossier des guides enregistré — accès permanent accordé.";
         }
         catch (Exception)
         {
             IsGuidesAccessPersistent = false;
-            StatusMessage = "⚠ Dossier enregistré, mais l'accès persistant (FutureAccessList) a échoué.";
+            StatusMessage = "⚠ Dossier enregistré, mais l'accès permanent a échoué.";
         }
     }
 
@@ -1044,18 +1099,91 @@ public partial class SettingsViewModel : ObservableObject
 
     // ─────────────── Styles : préréglages & aperçu ───────────────
 
+    /// <summary>Application immédiate de la couleur d'accentuation à l'interface.</summary>
+    partial void OnSelectedAccentChanged(AccentOption? value)
+    {
+        // Pendant le chargement, ApplyFromSettings (démarrage) a déjà posé la teinte ;
+        // on évite un double travail et un flash visuel.
+        if (_isLoadingSettings) return;
+
+        _accentColorService?.Apply(value?.Hex);
+        StatusMessage = $"🎨 Accentuation « {value?.Name} » appliquée à l'interface — pensez à enregistrer (Ctrl+S).";
+    }
+
+    /// <summary>Application immédiate du thème clair / sombre / système au shell.</summary>
+    partial void OnThemeChanged(string value)
+    {
+        if (_isLoadingSettings) return;
+
+        var shellTheme = value switch
+        {
+            "light" => "Light",
+            "dark" => "Dark",
+            _ => "System"
+        };
+        (App.CurrentMainWindow as MainWindow)?.ApplyShellTheme(shellTheme);
+    }
+
+    /// <summary>Charge le préréglage choisi dans le StyleBuilder (couleurs, police,
+    /// en-tête, arrondis) et rafraîchit l'aperçu. Le builder repart « propre » :
+    /// tant qu'il n'est pas retouché, l'enregistrement applique le préréglage tel quel.</summary>
     partial void OnSelectedPresetChanged(StylePresetItem? value)
     {
         if (value is null) return;
 
+        _isLoadingPresetIntoBuilder = true;
         SelectedStylePresetId = value.Id;
         BuilderPrimaryColor = AccentOption.ParseHex(value.PrimaryHex);
         BuilderSecondaryColor = AccentOption.ParseHex(value.SecondaryHex);
         BuilderAccentColor = AccentOption.ParseHex(value.AccentHex);
+        BuilderPrimaryHex = value.PrimaryHex;
+        BuilderSecondaryHex = value.SecondaryHex;
+        BuilderAccentHex = value.AccentHex;
         BuilderFontFamily = value.FontFamily;
+        BuilderHeaderLayout = value.HeaderLayout;
         BuilderCornerRadius = value.CornerRadius;
+        _isLoadingPresetIntoBuilder = false;
+        _builderDirty = false;
+        DefaultStyleLabel = value.Name;
         RequestPreviewRefresh();
     }
+
+    /// <summary>Applique une palette prédéfinie en un clic au StyleBuilder.</summary>
+    public void ApplyPalette(string paletteKey)
+    {
+        var (p, s, a) = paletteKey switch
+        {
+            "ocean" => ("#1E3A8A", "#2563EB", "#D97706"),
+            "forest" => ("#064E3B", "#059669", "#D97706"),
+            "purple" => ("#311042", "#6D28D9", "#F59E0B"),
+            "terracotta" => ("#7C2D12", "#C2410C", "#D97706"),
+            "slate" => ("#0F172A", "#334155", "#0284C7"),
+            "ruby" => ("#881337", "#BE123C", "#D97706"),
+            _ => ("#1E3A8A", "#2563EB", "#D97706")
+        };
+        BuilderPrimaryColor = AccentOption.ParseHex(p);
+        BuilderSecondaryColor = AccentOption.ParseHex(s);
+        BuilderAccentColor = AccentOption.ParseHex(a);
+    }
+
+    /// <summary>Construit le StylePreset correspondant à l'état courant du StyleBuilder.</summary>
+    private FicheGen.Core.Documents.StylePreset BuildCustomPresetFromBuilder() => new()
+    {
+        Id = "custom",
+        Name = "Personnalisé",
+        PrimaryColor = ToHex(BuilderPrimaryColor),
+        SecondaryColor = ToHex(BuilderSecondaryColor),
+        AccentColor = ToHex(BuilderAccentColor),
+        FontFamily = string.IsNullOrWhiteSpace(BuilderFontFamily) ? "Segoe UI" : BuilderFontFamily,
+        MarginMm = (int)Math.Round(BuilderMarginTop),
+        MarginBottomMm = (int)Math.Round(BuilderMarginBottom),
+        MarginLeftMm = (int)Math.Round(BuilderMarginLeft),
+        MarginRightMm = (int)Math.Round(BuilderMarginRight),
+        CornerRadiusPx = BuilderCornerRadius,
+        HeaderLayout = string.IsNullOrWhiteSpace(BuilderHeaderLayout)
+            ? FicheGen.Core.Documents.StylePreset.HeaderRule
+            : BuilderHeaderLayout
+    };
 
     partial void OnSelectedGlobalProviderChanged(ProviderOption? value)
     {
@@ -1074,15 +1202,38 @@ public partial class SettingsViewModel : ObservableObject
             item.ApplyCustomProxyModel(value);
     }
 
-    partial void OnBuilderPrimaryColorChanged(Color value) => RequestPreviewRefresh();
-    partial void OnBuilderSecondaryColorChanged(Color value) => RequestPreviewRefresh();
-    partial void OnBuilderAccentColorChanged(Color value) => RequestPreviewRefresh();
-    partial void OnBuilderFontFamilyChanged(string value) => RequestPreviewRefresh();
-    partial void OnBuilderCornerRadiusChanged(double value) => RequestPreviewRefresh();
-    partial void OnBuilderMarginTopChanged(double value) => RequestPreviewRefresh();
-    partial void OnBuilderMarginBottomChanged(double value) => RequestPreviewRefresh();
-    partial void OnBuilderMarginLeftChanged(double value) => RequestPreviewRefresh();
-    partial void OnBuilderMarginRightChanged(double value) => RequestPreviewRefresh();
+    private void MarkBuilderDirty()
+    {
+        if (_isLoadingPresetIntoBuilder || _isLoadingSettings) return;
+        _builderDirty = true;
+        DefaultStyleLabel = "Personnalisé (StyleBuilder)";
+        RequestPreviewRefresh();
+    }
+
+    partial void OnBuilderPrimaryColorChanged(Color value)
+    {
+        BuilderPrimaryHex = ToHex(value);
+        MarkBuilderDirty();
+    }
+
+    partial void OnBuilderSecondaryColorChanged(Color value)
+    {
+        BuilderSecondaryHex = ToHex(value);
+        MarkBuilderDirty();
+    }
+
+    partial void OnBuilderAccentColorChanged(Color value)
+    {
+        BuilderAccentHex = ToHex(value);
+        MarkBuilderDirty();
+    }
+    partial void OnBuilderFontFamilyChanged(string value) => MarkBuilderDirty();
+    partial void OnBuilderHeaderLayoutChanged(string value) => MarkBuilderDirty();
+    partial void OnBuilderCornerRadiusChanged(double value) => MarkBuilderDirty();
+    partial void OnBuilderMarginTopChanged(double value) => MarkBuilderDirty();
+    partial void OnBuilderMarginBottomChanged(double value) => MarkBuilderDirty();
+    partial void OnBuilderMarginLeftChanged(double value) => MarkBuilderDirty();
+    partial void OnBuilderMarginRightChanged(double value) => MarkBuilderDirty();
 
     private void RequestPreviewRefresh() => PreviewRefreshRequested?.Invoke(this, EventArgs.Empty);
 
@@ -1095,16 +1246,10 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
-            StyleAnalysisStatus = $"📥 Lecture de « {fileName} »…";
-            await Task.Delay(600);
-            StyleAnalysisStatus = "🎨 Extraction de la palette dominante…";
-            await Task.Delay(650);
-            StyleAnalysisStatus = "🔤 Analyse de la hiérarchie typographique…";
-            await Task.Delay(600);
-            StyleAnalysisStatus = "🧩 Génération de la feuille de style CSS…";
-            await Task.Delay(550);
+            StyleAnalysisStatus = $"🎨 Déduction de la palette depuis « {fileName} »…";
+            await Task.Delay(150); // laisse l'UI afficher l'état avant le travail synchrone
 
-            // Palette déduite (déterministe à partir du nom — pipeline IA branché ici en production).
+            // Palette déduite par heuristique locale (déterministe à partir du nom).
             var palettes = new (string P, string S, string A, string Font, double Radius)[]
             {
                 ("#1F4E79", "#2E75B6", "#FFC000", "Georgia", 6),                 // Académique bleu
@@ -1121,8 +1266,8 @@ public partial class SettingsViewModel : ObservableObject
 
             GeneratedCss = BuildGeneratedCss();
             HasGeneratedCssFlag = true;
-            StyleAnalysisStatus = $"✅ Identité visuelle déduite de « {fileName} » et appliquée au StyleBuilder.";
-            StatusMessage = "✨ Style généré par IA — vérifiez l'aperçu en direct, puis enregistrez (Ctrl+S).";
+            StyleAnalysisStatus = $"✅ Palette déduite de « {fileName} » et appliquée au StyleBuilder.";
+            StatusMessage = "🎨 Palette suggérée (heuristique locale) — ajustez si besoin puis enregistrez (Ctrl+S).";
             RequestPreviewRefresh();
         }
         finally
@@ -1132,7 +1277,7 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     private string BuildGeneratedCss() => $$"""
-        /* ── Feuille de style PROFstudio — générée par IA ────────────── */
+        /* ── Feuille de style PROFstudio — générée automatiquement ──── */
         :root {
           --fg-couleur-primaire:    {ToHex(BuilderPrimaryColor)};
           --fg-couleur-secondaire:  {ToHex(BuilderSecondaryColor)};
@@ -1160,99 +1305,91 @@ public partial class SettingsViewModel : ObservableObject
 
     // ─────────────── Aperçu HTML en direct ───────────────
 
-    public string BuildPreviewHtml(bool darkMode)
+    /// <summary>Aperçu fidèle : le document témoin est rendu par le VRAI moteur
+    /// (<see cref="HtmlRenderer"/>) avec le CSS du StyleBuilder — ce que l'on voit
+    /// est exactement ce que produiront la génération et l'export PDF.</summary>
+    public string BuildPreviewHtml()
     {
-        var p = ToHex(BuilderPrimaryColor);
-        var s = ToHex(BuilderSecondaryColor);
-        var a = ToHex(BuilderAccentColor);
-        var radius = $"{BuilderCornerRadius:0}px";
-        var padding = $"{BuilderMarginTop:0}mm {BuilderMarginRight:0}mm {BuilderMarginBottom:0}mm {BuilderMarginLeft:0}mm";
+        var css = HtmlRenderer.BuildPresetCss(BuildCustomPresetFromBuilder());
+        return HtmlRenderer.RenderToFullHtml(BuildSampleDocument(), css);
+    }
 
-        var pageBg = darkMode ? "#1B1B1F" : "#EEF1F5";
-        var sheetBg = darkMode ? "#26272E" : "#FFFFFF";
-        var text = darkMode ? "#E8E8EC" : "#1F2937";
-        var subtle = darkMode ? "#A6A7AE" : "#6B7280";
-        var boxBg = darkMode ? "#2F3038" : "#F8FAFC";
-        var line = darkMode ? "#55565E" : "#CBD5E1";
-        var preset = SelectedPreset?.Name ?? "Personnalisé";
+    /// <summary>Document témoin couvrant tous les types de blocs du moteur.</summary>
+    private static GeneratedDocument BuildSampleDocument() => new(
+        Metadata: new DocumentMetadata(
+            Title: "Les fractions simples : découverte et manipulation",
+            Subtitle: "Séance de découverte — manipulation et représentation",
+            ClassLevel: "CM2",
+            Subject: "Mathématiques",
+            Duration: 45,
+            Date: DateTime.Now.ToString("dd/MM/yyyy")),
+        Blocks: new List<Block>
+        {
+            new HeadingBlock(1, "1. Objectifs d'apprentissage"),
+            new CalloutBoxBlock("objectifs", new List<Block>
+            {
+                new BulletListBlock(new List<List<TextRun>>
+                {
+                    new() { new TextRun("Comprendre la fraction comme partage de l'unité.") },
+                    new() { new TextRun("Lire, écrire et représenter les fractions usuelles (1/2, 1/3, 1/4).") },
+                    new() { new TextRun("Nommer la partie numérateur et le dénominateur.") }
+                })
+            }),
+            new HeadingBlock(1, "2. Phase de découverte"),
+            new ParagraphBlock(new List<TextRun>
+            {
+                new TextRun("Distribuer une bande de papier unité à chaque élève. ", IsBold: true),
+                new TextRun("Consigne : « Pliez votre bande pour obtenir deux parts égales, puis coloriez-en une. »"),
+            }),
+            new ParagraphBlock(new List<TextRun>
+            {
+                new TextRun("Cadrage théorique : "),
+                new TextRun("la fraction ", IsItalic: true),
+                new TextRun("1/2", IsBold: true),
+                new TextRun(" se lit « un demi » et représente une part sur deux parts égales."),
+            }),
+            new HeadingBlock(2, "Déroulement de la séance"),
+            new TableBlock(
+                new List<string> { "Phase", "Durée", "Activité des élèves" },
+                new List<List<string>>
+                {
+                    new() { "Découverte", "10 min", "Pliage de la bande unité, premier repérage du demi." },
+                    new() { "Manipulation", "20 min", "Constitution de la boîte à fractions (1/2, 1/3, 1/4)." },
+                    new() { "Structuration", "15 min", "Trace écrite : vocabulaire numérateur / dénominateur." }
+                }),
+            new KeyValueGridBlock(new List<KeyValuePair<string, string>>
+            {
+                new("Matériel", "Bandes de papier, ciseaux, crayons de couleur"),
+                new("Organisation", "Binômes puis collectif"),
+                new("Différenciation", "Bandes pré-pliées pour les élèves en difficulté")
+            }),
+            new CalloutBoxBlock("corrige", new List<Block>
+            {
+                new ParagraphBlock(new List<TextRun>
+                {
+                    new TextRun("Corrigé — ", IsBold: true),
+                    new TextRun("la bande pliée en deux parties égales illustre 1/2 ; chaque part vaut un demi de l'unité.")
+                })
+            }),
+            new CalloutBoxBlock("differentiation", new List<Block>
+            {
+                new ParagraphBlock(new List<TextRun>
+                {
+                    new TextRun("Pour aller plus loin : ", IsBold: true),
+                    new TextRun("faire construire 2/4 et comparer avec 1/2 (première approche des fractions équivalentes).")
+                })
+            })
+        });
 
-        var safeClassLevel = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(DefaultClassLevel) ? "CM2" : DefaultClassLevel);
-        var safeSubject = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(DefaultSubject) ? "Mathématiques" : DefaultSubject);
-        var safeFontFamily = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(BuilderFontFamily) ? "Segoe UI" : BuilderFontFamily).Replace("\"", "");
-
-        return $$"""
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-        <meta charset="utf-8"/>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'self' https: data:;"/>
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { background: {{pageBg}}; color: {{text}};
-                 font-family: '{{safeFontFamily}}', 'Segoe UI', sans-serif;
-                 padding: 18px; font-size: 13.5px; }
-          .sheet { background: {{sheetBg}}; border-radius: {{radius}};
-                   padding: {{padding}}; max-width: 760px; margin: 0 auto;
-                   box-shadow: 0 6px 24px rgba(0,0,0,.18); }
-          header.band { background: linear-gradient(135deg, {{p}}, {{s}});
-                        border-radius: {{radius}}; color: #fff; padding: 18px 20px; }
-          header.band .ecole { font-size: 11px; opacity: .85; letter-spacing: .08em; text-transform: uppercase; }
-          header.band h1 { font-size: 24px; margin-top: 4px; }
-          .chips { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-          .chips span { background: rgba(255,255,255,.22); border-radius: 999px;
-                        padding: 3px 12px; font-size: 11.5px; font-weight: 600; }
-          h2 { color: {{p}}; font-size: 15.5px; margin: 20px 0 8px; }
-          .objectifs { background: {{boxBg}}; border-left: 4px solid {{a}};
-                       border-radius: 0 {{radius}} {{radius}} 0; padding: 12px 16px; }
-          .objectifs ul { margin-left: 18px; }
-          .objectifs li { margin: 4px 0; }
-          .reponse { border-bottom: 1.5px dashed {{line}}; height: 26px; margin: 10px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
-          th { background: {{p}}; color: #fff; text-align: left; padding: 7px 10px; }
-          td { border: 1px solid {{line}}; padding: 7px 10px; }
-          .badge { display: inline-block; background: {{a}}; color: #fff; border-radius: 999px;
-                   padding: 2px 10px; font-size: 11px; font-weight: 700; }
-          footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid {{line}};
-                   color: {{subtle}}; font-size: 11px; display: flex; justify-content: space-between; }
-        </style>
-        </head>
-        <body>
-          <div class="sheet">
-            <header class="band">
-              <div class="ecole">École primaire Louise-Michel</div>
-              <h1>Les fractions simples</h1>
-              <div class="chips"><span>{{safeClassLevel}}</span><span>{{safeSubject}}</span><span>45 min</span><span>Séquence 4 · Séance 2</span></div>
-            </header>
-
-            <h2>🎯 Objectifs d'apprentissage</h2>
-            <div class="objectifs">
-              <ul>
-                <li>Comprendre une fraction comme un partage de l'unité.</li>
-                <li>Lire et écrire les fractions usuelles (1/2, 1/3, 1/4).</li>
-                <li>Représenter une fraction sur une bande ou un disque.</li>
-              </ul>
-            </div>
-
-            <h2>✏️ Exercice 1 — À toi de jouer !</h2>
-            <p>Colorie la fraction demandée sur chaque figure, puis écris-la en chiffres.</p>
-            <div class="reponse"></div>
-            <div class="reponse"></div>
-
-            <h2>📊 Tableau de correspondance</h2>
-            <table>
-              <tr><th>Fraction</th><th>Lecture</th><th>Représentation</th></tr>
-              <tr><td>1/2</td><td>un demi</td><td><span class="badge">½ disque</span></td></tr>
-              <tr><td>1/4</td><td>un quart</td><td><span class="badge">¼ disque</span></td></tr>
-            </table>
-
-            <footer>
-              <span>Généré avec PROFstudio · Style « {{preset}} »{{(darkMode ? " · aperçu sombre" : "")}}</span>
-              <span>Page 1/1</span>
-            </footer>
-          </div>
-        </body>
-        </html>
-        """;
+    /// <summary>Enregistre le StyleBuilder comme style « Personnalisé » et le rend
+    /// actif pour toute nouvelle génération. Appelé à l'enregistrement des paramètres
+    /// lorsque le builder a été retouché.</summary>
+    private void RegisterCustomPreset()
+    {
+        var preset = BuildCustomPresetFromBuilder();
+        _stylePresetService.AddCustomPreset(preset);
+        SelectedStylePresetId = "custom";
+        DefaultStyleLabel = "Personnalisé (StyleBuilder)";
     }
 
     // ─────────────── Diagnostic & réinitialisation ───────────────
@@ -1298,6 +1435,9 @@ public partial class SettingsViewModel : ObservableObject
 
         SelectedPreset = StylePresets[0]; // recharge la palette « Moderne » dans le StyleBuilder
         BuilderMarginTop = 18; BuilderMarginBottom = 18; BuilderMarginLeft = 20; BuilderMarginRight = 20;
+        BuilderHeaderLayout = FicheGen.Core.Documents.StylePreset.HeaderRule;
+        _builderDirty = false;
+        RefreshDefaultStyleLabel(StylePresets[0].Id);
 
         foreach (var prompt in PromptTemplates) prompt.Content = prompt.DefaultContent;
         foreach (var shortcut in Shortcuts) shortcut.Keys = shortcut.DefaultKeys;

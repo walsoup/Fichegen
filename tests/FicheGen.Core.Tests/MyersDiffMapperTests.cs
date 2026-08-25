@@ -30,7 +30,7 @@ public class MyersDiffMapperTests
 
         var diff = MyersDiffMapper.ComputeDiff(oldText, newText);
 
-        diff.Should().Contain(l => l.Kind == DiffKind.Collapsed && l.Text.Contains("lignes inchangées"));
+        diff.Should().Contain(l => l.Kind == DiffKind.Collapsed && l.CollapsedCount > 0);
     }
 
     [Fact]

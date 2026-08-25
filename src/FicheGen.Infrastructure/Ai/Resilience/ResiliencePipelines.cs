@@ -45,9 +45,16 @@ public static class ResiliencePipelines
             .Build();
     }
 
-    public static ResiliencePipeline CreateStreamingPipeline(TimeSpan? idleTimeout = null)
+    /// <summary>
+    /// Pipeline for streaming requests. It guards connection establishment only:
+    /// retry + circuit breaker + a per-attempt timeout applied while awaiting
+    /// response headers. No overall timeout is imposed because legitimate
+    /// generation streams can run for several minutes; mid-stream failures are
+    /// propagated to the consumer and must not be retried.
+    /// </summary>
+    public static ResiliencePipeline CreateStreamingPipeline(TimeSpan? connectTimeout = null)
     {
-        var watchdogTimeout = idleTimeout ?? TimeSpan.FromSeconds(60);
+        var perAttemptTimeout = connectTimeout ?? TimeSpan.FromSeconds(60);
 
         return new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
@@ -66,7 +73,6 @@ public static class ResiliencePipelines
                     return ValueTask.FromResult<TimeSpan?>(null);
                 }
             })
-            .AddTimeout(watchdogTimeout)
             .AddCircuitBreaker(new CircuitBreakerStrategyOptions
             {
                 FailureRatio = 1.0,
@@ -75,6 +81,7 @@ public static class ResiliencePipelines
                 BreakDuration = TimeSpan.FromSeconds(30),
                 ShouldHandle = new PredicateBuilder().Handle<Exception>(ShouldRetryException)
             })
+            .AddTimeout(perAttemptTimeout)
             .Build();
     }
 

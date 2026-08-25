@@ -52,11 +52,14 @@ public partial class App : Application
                 services.AddSingleton<StylePresetService>();
                 services.AddSingleton<PickerService>();
                 services.AddSingleton<DialogService>();
+                services.AddSingleton<AccentColorService>();
                 services.AddSingleton<IDiagnosticBundleExporter, DiagnosticBundleExporter>();
 
                 services.AddHttpClient();
                 services.AddSingleton<LlmRouter>();
                 services.AddSingleton<ILlmClient, LlmClient>();
+                services.AddSingleton<IConnectionTester, ConnectionTester>();
+                services.AddSingleton<IProxyModelScanner, ProxyModelScanner>();
                 services.AddSingleton<IPdfGuideService, PdfGuideService>();
                 services.AddSingleton<IDocxExporter, DocxExporter>();
                 services.AddSingleton<IRtfDocumentWriter, RtfDocumentWriter>();
@@ -81,6 +84,29 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Applique la couleur d'accentuation persistée avant la création de la fenêtre,
+        // pour que la première frame utilise déjà la teinte choisie.
+        try
+        {
+            Services.GetRequiredService<AccentColorService>().ApplyFromSettings();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Application de la couleur d'accentuation au démarrage impossible.");
+        }
+
+        // Réenregistre le style « Personnalisé » du StyleBuilder pour le moteur de rendu.
+        try
+        {
+            CustomPresetBootstrapper.Register(
+                Services.GetRequiredService<StylePresetService>(),
+                Services.GetRequiredService<ISettingsStore>());
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Réenregistrement du style personnalisé impossible.");
+        }
+
         MainWindow = new MainWindow();
 
         // Initialize PickerService with MainWindow handle

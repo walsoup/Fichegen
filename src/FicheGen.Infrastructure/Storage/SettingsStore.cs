@@ -25,13 +25,31 @@ public sealed class SettingsStore : ISettingsStore
             "settings.json");
     }
 
+    /// <summary>
+    /// Un fichier par type de réglages. Historique : tous les types partageaient
+    /// <c>settings.json</c>, et chaque sauvegarde de l'état de la coque écrasait
+    /// les AppSettings (premier démarrage reposé, thème, profil enseignant perdus).
+    /// </summary>
+    private string PathFor<T>() where T : class =>
+        typeof(T) == typeof(ShellStateSettings)
+            ? Path.Combine(Path.GetDirectoryName(_settingsPath)!, "shell-state.json")
+            : _settingsPath;
+
     public T GetSettings<T>() where T : class, new()
     {
+        var path = PathFor<T>();
         _semaphore.Wait();
         try
         {
-            if (!File.Exists(_settingsPath))
+            // Migration : l'état de la coque vivait autrefois dans settings.json.
+            if (!File.Exists(path))
             {
+                var migrated = TryMigrateLegacyShellState<T>(path);
+                if (migrated is not null)
+                {
+                    return migrated;
+                }
+
                 var newSettings = new T();
                 if (newSettings is AppSettings appSettings)
                 {
@@ -40,7 +58,7 @@ public sealed class SettingsStore : ISettingsStore
                 return newSettings;
             }
 
-            var json = File.ReadAllText(_settingsPath);
+            var json = File.ReadAllText(path);
             var settings = JsonSerializer.Deserialize<T>(json, JsonOptions) ?? new T();
 
             if (settings is AppSettings loadedAppSettings)
@@ -65,12 +83,46 @@ public sealed class SettingsStore : ISettingsStore
         }
     }
 
+    /// <summary>Récupère l'état de la coque depuis l'ancien fichier partagé, s'il s'y trouve
+    /// encore (signature : présence de la propriété « IsAssistantVisible »).</summary>
+    private T? TryMigrateLegacyShellState<T>(string newPath) where T : class, new()
+    {
+        try
+        {
+            if (typeof(T) != typeof(ShellStateSettings) || !File.Exists(_settingsPath))
+            {
+                return null;
+            }
+
+            var legacyJson = File.ReadAllText(_settingsPath);
+            if (!legacyJson.Contains("IsAssistantVisible", StringComparison.Ordinal))
+            {
+                return null; // settings.json contient de vrais AppSettings : ne pas y toucher.
+            }
+
+            var shellState = JsonSerializer.Deserialize<T>(legacyJson, JsonOptions);
+            if (shellState is not null)
+            {
+                // Écrit immédiatement dans le nouveau fichier dédié.
+                Directory.CreateDirectory(Path.GetDirectoryName(newPath)!);
+                File.WriteAllText(newPath, legacyJson);
+                return shellState;
+            }
+        }
+        catch
+        {
+            // Migration best-effort : à défaut, valeurs par défaut.
+        }
+        return null;
+    }
+
     public async Task SaveSettingsAsync<T>(T settings, CancellationToken ct = default) where T : class
     {
+        var path = PathFor<T>();
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
             string jsonToWrite;
 
@@ -92,9 +144,9 @@ public sealed class SettingsStore : ISettingsStore
             }
 
             // Atomic file write pattern: write .tmp -> flush -> Move
-            var tempPath = _settingsPath + ".tmp";
+            var tempPath = path + ".tmp";
             await File.WriteAllTextAsync(tempPath, jsonToWrite, ct).ConfigureAwait(false);
-            File.Move(tempPath, _settingsPath, overwrite: true);
+            File.Move(tempPath, path, overwrite: true);
         }
         finally
         {

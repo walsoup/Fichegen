@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using FicheGen.Core.Ai;
+using FicheGen.Core.Documents;
 using FicheGen.Core.Prompts;
 using FicheGen.Infrastructure.Services;
 using FluentAssertions;
@@ -99,6 +100,73 @@ Ceci est du markdown brut renvoyé par l'IA au lieu du JSON.";
         result.PreviewHtml.Should().Contain("Mode dégradé");
         result.PreviewHtml.Should().Contain("Titre de secours");
     }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_BaremeSumMismatch_AppendsWarningCallout()
+    {
+        var mockJson = @"{
+          ""metadata"": { ""title"": ""Évaluation Fractions"", ""classLevel"": ""CM2"" },
+          ""blocks"": [
+            { ""$type"": ""table"",
+              ""headers"": [""Exercice"", ""Barème""],
+              ""rows"": [
+                [""Ex. 1"", ""8""],
+                [""Ex. 2"", ""7""]
+              ]
+            }
+          ]
+        }";
+
+        var orchestrator = new GenerationOrchestrator(new MockLlmClient(mockJson));
+        var config = CreateConfig();
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions"),
+            config,
+            ct: CancellationToken.None);
+
+        result.Document.Blocks.Should().HaveCount(2);
+        var warning = result.Document.Blocks[1].Should().BeOfType<CalloutBoxBlock>().Subject;
+        warning.Kind.Should().Be("warning");
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_BaremeSumCorrect_DoesNotAppendWarning()
+    {
+        var mockJson = @"{
+          ""metadata"": { ""title"": ""Évaluation Fractions"", ""classLevel"": ""CM2"" },
+          ""blocks"": [
+            { ""$type"": ""table"",
+              ""headers"": [""Exercice"", ""Points""],
+              ""rows"": [
+                [""Ex. 1"", ""12""],
+                [""Ex. 2"", ""8""]
+              ]
+            }
+          ]
+        }";
+
+        var orchestrator = new GenerationOrchestrator(new MockLlmClient(mockJson));
+        var config = CreateConfig();
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20),
+            config,
+            ct: CancellationToken.None);
+
+        result.Document.Blocks.Should().HaveCount(1);
+    }
+
+    private static AiRequestConfig CreateConfig() => new(
+        GlobalProvider: "aistudio",
+        DefaultModels: new Dictionary<string, string>(),
+        RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+        ProxyBaseUrl: "http://localhost:11434",
+        VertexProject: "",
+        VertexRegion: "",
+        Temperatures: new Dictionary<string, double>(),
+        SecretResolver: (k, ct) => ValueTask.FromResult<string?>("key")
+    );
 
     // Note: Live external API integration tests should run in a dedicated test suite with environment variables, not in standard CI.
 }

@@ -151,7 +151,7 @@ public sealed partial class AssistantPane : UserControl
 
         if (pane.ModelBadgeText is not null)
         {
-            pane.ModelBadgeText.Text = args.NewValue as string ?? "Modèle automatique";
+            pane.ModelBadgeText.Text = args.NewValue as string ?? Services.L10n.Get("AP_ModelBadge.Text");
         }
     }
 
@@ -226,31 +226,31 @@ public sealed partial class AssistantPane : UserControl
         {
             case "Générer":
                 ModeCaptionText.Text =
-                    "Crée une nouvelle fiche à partir de votre demande.";
+                    Services.L10n.Get("AP_ModeGenerate_Caption");
 
                 PromptTextBox.PlaceholderText =
-                    "Décrivez la fiche pédagogique à générer…";
+                    Services.L10n.Get("AP_ModeGenerate_Prompt");
                 break;
 
             case "Modifier":
                 ModeCaptionText.Text =
-                    "Propose des modifications ciblées sur le document courant.";
+                    Services.L10n.Get("AP_ModeEdit_Caption");
 
                 PromptTextBox.PlaceholderText =
-                    "Décrivez les changements à apporter au document…";
+                    Services.L10n.Get("AP_ModeEdit_Prompt");
                 break;
 
             case "Question":
                 ModeCaptionText.Text =
-                    "Répond à une question sans modifier automatiquement le document.";
+                    Services.L10n.Get("AP_ModeQuestion_Caption");
 
                 PromptTextBox.PlaceholderText =
-                    "Posez une question pédagogique…";
+                    Services.L10n.Get("AP_ModeQuestion_Prompt");
                 break;
 
             default:
                 ModeCaptionText.Text =
-                    "Détecte automatiquement s'il faut générer, modifier ou répondre.";
+                    Services.L10n.Get("AP_ModeAuto_Caption");
 
                 PromptTextBox.PlaceholderText =
                     "Demandez une modification ou posez une question…";
@@ -320,7 +320,8 @@ public sealed partial class AssistantPane : UserControl
             return;
         }
 
-        Messages.Add(AssistantMessage.CreateUser(prompt));
+        // No local add: SendMessageAsync adds the user message to the VM and the
+        // CollectionChanged handler mirrors it here — a local Add would duplicate it.
         PromptTextBox.Text = string.Empty;
 
         SendRequested?.Invoke(

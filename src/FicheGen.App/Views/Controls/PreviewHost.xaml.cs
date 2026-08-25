@@ -89,15 +89,16 @@ public sealed partial class PreviewHost : UserControl
     // Champs privés
     // ------------------------------------------------------------------
 
-    private double _zoomFactor = 1.0;
+    // Le zoom a une SEULE source de vérité : ResultViewModel.ZoomFactor (persisté).
+    // Ce champ n'est plus qu'un cache de la dernière valeur appliquée au rendu.
+    private double _lastAppliedZoom = 1.0;
     private ResultViewModel? _currentViewModel;
+    private bool _isViewModelWired;
     private bool _isWebView2Initialized;
     private bool _isWebView2Failed;
     private bool _isSpeaking;
 
     private const double ZoomStep = 0.1;
-    private const double ZoomMin = 0.5;
-    private const double ZoomMax = 2.0;
 
     public PreviewHost()
     {
@@ -116,25 +117,52 @@ public sealed partial class PreviewHost : UserControl
 
     private void OnDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
     {
-        if (_currentViewModel != null)
-        {
-            _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
-
         if (args.NewValue is ResultViewModel vm)
         {
-            _currentViewModel = vm;
-            _currentViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            WireViewModel(vm);
             SyncFromViewModel(vm);
+            // Applique immédiatement le zoom restauré par le ViewModel (source de vérité).
+            _ = SetZoomAsync(vm.ZoomFactor);
         }
         else
         {
+            UnwireViewModel();
             _currentViewModel = null;
             if (State != PreviewState.Error)
             {
                 State = PreviewState.Empty;
             }
         }
+    }
+
+    /// <summary>
+    /// Abonne <see cref="OnViewModelPropertyChanged"/> ET <see cref="OnViewModelPrintRequested"/>.
+    /// Idempotent, et rejoué après chaque rechargement du contrôle : sans cela,
+    /// l'abonnement d'impression ne survit pas à un cycle Loaded/Unloaded.
+    /// </summary>
+    private void WireViewModel(ResultViewModel vm)
+    {
+        if (_isViewModelWired && ReferenceEquals(_currentViewModel, vm))
+        {
+            return;
+        }
+        UnwireViewModel();
+        _currentViewModel = vm;
+        vm.PropertyChanged += OnViewModelPropertyChanged;
+        vm.PrintRequested += OnViewModelPrintRequested;
+        _isViewModelWired = true;
+        SyncPresetComboBox(vm.ActivePresetId);
+    }
+
+    private void UnwireViewModel()
+    {
+        if (_currentViewModel == null || !_isViewModelWired)
+        {
+            return;
+        }
+        _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _currentViewModel.PrintRequested -= OnViewModelPrintRequested;
+        _isViewModelWired = false;
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -151,7 +179,7 @@ public sealed partial class PreviewHost : UserControl
             {
                 if (vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
                 {
-                    StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? "Génération de votre document par l'IA…" : vm.StatusMessage;
+                    StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? Services.L10n.Get("Preview_Generating") : vm.StatusMessage;
                     State = PreviewState.Generating;
                 }
                 else if (!vm.IsBusy && !string.IsNullOrWhiteSpace(vm.CurrentHtml))
@@ -170,6 +198,10 @@ public sealed partial class PreviewHost : UserControl
                     StatusText = vm.StatusMessage;
                 }
             }
+            else if (e.PropertyName == nameof(ResultViewModel.ActivePresetId))
+            {
+                SyncPresetComboBox(vm.ActivePresetId);
+            }
             else if (e.PropertyName == nameof(ResultViewModel.ZoomFactor))
             {
                 _ = SetZoomAsync(vm.ZoomFactor);
@@ -181,7 +213,7 @@ public sealed partial class PreviewHost : UserControl
     {
         if (vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
         {
-            StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? "Génération de votre document par l'IA…" : vm.StatusMessage;
+            StatusText = string.IsNullOrWhiteSpace(vm.StatusMessage) ? Services.L10n.Get("Preview_Generating") : vm.StatusMessage;
             State = PreviewState.Generating;
         }
         else if (!string.IsNullOrWhiteSpace(vm.CurrentHtml))
@@ -230,15 +262,12 @@ public sealed partial class PreviewHost : UserControl
             WebViewControl.CoreProcessFailed += OnCoreProcessFailed;
         }
 
-        if (DataContext is ResultViewModel vm)
+        // Rejoue l'abonnement si le contrôle a été déchargé puis rechargé
+        // sans changement de DataContext (le flag rend l'opération idempotente).
+        if (_currentViewModel != null)
         {
-            if (_currentViewModel != vm)
-            {
-                if (_currentViewModel != null) _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
-                _currentViewModel = vm;
-                _currentViewModel.PropertyChanged += OnViewModelPropertyChanged;
-            }
-            SyncFromViewModel(vm);
+            WireViewModel(_currentViewModel);
+            SyncFromViewModel(_currentViewModel);
         }
     }
 
@@ -254,7 +283,7 @@ public sealed partial class PreviewHost : UserControl
 
         if (_currentViewModel != null)
         {
-            _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            UnwireViewModel();
         }
     }
 
@@ -320,31 +349,46 @@ public sealed partial class PreviewHost : UserControl
     }
 
     // ------------------------------------------------------------------
-    // Zoom (50 % – 200 %)
+    // Zoom (source de vérité : ResultViewModel.ZoomFactor, 50 % – 200 %)
     // ------------------------------------------------------------------
 
-    private async void OnZoomInClicked(object sender, RoutedEventArgs e) => await SetZoomAsync(_zoomFactor + ZoomStep);
+    private void OnZoomInClicked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm) vm.ZoomInCommand.Execute(null);
+    }
 
-    private async void OnZoomOutClicked(object sender, RoutedEventArgs e) => await SetZoomAsync(_zoomFactor - ZoomStep);
+    private void OnZoomOutClicked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm) vm.ZoomOutCommand.Execute(null);
+    }
 
-    private async void OnZoomResetClicked(object sender, RoutedEventArgs e) => await SetZoomAsync(1.0);
+    private void OnZoomResetClicked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm) vm.ResetZoomCommand.Execute(null);
+    }
 
-    /// <summary>Réinitialise le zoom à 100 %.</summary>
-    public Task ResetZoomAsync() => SetZoomAsync(1.0);
+    /// <summary>Réinitialise le zoom à 100 % via la source de vérité (VM).</summary>
+    public Task ResetZoomAsync()
+    {
+        if (DataContext is ResultViewModel vm) vm.ResetZoomCommand.Execute(null);
+        return Task.CompletedTask;
+    }
 
+    /// <summary>Côté rendu uniquement : applique visuellement le zoom demandé.
+    /// Appelé par la notification <c>ZoomFactor</c> du ViewModel — jamais par les boutons.</summary>
     private async Task SetZoomAsync(double value)
     {
-        _zoomFactor = Math.Clamp(value, ZoomMin, ZoomMax);
+        _lastAppliedZoom = value;
         if (ZoomPercentText != null)
         {
-            ZoomPercentText.Text = string.Format(CultureInfo.InvariantCulture, "{0} %", (int)Math.Round(_zoomFactor * 100));
+            ZoomPercentText.Text = string.Format(CultureInfo.InvariantCulture, "{0} %", (int)Math.Round(value * 100));
         }
 
         try
         {
             if (WebViewControl?.CoreWebView2 != null)
             {
-                var zoom = _zoomFactor.ToString(CultureInfo.InvariantCulture);
+                var zoom = value.ToString(CultureInfo.InvariantCulture);
                 await WebViewControl.ExecuteScriptAsync($"document.documentElement.style.zoom='{zoom}';");
             }
         }
@@ -358,8 +402,40 @@ public sealed partial class PreviewHost : UserControl
     // Sélecteur de style visuel
     // ------------------------------------------------------------------
 
+    /// <summary>Aligne la liste déroulante sur le préréglage actif du ViewModel
+    /// (document chargé depuis l'historique, préférence persistée…).</summary>
+    private void SyncPresetComboBox(string? presetId)
+    {
+        if (StylePresetComboBox is null || string.IsNullOrWhiteSpace(presetId))
+        {
+            return;
+        }
+
+        for (var i = 0; i < StylePresetComboBox.Items.Count; i++)
+        {
+            if (StylePresetComboBox.Items[i] is ComboBoxItem { Tag: string tag } &&
+                string.Equals(tag, presetId, StringComparison.Ordinal))
+            {
+                if (StylePresetComboBox.SelectedIndex != i)
+                {
+                    _isSyncingPresetCombo = true;
+                    StylePresetComboBox.SelectedIndex = i;
+                    _isSyncingPresetCombo = false;
+                }
+                return;
+            }
+        }
+    }
+
+    private bool _isSyncingPresetCombo;
+
     private async void OnStylePresetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isSyncingPresetCombo)
+        {
+            return;
+        }
+
         if (StylePresetComboBox?.SelectedItem is not ComboBoxItem item)
         {
             return;
@@ -453,25 +529,36 @@ public sealed partial class PreviewHost : UserControl
 
     private async void OnPrintClicked(object sender, RoutedEventArgs e)
     {
+        // Un hôte qui a souscrit à l'événement sortant prend le relais ;
+        // sinon l'aperçu affiche lui-même la boîte de dialogue d'impression.
         if (PrintRequested != null)
         {
             PrintRequested(this, EventArgs.Empty);
+            return;
         }
-        else
+
+        await ShowPrintDialogAsync();
+    }
+
+    private void OnViewModelPrintRequested(object? sender, PrintRequestedEventArgs e)
+        => _ = ShowPrintDialogAsync();
+
+    /// <summary>Affiche la boîte de dialogue d'impression WebView2 sur l'aperçu visible.
+    /// Point d'entrée unique pour le bouton outil et Ctrl+P depuis les pages hôtes.</summary>
+    private async Task ShowPrintDialogAsync()
+    {
+        try
         {
-            try
+            var ready = await EnsureWebViewReadyAsync();
+            if (ready && WebViewControl?.CoreWebView2 != null)
             {
-                var ready = await EnsureWebViewReadyAsync();
-                if (ready && WebViewControl?.CoreWebView2 != null)
-                {
-                    WebViewControl.CoreWebView2.ShowPrintUI(
-                        Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
-                }
+                WebViewControl.CoreWebView2.ShowPrintUI(
+                    Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
             }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Impression WebView2 impossible.");
-            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Impression WebView2 impossible.");
         }
     }
 
@@ -484,6 +571,81 @@ public sealed partial class PreviewHost : UserControl
         else
         {
             await ReadAloudFallbackAsync();
+        }
+    }
+
+    private void OnFindClicked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm && vm.ToggleFindBarCommand.CanExecute(null))
+        {
+            vm.ToggleFindBarCommand.Execute(null);
+        }
+    }
+
+    private void OnOpenExportFolderClicked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm && vm.OpenLastExportedFolderCommand.CanExecute(null))
+        {
+            vm.OpenLastExportedFolderCommand.Execute(null);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // État vide : raccourcis vers le shell
+    // ------------------------------------------------------------------
+
+    private void OnPaletteClicked(object sender, RoutedEventArgs e)
+        => (App.CurrentMainWindow as MainWindow)?.OpenCommandPalette();
+
+    private void OnOpenHistoryClicked(object sender, RoutedEventArgs e)
+        => (App.CurrentMainWindow as MainWindow)?.NavigateToTag("HistoryPage");
+
+    // ------------------------------------------------------------------
+    // Zoom molette (Ctrl + molette) et animation connectée
+    // ------------------------------------------------------------------
+
+    private void OnPreviewWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if ((e.KeyModifiers & Windows.System.VirtualKeyModifiers.Control) == 0) return;
+
+        var delta = e.GetCurrentPoint(WebViewControl).Properties.MouseWheelDelta;
+        // Passe par la source de vérité (VM) : clamp + persistance + notification.
+        if (DataContext is ResultViewModel vm)
+        {
+            vm.SetZoom(vm.ZoomFactor + (delta > 0 ? ZoomStep : -ZoomStep));
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Joue l'animation connectée « carte d'historique → aperçu » préparée par HistoryPage.
+    /// Silencieux si aucune animation n'est en attente ou si les animations sont désactivées.
+    /// </summary>
+    public async Task RunIncomingAnimationAsync(Frame? frame)
+    {
+        try
+        {
+            if (!Services.UiMotion.Enabled || frame == null) return;
+
+            var anim = Microsoft.UI.Xaml.Media.Animation.ConnectedAnimationService
+                .GetForCurrentView().GetAnimation("openDoc");
+            if (anim == null) return;
+
+            if (ContentHost.ActualWidth == 0)
+            {
+                var loaded = new TaskCompletionSource<bool>();
+                RoutedEventHandler? handler = null;
+                handler = (_, _) => { ContentHost.Loaded -= handler; loaded.TrySetResult(true); };
+                ContentHost.Loaded += handler;
+                await Task.WhenAny(loaded.Task, Task.Delay(800));
+            }
+
+            UpdateLayout();
+            anim.TryStart(ContentHost);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Animation connectée non jouée.");
         }
     }
 
@@ -540,6 +702,16 @@ public sealed partial class PreviewHost : UserControl
             await WebViewControl.EnsureCoreWebView2Async();
             _isWebView2Initialized = true;
             _isWebView2Failed = false;
+
+            // Désactive le zoom natif du navigateur (Ctrl+molette WebView2) :
+            // seul le pipeline ResultViewModel.ZoomFactor doit zoomer.
+            WebViewControl.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+
+            // Ré-applique le zoom courant après chaque navigation : le premier
+            // chargement HTML réinitialise sinon le style visuel à 100 %.
+            WebViewControl.NavigationCompleted -= OnWebViewNavigationCompleted;
+            WebViewControl.NavigationCompleted += OnWebViewNavigationCompleted;
+
             return true;
         }
         catch (Exception ex)
@@ -557,6 +729,15 @@ public sealed partial class PreviewHost : UserControl
         _isWebView2Failed = false;
         _isWebView2Initialized = false;
         return await EnsureWebViewReadyAsync();
+    }
+
+    private void OnWebViewNavigationCompleted(WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
+    {
+        // Après une navigation (nouveau document), ré-applique le zoom du ViewModel.
+        if (DataContext is ResultViewModel vm)
+        {
+            _ = SetZoomAsync(vm.ZoomFactor);
+        }
     }
 
     /// <summary>Charge un document HTML dans l'aperçu et passe à l'état <see cref="PreviewState.Ready"/>.</summary>
@@ -622,13 +803,13 @@ public sealed partial class PreviewHost : UserControl
             {
                 await WebViewControl.ExecuteScriptAsync("window.speechSynthesis && window.speechSynthesis.cancel();");
                 _isSpeaking = false;
-                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = "🔊 Lire à voix haute";
+                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = Services.L10n.Get("PH_MenuReadAloud.Text");
                 if (ReadAloudMenuIcon != null) ReadAloudMenuIcon.Glyph = "\uE995";
             }
             else
             {
                 _isSpeaking = true;
-                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = "⏹ Arrêter la lecture";
+                if (ReadAloudMenuItem != null) ReadAloudMenuItem.Text = Services.L10n.Get("PH_ReadAloudStop");
                 if (ReadAloudMenuIcon != null) ReadAloudMenuIcon.Glyph = "\uE71A";
 
                 await WebViewControl.ExecuteScriptAsync(

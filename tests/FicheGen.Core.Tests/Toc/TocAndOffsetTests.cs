@@ -70,6 +70,25 @@ Périmètres et aires       48
     }
 
     [Fact]
+    public void TocParser_Tier1_UnicodeEllipsis_ParsesEntries()
+    {
+        // PDF extraction often yields '…' (U+2026) instead of ASCII dots.
+        var text = @"
+Leçon 1 : Les nombres entiers … 5
+Leçon 2 : L'addition … 12
+Leçon 3 : La multiplication … 20
+Leçon 4 : La division … 30
+Leçon 5 : Les fractions … 42
+";
+
+        var entries = TocParser.ParseToc(text);
+
+        entries.Should().HaveCount(5);
+        entries[0].PrintedPage.Should().Be(5);
+        entries[4].Title.Should().Be("Leçon 5 : Les fractions");
+    }
+
+    [Fact]
     public void PageOffsetDetector_CalculatesCorrectOffsetAndConfidence()
     {
         var mockSource = new TestWordSource(pageCount: 30, printedPageOffset: 10);

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Ai;
 using FicheGen.Core.Documents;
@@ -54,9 +55,8 @@ public sealed class GenerationOrchestrator
         var result = await ProcessGenerationAsync(req, config, parameters.Topic, lessonContext, sw, ct).ConfigureAwait(false);
 
         // Normalize barème if evaluation
-        NormalizeBaremeIfNeeded(result.Document);
-
-        return result;
+        var normalizedDoc = NormalizeBaremeIfNeeded(result.Document, parameters.TargetPoints);
+        return ReferenceEquals(normalizedDoc, result.Document) ? result : result with { Document = normalizedDoc };
     }
 
     public async Task<GenerationResult> GenerateQuizAsync(
@@ -131,17 +131,82 @@ public sealed class GenerationOrchestrator
             var endPage = bestMatch.PhysicalPage + 3; // Extract 3 pages by default
             return await guideService.ExtractLessonTextAsync(guideFile, bestMatch.PhysicalPage, endPage, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch
         {
+            // Guide resolution is best-effort enrichment: generation continues
+            // without lesson context when the guide cannot be read.
             return null;
         }
     }
 
-    private static void NormalizeBaremeIfNeeded(GeneratedDocument doc)
+    /// <summary>
+    /// Scans evaluation tables for a barème/points column and appends a warning
+    /// callout when the points do not sum to the expected total. Returns the
+    /// original document instance when no warning is needed.
+    /// </summary>
+    internal static GeneratedDocument NormalizeBaremeIfNeeded(GeneratedDocument doc, double targetTotal = 20.0)
     {
-        // Check table or keyvalue grid for barème sum
-        // If sum != 20, add warning note block
+        const double tolerance = 0.01;
+
+        foreach (var block in doc.Blocks)
+        {
+            if (block is not TableBlock table || table.Headers.Count == 0)
+                continue;
+
+            for (var col = 0; col < table.Headers.Count; col++)
+            {
+                var header = NormalizeAccents(table.Headers[col]).ToLowerInvariant();
+                var isBaremeColumn = header.Contains("bareme") || header.Contains("point") || header.Contains("note");
+                if (!isBaremeColumn)
+                    continue;
+
+                double sum = 0;
+                var hasValues = false;
+                foreach (var row in table.Rows)
+                {
+                    if (col >= row.Count) continue;
+                    if (TryParseFrenchDouble(row[col], out var value))
+                    {
+                        sum += value;
+                        hasValues = true;
+                    }
+                }
+
+                if (hasValues && Math.Abs(sum - targetTotal) > tolerance)
+                {
+                    var warning = new CalloutBoxBlock("warning", new List<Block>
+                    {
+                        new ParagraphBlock(
+                            $"Attention : le total du barème est de {FormatFrenchDouble(sum)} points au lieu de {FormatFrenchDouble(targetTotal)}. Ajustez la répartition des points.")
+                    });
+                    return doc with { Blocks = doc.Blocks.Append(warning).ToList() };
+                }
+            }
+        }
+
+        return doc;
     }
+
+    private static string NormalizeAccents(string input) =>
+        input.Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .Aggregate(new StringBuilder(), (sb, c) => sb.Append(c))
+            .ToString();
+
+    private static bool TryParseFrenchDouble(string? text, out double value)
+    {
+        value = 0;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var cleaned = text.Trim().Replace(',', '.').TrimEnd('.', 'p', 't', 's', ' ', '/');
+        return double.TryParse(cleaned, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string FormatFrenchDouble(double value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
     private static int ComputeLevenshteinDistance(string s, string t)
     {

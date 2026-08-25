@@ -1,0 +1,110 @@
+<UserControl
+    x:Class="FicheGen.App.Views.Controls.CommandPalette"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <!-- Voile plein écran : la palette vit au-dessus de tout le shell. -->
+    <Grid x:Name="Overlay" Visibility="Collapsed">
+        <Border Background="{ThemeResource ScrimBrush}" Tapped="OnScrimTapped"/>
+
+        <Border x:Name="Panel"
+                Width="600"
+                MaxHeight="520"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,72,0,24"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                x:Uid="CP_Panel"
+                AutomationProperties.Name="Palette de commandes">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Recherche -->
+                <Grid Grid.Row="0" Margin="16,12,16,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <FontIcon Glyph="&#xE721;" FontSize="15" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBox x:Name="QueryBox" Grid.Column="1" Margin="10,0,0,0" x:Uid="CP_QueryBox"
+                             PlaceholderText="Rechercher une action…  (ex. « quiz », « pdf », « thème »)"
+                             FontSize="15"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             MaxLength="100"
+                             TextChanged="OnQueryChanged"
+                             KeyDown="OnQueryKeyDown"
+                             AutomationProperties.Name="Recherche de commande"/>
+                    <Border Grid.Column="2" CornerRadius="6" Padding="7,2" VerticalAlignment="Center"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            ToolTipService.ToolTip="Fermer (Échap)">
+                        <TextBlock Text="Ctrl K" FontSize="11" FontFamily="Consolas"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    </Border>
+                </Grid>
+
+                <Border Grid.Row="1" Height="1" Margin="14,0"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                <!-- Résultats -->
+                <ListView x:Name="ResultsList" Grid.Row="2"
+                          Margin="4,4,4,0"
+                          MaxHeight="380"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          ItemClick="OnItemClick">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="8,9">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="{Binding Glyph}" FontSize="16"
+                                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                <StackPanel Grid.Column="1" Margin="12,0,8,0" Spacing="1">
+                                    <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}" FontSize="13"/>
+                                    <TextBlock Text="{Binding Subtitle}" FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Hint}" FontSize="11" FontFamily="Consolas"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <!-- Aide clavier -->
+                <Border Grid.Row="3" Padding="14,8" BorderThickness="0,1,0,0"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+                    <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+                        <TextBlock x:Uid="CP_NavHint" Text="↑↓ Naviguer" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock x:Uid="CP_RunHint" Text="Entrée Exécuter" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock x:Uid="CP_EscapeHint" Text="Échap Fermer" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

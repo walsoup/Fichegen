@@ -110,6 +110,178 @@ public class HtmlRendererTests
     }
 
     [Fact]
+    public void RenderToHtml_AppliesPresetColorsFontAndMargin()
+    {
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Fiche Thème"),
+            Blocks: new List<Block> { new ParagraphBlock("Contenu") }
+        );
+        var preset = new StylePreset
+        {
+            Id = "test",
+            Name = "Test",
+            PrimaryColor = "#123456",
+            SecondaryColor = "#654321",
+            FontFamily = "Georgia, serif",
+            MarginMm = 12
+        };
+
+        var html = HtmlRenderer.RenderToHtml(doc, preset);
+
+        html.Should().Contain("--primary: #123456");
+        html.Should().Contain("--secondary: #654321");
+        html.Should().Contain("Georgia, serif");
+        html.Should().Contain("--page-margin: 12mm 12mm 12mm 12mm");
+    }
+
+    [Fact]
+    public void BuildPresetCss_AppliesAccentAndRadius()
+    {
+        var preset = new StylePreset
+        {
+            Id = "test",
+            Name = "Test",
+            PrimaryColor = "#123456",
+            SecondaryColor = "#654321",
+            AccentColor = "#ABCDEF",
+            CornerRadiusPx = 14
+        };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("--accent: #ABCDEF");
+        css.Should().Contain("--radius: 14px");
+    }
+
+    [Fact]
+    public void BuildPresetCss_AccentFallsBackToSecondaryWhenEmpty()
+    {
+        var preset = new StylePreset
+        {
+            Id = "test",
+            Name = "Test",
+            PrimaryColor = "#123456",
+            SecondaryColor = "#654321",
+            AccentColor = ""
+        };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("--accent: #654321");
+    }
+
+    [Fact]
+    public void BuildPresetCss_BandLayout_UsesGradientHeaderWithWhiteTitle()
+    {
+        var preset = new StylePreset { Id = "t", Name = "T", HeaderLayout = StylePreset.HeaderBand };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("linear-gradient(135deg");
+        css.Should().Contain(".doc-title");
+        css.Should().NotContain("border-bottom: 3px double");
+    }
+
+    [Fact]
+    public void BuildPresetCss_CenteredLayout_UsesDoubleRuleAndCenteredHeader()
+    {
+        var preset = new StylePreset { Id = "t", Name = "T", HeaderLayout = StylePreset.HeaderCentered };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("text-align: center");
+        css.Should().Contain("border-bottom: 3px double");
+    }
+
+    [Fact]
+    public void BuildPresetCss_MinimalLayout_AddsAccentDotAndCleanTables()
+    {
+        var preset = new StylePreset { Id = "t", Name = "T", HeaderLayout = StylePreset.HeaderMinimal };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain(".doc-title::before");
+        css.Should().Contain("tbody tr:nth-child(even) td { background: transparent; }");
+    }
+
+    [Fact]
+    public void BuildPresetCss_UnknownLayout_FallsBackToRule()
+    {
+        var preset = new StylePreset { Id = "t", Name = "T", HeaderLayout = "inconnu" };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("filet bicolore");
+        css.Should().NotContain("linear-gradient(120deg");
+    }
+
+    [Fact]
+    public void BuildPresetCss_PerSideMargins_AppliedAsShorthand()
+    {
+        var preset = new StylePreset
+        {
+            Id = "t",
+            Name = "T",
+            MarginMm = 20,
+            MarginBottomMm = 15,
+            MarginLeftMm = 18,
+            MarginRightMm = 22
+        };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("--page-margin: 20mm 22mm 15mm 18mm");
+    }
+
+    [Fact]
+    public void BuildPresetCss_OutputSurvivesCssSanitizer()
+    {
+        var css = HtmlRenderer.BuildPresetCss(StylePreset.Modern);
+
+        var sanitized = CssSanitizer.SanitizeCss(css);
+
+        // Aucune ligne du thème intégré ne doit être retirée par le sanitiseur.
+        sanitized.Should().Contain(".doc-title");
+        sanitized.Should().Contain(".callout");
+        sanitized.Should().Contain(".document-header");
+    }
+
+    [Fact]
+    public void RenderToHtml_NullPreset_FallsBackToModernDefaults()
+    {
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Fiche Défaut"),
+            Blocks: new List<Block> { new ParagraphBlock("Contenu") }
+        );
+
+        var html = HtmlRenderer.RenderToHtml(doc);
+
+        html.Should().Contain("--primary: #1E3A8A");
+        html.Should().Contain("--page-margin: 20mm");
+    }
+
+    [Fact]
+    public void BuildPresetCss_AppendsCustomCssAfterBase()
+    {
+        var preset = new StylePreset
+        {
+            Id = "custom",
+            Name = "Custom",
+            PrimaryColor = "#123456",
+            SecondaryColor = "#654321",
+            FontFamily = "Georgia",
+            CustomCss = ".doc-title { text-transform: uppercase; }"
+        };
+
+        var css = HtmlRenderer.BuildPresetCss(preset);
+
+        css.Should().Contain("--primary: #123456");
+        css.Should().Contain(".doc-title { text-transform: uppercase; }");
+        css.IndexOf(".doc-title { text-transform: uppercase; }", StringComparison.Ordinal)
+            .Should().BeGreaterThan(css.IndexOf("--primary:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void RenderToFragment_HtmlEncodesMetadata_ToPreventXss()
     {
         var doc = new GeneratedDocument(

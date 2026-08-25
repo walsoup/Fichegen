@@ -81,7 +81,9 @@ public sealed class OpenAiCompatibleAdapter : IProviderAdapter
             }
             catch (JsonException)
             {
-                chunkText = sseData;
+                // Truncated/garbled SSE event (e.g. connection cut mid-event):
+                // never inject raw protocol data into the document stream.
+                chunkText = null;
             }
 
             if (!string.IsNullOrEmpty(chunkText))

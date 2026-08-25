@@ -93,11 +93,22 @@
                 <Setter Property="Padding" Value="8,1"/>
             </Style>
 
-            <!-- Conteneur de groupe discret -->
+            <!-- Conteneur de groupe : template nu SANS états de survol/sélection —
+                 sinon le rectangle de survol couvre toute la journée au lieu de la
+                 carte survolée. Le survol est géré par carte dans le modèle d'élément. -->
             <Style x:Key="HistoryGroupContainerStyle" TargetType="ListViewItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Margin" Value="0,0,0,8"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- Style pour les éléments de l'historique -->
@@ -122,13 +133,13 @@
 
         <!-- En-tête serein -->
         <StackPanel Grid.Row="0" Spacing="3" Margin="0,0,0,16">
-            <TextBlock Text="Mes documents" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="SemiBold"/>
-            <TextBlock Text="Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur."
+            <TextBlock x:Uid="HP_Title" Text="Mes documents" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="SemiBold"/>
+            <TextBlock x:Uid="HP_Subtitle" Text="Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur."
                        Style="{StaticResource CaptionSecondaryStyle}"/>
         </StackPanel>
 
         <!-- Barre de recherche -->
-        <AutoSuggestBox x:Name="SearchBox"
+        <AutoSuggestBox x:Name="SearchBox" x:Uid="HP_SearchBox"
                         Grid.Row="1"
                         Margin="0,0,0,12"
                         PlaceholderText="Rechercher par titre, matière, niveau ou mot-clé…"
@@ -145,15 +156,15 @@
                       SelectedIndex="0"
                       SelectionChanged="OnFilterSelectionChanged"
                       Visibility="{x:Bind local:HistoryPage.InverseBoolToVisibility(ViewModel.IsLoading), Mode=OneWay}">
-            <RadioButton Content="Tout" 
+            <RadioButton x:Uid="HP_FilterAll" Content="Tout" 
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton Content="Fiches"
+            <RadioButton x:Uid="HP_FilterFiches" Content="Fiches"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton Content="Évaluations"
+            <RadioButton x:Uid="HP_FilterEvals" Content="Évaluations"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton Content="Quiz"
+            <RadioButton x:Uid="HP_FilterQuiz" Content="Quiz"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton Content="Favoris"
+            <RadioButton x:Uid="HP_FilterFavorites" Content="Favoris"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
         </RadioButtons>
 
@@ -164,24 +175,53 @@
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"/>
 
-        <!-- État vide -->
+        <!-- État vide pédagogique -->
         <StackPanel Grid.Row="3"
                     Visibility="{x:Bind local:HistoryPage.BoolToVisibility(ViewModel.ShowEmptyState), Mode=OneWay}"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-            <FontIcon FontFamily="Segoe MDL2 Assets"
-                      Glyph="&#xE74D;"
-                      FontSize="48"
-                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                      Margin="0,0,0,12"/>
-            <TextBlock Text="{x:Bind ViewModel.StatusMessage}"
-                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                      TextAlignment="Center"
-                      MaxWidth="400"/>
+                    VerticalAlignment="Center"
+                    Spacing="12"
+                    MaxWidth="440"
+                    Margin="24"
+                    x:Uid="HP_EmptyState">
+            <Border Width="80" Height="80" CornerRadius="20" HorizontalAlignment="Center"
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                <FontIcon FontFamily="Segoe MDL2 Assets"
+                          Glyph="&#xE8A5;"
+                          FontSize="34"
+                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+            </Border>
+            <TextBlock Text="{x:Bind ViewModel.EmptyStateTitle, Mode=OneWay}"
+                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"/>
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"/>
+            <Border Padding="14"
+                    CornerRadius="10"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Margin="0,6,0,0">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="💡" FontSize="13"/>
+                        <TextBlock x:Uid="HP_Tip1" Text="Chaque fiche, évaluation ou quiz généré est sauvegardé automatiquement ici."
+                                   FontSize="12" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="🔍" FontSize="13"/>
+                        <TextBlock x:Uid="HP_Tip2" Text="Utilisez la recherche pour retrouver rapidement un document par matière, niveau ou mot-clé."
+                                   FontSize="12" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- Contenu principal - Liste des éléments -->
-        <ScrollViewer Grid.Row="3"
+        <ScrollViewer x:Name="ResultsScrollViewer" Grid.Row="3"
                       Visibility="{x:Bind local:HistoryPage.BoolToVisibility(ViewModel.HasResults), Mode=OneWay}">
             <StackPanel>
                 <!-- Statistiques -->
@@ -218,10 +258,12 @@
                                 <ItemsControl ItemsSource="{x:Bind Items}" Margin="0,0,0,8">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:HistoryItemViewModel">
-                                            <Border Style="{StaticResource HistoryItemContainerStyle}" 
+                                            <Border Style="{StaticResource HistoryItemContainerStyle}"
                                                     Margin="0,0,0,8"
                                                     Tapped="OnItemClicked"
                                                     KeyDown="OnItemKeyDown"
+                                                    PointerEntered="OnItemPointerEntered"
+                                                    PointerExited="OnItemPointerExited"
                                                     IsTabStop="True"
                                                     Tag="{Binding}"
                                                     AutomationProperties.Name="{x:Bind Title}"
@@ -254,13 +296,13 @@
                                                                    TextTrimming="CharacterEllipsis"/>
                                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                             <Border Style="{StaticResource MetaPillStyle}" Margin="0,0,8,0">
-                                                                <TextBlock Text="{x:Bind TypeDisplay}" FontSize="11"/>
+                                                                <TextBlock Text="{x:Bind TypeDisplay}" FontSize="12"/>
                                                             </Border>
                                                             <Border Style="{StaticResource MetaPillStyle}" Margin="0,0,8,0">
-                                                                <TextBlock Text="{x:Bind LevelBadge}" FontSize="11"/>
+                                                                <TextBlock Text="{x:Bind LevelBadge}" FontSize="12"/>
                                                             </Border>
                                                             <TextBlock Text="{x:Bind CreatedTimeDisplay}"
-                                                                       FontSize="11"
+                                                                       FontSize="12"
                                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                         </StackPanel>
                                                     </StackPanel>
@@ -290,29 +332,28 @@
                                                                 Margin="0,0,4,0"/>
                                                         
                                                         <Button Style="{ThemeResource SubtleButtonStyle}"
-                                                                ToolTipService.ToolTip="Options du document (⋯)"
-                                                                AutomationProperties.Name="Options du document"
+                                                                x:Uid="HP_OptionsButton" ToolTipService.ToolTip="Options du document (⋯)" AutomationProperties.Name="Options du document"
                                                                 Tag="{Binding}">
                                                             <FontIcon Glyph="&#xE712;" FontSize="12"/>
                                                             <Button.Flyout>
                                                                 <MenuFlyout>
-                                                                    <MenuFlyoutItem Text="Ouvrir le document" Click="OnOpenMenuItemClicked" Tag="{Binding}">
+                                                                    <MenuFlyoutItem x:Uid="HP_MenuOpen" Text="Ouvrir le document" Click="OnOpenMenuItemClicked" Tag="{Binding}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE8E5;"/>
                                                                         </MenuFlyoutItem.Icon>
                                                                     </MenuFlyoutItem>
-                                                                    <MenuFlyoutItem Text="Exporter en Word (.docx)" Click="OnExportWordMenuItemClicked" Tag="{Binding}">
+                                                                    <MenuFlyoutItem x:Uid="HP_MenuExportWord" Text="Exporter en Word (.docx)" Click="OnExportWordMenuItemClicked" Tag="{Binding}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE8A5;"/>
                                                                         </MenuFlyoutItem.Icon>
                                                                     </MenuFlyoutItem>
-                                                                    <MenuFlyoutItem Text="Exporter en PDF" Click="OnExportPdfMenuItemClicked" Tag="{Binding}">
+                                                                    <MenuFlyoutItem x:Uid="HP_MenuExportPdf" Text="Exporter en PDF" Click="OnExportPdfMenuItemClicked" Tag="{Binding}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xEA90;"/>
                                                                         </MenuFlyoutItem.Icon>
                                                                     </MenuFlyoutItem>
                                                                     <MenuFlyoutSeparator/>
-                                                                    <MenuFlyoutItem Text="Supprimer le document" Click="OnDeleteClicked" Tag="{Binding}">
+                                                                    <MenuFlyoutItem x:Uid="HP_MenuDelete" Text="Supprimer le document" Click="OnDeleteClicked" Tag="{Binding}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE74D;"/>
                                                                         </MenuFlyoutItem.Icon>
@@ -334,7 +375,7 @@
         </ScrollViewer>
 
         <!-- Toast d'annulation de suppression (§8.3) -->
-        <Border x:Name="UndoToast" Grid.Row="0"
+        <Border x:Name="UndoToast" Grid.Row="0" Grid.RowSpan="4"
                 HorizontalAlignment="Center" VerticalAlignment="Bottom"
                 Margin="0,0,0,24" Padding="16,10" CornerRadius="8"
                 Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -342,8 +383,8 @@
                 BorderThickness="1" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                <TextBlock x:Name="UndoToastText" Text="Document supprimé" FontSize="13" VerticalAlignment="Center"/>
-                <Button x:Name="UndoToastButton" Content="Annuler" Style="{ThemeResource AccentButtonStyle}"
+                <TextBlock x:Name="UndoToastText" x:Uid="HP_UndoToastDefault" Text="Document supprimé" FontSize="13" VerticalAlignment="Center"/>
+                <Button x:Name="UndoToastButton" x:Uid="HP_UndoButton" Content="Annuler" Style="{ThemeResource AccentButtonStyle}"
                         Padding="12,4" FontSize="12" Click="OnUndoDeleteClicked"/>
                 <Button Style="{ThemeResource SubtleButtonStyle}" Padding="6" Click="OnDismissUndoClicked">
                     <FontIcon Glyph="&#xE711;" FontSize="10"/>

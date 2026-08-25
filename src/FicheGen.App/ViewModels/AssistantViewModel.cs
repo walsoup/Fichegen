@@ -46,6 +46,9 @@ public partial class ChatMessageItem : ObservableObject
     [ObservableProperty]
     public partial DateTimeOffset Timestamp { get; set; }
 
+    /// <summary>Document révisé reconstruit depuis la réponse IA (prêt à appliquer).</summary>
+    public GeneratedDocument? EditedDocument { get; set; }
+
     public bool IsUser => string.Equals(Sender, "User", StringComparison.Ordinal);
     public string RoleLabel => IsUser ? "Vous" : "Assistant";
 
@@ -301,11 +304,43 @@ public partial class AssistantViewModel : ObservableObject
                 }
                 else
                 {
-                    var originalText = HtmlRenderer.RenderToHtml(_resultViewModel.CurrentDocument);
-                    var diffLines = MyersDiffMapper.ComputeDiff(originalText, editedText);
+                    // Le modèle renvoie le JSON du document révisé : on le reparse en
+                    // GeneratedDocument afin que exports, statistiques et annulation
+                    // portent sur le contenu réellement édité.
+                    GeneratedDocument? editedDoc = null;
+                    if (JsonCleaner.TryDeserializeDocument(editedText, out var parsedDoc) && parsedDoc is not null)
+                    {
+                        editedDoc = parsedDoc;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            editedDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(
+                                editedText,
+                                _resultViewModel.CurrentDocument?.Metadata.Title ?? "Document modifié");
+                        }
+                        catch (OperationCanceledException) { throw; }
+                        catch
+                        {
+                            // editedDoc reste null : réponse inutilisable.
+                        }
+                    }
 
-                    assistantMsg.DiffLines = diffLines;
-                    assistantMsg.HasDiff = true;
+                    if (editedDoc is null)
+                    {
+                        assistantMsg.Content =
+                            "La modification n'a pas pu être convertie en document. " +
+                            "Reformulez votre consigne, plus précisément.";
+                    }
+                    else
+                    {
+                        assistantMsg.EditedDocument = editedDoc;
+                        var originalPlainText = _resultViewModel.CurrentDocument!.ToPlainText();
+                        var newPlainText = editedDoc.ToPlainText();
+                        assistantMsg.DiffLines = MyersDiffMapper.ComputeDiff(originalPlainText, newPlainText);
+                        assistantMsg.HasDiff = true;
+                    }
                 }
             }
             else if (hasDocument && !string.Equals(SelectedMode, "Générer", StringComparison.OrdinalIgnoreCase))
@@ -369,11 +404,24 @@ public partial class AssistantViewModel : ObservableObject
     [RelayCommand]
     public void ApplyDiff(ChatMessageItem? message)
     {
-        if (message?.DiffLines is null || _resultViewModel.CurrentDocument is null || message.IsApplied) return;
+        if (message?.EditedDocument is null || message.IsApplied) return;
+        if (_resultViewModel.CurrentDocument is null) return;
 
-        _resultViewModel.RefreshRendering();
+        var label = $"Assistant : « {Truncate(message.Content, 40)} »";
+        if (!_resultViewModel.ApplyEditedDocument(message.EditedDocument, label)) return;
+
         message.IsApplied = true;
         SetStatus("Modifications appliquées au document (Ctrl+Z pour annuler).", StatusSeverity.Success);
+    }
+
+    /// <summary>
+    /// Applique l'édition affichée à l'index donné du volet (les messages du volet
+    /// sont la copie 1:1 de <see cref="Messages"/>).
+    /// </summary>
+    public void ApplyEditAtIndex(int index)
+    {
+        if (index < 0 || index >= Messages.Count) return;
+        ApplyDiff(Messages[index]);
     }
 
     /// <summary>Ctrl+Z — Annule la dernière modification du document.</summary>

@@ -18,12 +18,50 @@ public sealed class StylePresetServiceTests
     }
 
     [Fact]
+    public void BuiltInPresets_HaveDistinctHeaderLayouts()
+    {
+        // Chaque préréglage est une direction artistique réellement différente.
+        var service = new StylePresetService();
+        var presets = service.GetPresets();
+
+        presets.First(p => p.Id == "modern").HeaderLayout.Should().Be(StylePreset.HeaderRule);
+        presets.First(p => p.Id == "classic").HeaderLayout.Should().Be(StylePreset.HeaderCentered);
+        presets.First(p => p.Id == "minimal").HeaderLayout.Should().Be(StylePreset.HeaderMinimal);
+        presets.First(p => p.Id == "academic").HeaderLayout.Should().Be(StylePreset.HeaderCentered);
+        presets.First(p => p.Id == "playful").HeaderLayout.Should().Be(StylePreset.HeaderBand);
+
+        presets.Select(p => p.AccentColor).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void AddCustomPreset_MakesPresetResolvable()
+    {
+        var service = new StylePresetService();
+        var custom = new StylePreset
+        {
+            Id = "custom",
+            Name = "Personnalisé",
+            PrimaryColor = "#123456",
+            SecondaryColor = "#654321",
+            AccentColor = "#ABCDEF",
+            HeaderLayout = StylePreset.HeaderBand
+        };
+
+        service.AddCustomPreset(custom);
+        var resolved = service.GetPreset("custom");
+
+        resolved.Id.Should().Be("custom");
+        resolved.PrimaryColor.Should().Be("#123456");
+        resolved.HeaderLayout.Should().Be(StylePreset.HeaderBand);
+    }
+
+    [Fact]
     public void GenerateCss_IncludesPresetVariablesAndSanitizedCustomCss()
     {
         var service = new StylePresetService();
         var css = service.GenerateCss("classic");
 
-        css.Should().Contain("--primary-color: #1E293B");
+        css.Should().Contain("--primary-color: #1E3A5F");
         css.Should().Contain("Georgia");
     }
 

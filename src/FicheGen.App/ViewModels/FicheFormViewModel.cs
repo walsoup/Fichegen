@@ -541,16 +541,5 @@ public partial class FicheFormViewModel : ObservableValidator
         new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation } },
         (k, _) => ValueTask.FromResult(_credentialStore?.Get(k)));
 
-    private static string GetPlainText(GeneratedDocument doc)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine(doc.Metadata.Title);
-        if (!string.IsNullOrEmpty(doc.Metadata.Subtitle)) sb.AppendLine(doc.Metadata.Subtitle);
-        foreach (var block in doc.Blocks)
-        {
-            if (block is HeadingBlock h) sb.AppendLine(string.Join(" ", h.Runs.Select(r => r.Text)));
-            else if (block is ParagraphBlock p) sb.AppendLine(string.Join(" ", p.Runs.Select(r => r.Text)));
-        }
-        return sb.ToString();
-    }
+    private static string GetPlainText(GeneratedDocument doc) => doc.ToPlainText();
 }

@@ -72,7 +72,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,0,1"
-                AutomationProperties.Name="Barre d'outils du document">
+                x:Uid="PH_Toolbar">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <!-- Groupe Style & Vue Élève/Corrigé -->
@@ -90,24 +90,24 @@
                 <!-- 1. Style & Élève/Corrigé -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <FontIcon Glyph="&#xE8D2;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="StylePresetComboBox"
+                    <ComboBox x:Name="StylePresetComboBox" x:Uid="PH_StyleCombo"
                               MinWidth="140"
                               SelectedIndex="0"
                               SelectionChanged="OnStylePresetSelectionChanged"
                               ToolTipService.ToolTip="Style visuel de la fiche"
                               AutomationProperties.Name="Style visuel du document">
-                        <ComboBoxItem Content="Moderne" Tag="modern"/>
-                        <ComboBoxItem Content="Classique" Tag="classic"/>
-                        <ComboBoxItem Content="Minimaliste" Tag="minimal"/>
-                        <ComboBoxItem Content="Académique" Tag="academic"/>
-                        <ComboBoxItem Content="Ludique" Tag="playful"/>
+                        <ComboBoxItem x:Uid="PH_StyleModern" Content="Moderne" Tag="modern"/>
+                        <ComboBoxItem x:Uid="PH_StyleClassic" Content="Classique" Tag="classic"/>
+                        <ComboBoxItem x:Uid="PH_StyleMinimal" Content="Minimaliste" Tag="minimal"/>
+                        <ComboBoxItem x:Uid="PH_StyleAcademic" Content="Académique" Tag="academic"/>
+                        <ComboBoxItem x:Uid="PH_StylePlayful" Content="Ludique" Tag="playful"/>
                     </ComboBox>
 
                     <Button x:Name="StudentViewButton"
+                            x:Uid="PH_StudentButton"
                             Style="{StaticResource ToolbarButtonStyle}"
                             Click="OnStudentViewClicked"
-                            ToolTipService.ToolTip="Basculer entre la version enseignant (avec corrigé) et la version élève (Ctrl+Shift+V)"
-                            AutomationProperties.Name="Basculer la version élève ou corrigé">
+                            ToolTipService.ToolTip="Basculer entre la version enseignant (avec corrigé) et la version élève (Ctrl+Shift+V)" AutomationProperties.Name="Basculer la version élève ou corrigé">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <FontIcon Glyph="&#xE77B;" FontSize="13"/>
                             <TextBlock Text="Élève / Corrigé" FontSize="12" VerticalAlignment="Center"/>
@@ -122,72 +122,78 @@
                 <!-- 2. Zoom -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomOutClicked"
-                            ToolTipService.ToolTip="Réduire le zoom" AutomationProperties.Name="Réduire le zoom">
+                            x:Uid="PH_ZoomOut">
                         <FontIcon Glyph="&#xE71F;" FontSize="12"/>
                     </Button>
                     <TextBlock x:Name="ZoomPercentText" Text="100 %" Width="48" FontSize="12"
                                TextAlignment="Center" VerticalAlignment="Center"
-                               AutomationProperties.Name="Niveau de zoom"/>
+                               x:Uid="PH_ZoomLevel"/>
                     <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomInClicked"
-                            ToolTipService.ToolTip="Agrandir le zoom" AutomationProperties.Name="Agrandir le zoom">
+                            x:Uid="PH_ZoomIn">
                         <FontIcon Glyph="&#xE8A3;" FontSize="12"/>
                     </Button>
                     <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="OnZoomResetClicked"
-                            ToolTipService.ToolTip="Réinitialiser le zoom à 100 % (Ctrl+0)" AutomationProperties.Name="Réinitialiser le zoom">
+                            x:Uid="PH_ZoomReset">
                         <FontIcon Glyph="&#xE72C;" FontSize="12"/>
                     </Button>
                 </StackPanel>
 
                 <!-- 3. Exports, Impression, Lecture, Presse-papiers -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Button x:Name="ExportWordButton"
+                    <Button x:Name="ExportWordButton" x:Uid="PH_ExportWord"
                             Style="{StaticResource ToolbarButtonStyle}"
                             Click="OnExportWordClicked"
                             ToolTipService.ToolTip="Exporter en document Word modifiable (Ctrl+Shift+W)"
                             AutomationProperties.Name="Exporter en Word">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <FontIcon Glyph="&#xE8A5;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                            <TextBlock Text="Word" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <TextBlock x:Uid="PH_WordLabel" Text="Word" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="ExportPdfButton"
+                    <Button x:Name="ExportPdfButton" x:Uid="PH_ExportPdf"
                             Style="{StaticResource ToolbarButtonStyle}"
                             Click="OnExportPdfClicked"
                             ToolTipService.ToolTip="Exporter en document PDF imprimable (Ctrl+Shift+E)"
                             AutomationProperties.Name="Exporter en PDF">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <FontIcon Glyph="&#xEA90;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                            <TextBlock Text="PDF" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <TextBlock x:Uid="PH_PdfLabel" Text="PDF" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="PrintButton"
+                    <Button x:Name="PrintButton" x:Uid="PH_PrintButton"
                             Style="{StaticResource ToolbarButtonStyle}"
                             Click="OnPrintClicked"
                             ToolTipService.ToolTip="Imprimer le document (Ctrl+P)"
                             AutomationProperties.Name="Imprimer le document">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <FontIcon Glyph="&#xE749;" FontSize="13"/>
-                            <TextBlock Text="Imprimer" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock x:Uid="PH_PrintLabel" Text="Imprimer" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Menu Autres actions -->
                     <Button Style="{StaticResource ToolbarIconButtonStyle}"
-                            ToolTipService.ToolTip="Autres actions"
-                            AutomationProperties.Name="Autres options d'export et d'écoute">
+                            x:Uid="PH_MoreActions">
                         <FontIcon Glyph="&#xE712;" FontSize="13"/>
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                <MenuFlyoutItem Text="📄 Exporter en RTF" Click="OnExportRtfClicked">
+                                <MenuFlyoutItem x:Uid="PH_MenuRtf" Text="📄 Exporter en RTF" Click="OnExportRtfClicked">
                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C6;" FontSize="14"/></MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="📋 Copier le texte complet" Click="OnCopyClicked">
+                                <MenuFlyoutItem x:Uid="PH_MenuCopyText" Text="📋 Copier le texte complet" Click="OnCopyClicked">
                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" FontSize="14"/></MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                                 <MenuFlyoutSeparator/>
-                                <MenuFlyoutItem x:Name="ReadAloudMenuItem" Text="🔊 Lire à voix haute" Click="OnReadAloudClicked">
+                                <MenuFlyoutItem x:Uid="PH_MenuFind" Text="🔎 Rechercher dans le document" Click="OnFindClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem x:Uid="PH_MenuOpenFolder" Text="📂 Ouvrir le dossier d'exportation" Click="OnOpenExportFolderClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem x:Name="ReadAloudMenuItem" x:Uid="PH_MenuReadAloud" Text="🔊 Lire à voix haute" Click="OnReadAloudClicked">
                                     <MenuFlyoutItem.Icon><FontIcon x:Name="ReadAloudMenuIcon" Glyph="&#xE995;" FontSize="14"/></MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                             </MenuFlyout>
@@ -198,20 +204,18 @@
         </Border>
 
         <!-- Bannière d'exportation réussie -->
-        <InfoBar x:Name="ExportSuccessInfoBar"
+        <InfoBar x:Name="ExportSuccessInfoBar" x:Uid="PH_ExportBanner"
                  Grid.Row="1"
                  IsOpen="{Binding ShowExportSuccessBanner, Mode=TwoWay}"
                  Severity="Success"
-                 Title="Document exporté avec succès"
                  Message="{Binding ExportSuccessMessage}"
                  IsClosable="True"
                  Margin="12,6"
                  AutomationProperties.LiveSetting="Polite">
             <InfoBar.ActionButton>
-                <Button Content="Ouvrir le fichier"
+                <Button x:Uid="PH_OpenExportedFile" Content="Ouvrir le fichier"
                         Style="{ThemeResource AccentButtonStyle}"
-                        Command="{Binding OpenLastExportedFileCommand}"
-                        AutomationProperties.Name="Ouvrir le fichier exporté"/>
+                        Command="{Binding OpenLastExportedFileCommand}"/>
             </InfoBar.ActionButton>
         </InfoBar>
 
@@ -222,7 +226,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,0,1"
-                AutomationProperties.Name="Rendu progressif du document en cours">
+                x:Uid="PH_StreamingBanner">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -253,7 +257,7 @@
         </Border>
 
         <!-- Zone de contenu -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="3" x:Name="ContentHost">
 
             <!-- État vide avec illustration de marque + astuces -->
             <StackPanel x:Name="EmptyStatePanel"
@@ -263,7 +267,7 @@
                         Spacing="14"
                         MaxWidth="460"
                         Margin="24"
-                        AutomationProperties.Name="Aucun document généré">
+                        x:Uid="PH_EmptyState">
                 <StackPanel.RenderTransform>
                     <TranslateTransform x:Name="EmptyStateTransform"/>
                 </StackPanel.RenderTransform>
@@ -276,45 +280,65 @@
                         </LinearGradientBrush>
                     </Border.Background>
                     <Grid>
-                        <FontIcon Glyph="&#xE8A5;" FontSize="44" Foreground="White"/>
+                        <FontIcon Glyph="&#xE8A5;" FontSize="44" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
                         <TextBlock Text="✨" FontSize="20" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,16,0"/>
                     </Grid>
                 </Border>
 
-                <TextBlock Text="Générez votre première fiche"
+                <TextBlock x:Uid="PH_EmptyTitle" Text="Générez votre première fiche"
                            Style="{ThemeResource TitleTextBlockStyle}"
                            HorizontalAlignment="Center"/>
 
-                <TextBlock Text="Décrivez votre besoin, ajustez les paramètres, puis cliquez sur « Générer ». L'aperçu interactif de votre fiche apparaîtra ici."
+                <TextBlock x:Uid="PH_EmptyBody" Text="Décrivez votre besoin, ajustez les paramètres, puis cliquez sur « Générer ». L'aperçu interactif de votre fiche apparaîtra ici."
                            Style="{ThemeResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            TextWrapping="Wrap"
                            TextAlignment="Center"/>
 
-                <Border Margin="0,10,0,0"
-                        Padding="16"
-                        CornerRadius="12"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <Button Style="{ThemeResource AccentButtonStyle}" CornerRadius="16" x:Uid="PH_PaletteButton"
+                                    Click="OnPaletteClicked"
+                                    AutomationProperties.Name="Explorer les commandes (Ctrl+K)"
+                                    ToolTipService.ToolTip="Ouvre la palette de commandes">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE721;" FontSize="13"/>
+                                    <TextBlock x:Uid="PH_PaletteLabel" Text="Que puis-je faire ?" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Ctrl+K" FontSize="11" Opacity="0.72" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Uid="PH_HistoryButton" Click="OnOpenHistoryClicked"
+                                    AutomationProperties.Name="Ouvrir mes documents">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE81C;" FontSize="13"/>
+                                    <TextBlock x:Uid="PH_HistoryLabel" Text="Mes documents" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <Border Margin="0,10,0,0"
+                                Padding="16"
+                                CornerRadius="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
                     <StackPanel Spacing="10">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="💡" FontSize="14"/>
-                            <TextBlock Text="Astuces rapides" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock x:Uid="PH_TipsTitle" Text="Astuces rapides" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon Glyph="&#xE7BE;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,1,0,0"/>
-                            <TextBlock Text="Précisez le niveau (ex. : CM2) et l'objectif pédagogique pour un résultat plus ciblé."
+                            <TextBlock x:Uid="PH_Tip1" Text="Précisez le niveau (ex. : CM2) et l'objectif pédagogique pour un résultat plus ciblé."
                                        Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon Glyph="&#xE99A;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,1,0,0"/>
-                            <TextBlock Text="Après la génération, demandez des ajustements à l'assistant IA dans le panneau latéral."
+                            <TextBlock x:Uid="PH_Tip2" Text="Après la génération, demandez des ajustements à l'assistant IA dans le panneau latéral."
                                        Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon Glyph="&#xE765;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,1,0,0"/>
-                            <TextBlock Text="Raccourcis : Ctrl+G génère • Ctrl+P imprime • Ctrl+Shift+E exporte en PDF."
+                            <TextBlock x:Uid="PH_Tip3" Text="Raccourcis : Ctrl+G génère • Ctrl+P imprime • Ctrl+Shift+E exporte en PDF."
                                        Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </StackPanel>
@@ -325,7 +349,7 @@
             <Grid x:Name="SkeletonOverlay"
                   Visibility="Collapsed"
                   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-                  AutomationProperties.Name="Génération du document en cours">
+                  x:Uid="PH_Skeleton">
                 <Grid MaxWidth="640"
                       HorizontalAlignment="Center"
                       Width="{x:Bind Root.ActualWidth, Mode=OneWay}"
@@ -370,7 +394,8 @@
                       Visibility="Collapsed"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
-                      AutomationProperties.Name="Aperçu interactif du document WebView2"/>
+                      PointerWheelChanged="OnPreviewWheelChanged"
+                      x:Uid="PH_WebView"/>
 
             <!-- État d'erreur WebView2 absent (UX-04) -->
             <StackPanel x:Name="WebView2ErrorPanel"
@@ -380,34 +405,34 @@
                         Spacing="16"
                         MaxWidth="480"
                         Margin="24"
-                        AutomationProperties.Name="Aperçu indisponible : composant manquant">
+                        x:Uid="PH_ErrorPanel">
                 <Border Width="72" Height="72" CornerRadius="18" HorizontalAlignment="Center"
                         Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                     <FontIcon Glyph="&#xE7BA;" FontSize="32" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
                 </Border>
 
-                <TextBlock Text="L'aperçu ne peut pas s'afficher"
+                <TextBlock x:Uid="PH_ErrorTitle" Text="L'aperçu ne peut pas s'afficher"
                            Style="{ThemeResource TitleTextBlockStyle}"
                            HorizontalAlignment="Center"/>
 
-                <TextBlock Text="PROFstudio a besoin du composant Microsoft Edge WebView2 pour afficher et exporter vos documents. Il n'est pas installé sur cet ordinateur."
+                <TextBlock x:Uid="PH_ErrorBody" Text="PROFstudio a besoin du composant Microsoft Edge WebView2 pour afficher et exporter vos documents. Il n'est pas installé sur cet ordinateur."
                            Style="{ThemeResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            TextWrapping="Wrap"
                            TextAlignment="Center"/>
 
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
-                    <Button Content="Installer le composant ↗"
+                    <Button x:Uid="PH_InstallButton" Content="Installer le composant ↗"
                             Style="{ThemeResource AccentButtonStyle}"
                             Click="OnInstallWebView2Clicked"
                             AutomationProperties.Name="Installer le composant WebView2"/>
-                    <Button Content="Copier le lien pour l'informaticien"
+                    <Button x:Uid="PH_CopyLinkButton" Content="Copier le lien pour l'informaticien"
                             Click="OnCopyWebView2LinkClicked"
                             AutomationProperties.Name="Copier le lien de téléchargement pour l'administrateur"/>
                 </StackPanel>
 
                 <TextBlock x:Name="WebView2LinkCopiedNotice"
-                           Text="✓ Lien copié dans le presse-papiers"
+                           x:Uid="PH_LinkCopied" Text="✓ Lien copié dans le presse-papiers"
                            FontSize="12"
                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"
                            HorizontalAlignment="Center"

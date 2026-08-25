@@ -7,18 +7,19 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Border x:Name="DropBorder"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderThickness="1"
-            CornerRadius="8"
-            Padding="14,12"
-            AllowDrop="True"
-            DragOver="OnDragOver"
-            DragLeave="OnDragLeave"
-            Drop="OnDrop"
-            AutomationProperties.Name="Zone de sélection du guide pédagogique PDF"
-            AutomationProperties.HelpText="Glissez-déposez un guide PDF ou cliquez pour en sélectionner un">
+    <StackPanel Spacing="8">
+        <Border x:Name="DropBorder"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="14,12"
+                AllowDrop="True"
+                DragOver="OnDragOver"
+                DragLeave="OnDragLeave"
+                Drop="OnDrop"
+                AutomationProperties.Name="Zone de sélection du guide pédagogique PDF"
+                AutomationProperties.HelpText="Glissez-déposez un guide PDF ou cliquez pour en sélectionner un">
 
         <Grid>
             <!-- État 1 : Vide / Prêt au dépôt -->
@@ -37,7 +38,7 @@
                                FontSize="12" FontWeight="Medium"
                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                     <TextBlock Text="Manuel scolaire, progression de cycle, etc. (optionnel)"
-                               FontSize="11"
+                               FontSize="12"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
                 </StackPanel>
             </StackPanel>
@@ -71,7 +72,7 @@
                                TextTrimming="CharacterEllipsis"
                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                     <TextBlock x:Name="FileMetaText" Text="Guide PDF prêt pour l'ancrage pédagogique"
-                               FontSize="11"
+                               FontSize="12"
                                Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="2" Style="{ThemeResource SubtleButtonStyle}"
@@ -102,7 +103,7 @@
                                FontSize="12" FontWeight="SemiBold"
                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                     <TextBlock x:Name="ErrorMessageText" Text="Seuls les fichiers .pdf sont acceptés."
-                               FontSize="11"
+                               FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="2" Style="{ThemeResource SubtleButtonStyle}"
@@ -123,5 +124,21 @@
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
-    </Border>
+        </Border>
+
+        <!-- Sélecteur de chapitre : alimenté par le cache de la table des matières
+             du guide (aucun retraitement du PDF si le cache est présent). -->
+        <StackPanel x:Name="ChapterPanel" Visibility="Collapsed" Spacing="4">
+            <ComboBox x:Name="ChapterCombo"
+                      Header="Chapitre du guide (table des matières)"
+                      HorizontalAlignment="Stretch"
+                      PlaceholderText="Choisir un chapitre pour préremplir le sujet…"
+                      SelectionChanged="OnChapterSelectionChanged"
+                      AutomationProperties.Name="Chapitre du guide pédagogique"/>
+            <TextBlock Text="Issu du cache de la table des matières — la sélection préremplit le sujet."
+                       FontSize="11"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+    </StackPanel>
 </UserControl>

@@ -15,6 +15,10 @@ public sealed class LlmClient : ILlmClient
     private readonly VertexTokenProvider _vertexTokenProvider;
     private readonly Dictionary<ProviderAdapterKind, IProviderAdapter> _adapters;
 
+    // Built once per client so circuit-breaker state persists across requests.
+    private readonly ResiliencePipeline _nonStreamingPipeline;
+    private readonly ResiliencePipeline _streamingPipeline;
+
     public LlmClient(HttpClient httpClient, LlmRouter? router = null, VertexTokenProvider? vertexTokenProvider = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -30,6 +34,9 @@ public sealed class LlmClient : ILlmClient
         };
 
         _adapters = adapters.ToDictionary(a => a.Kind);
+
+        _nonStreamingPipeline = ResiliencePipelines.CreateNonStreamingPipeline();
+        _streamingPipeline = ResiliencePipelines.CreateStreamingPipeline();
     }
 
     public async Task<string> GenerateAsync(LlmRequest req, AiRequestConfig cfg, CancellationToken ct)
@@ -44,9 +51,7 @@ public sealed class LlmClient : ILlmClient
         var secretKey = await ResolveSecretAsync(route, cfg, ct).ConfigureAwait(false);
         var temperature = GetTemperature(req, cfg);
 
-        var pipeline = ResiliencePipelines.CreateNonStreamingPipeline();
-
-        return await pipeline.ExecuteAsync(async cancellationToken =>
+        return await _nonStreamingPipeline.ExecuteAsync(async cancellationToken =>
         {
             using var requestMessage = adapter.BuildRequest(req, route, secretKey, temperature);
             using var responseMessage = await _httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
@@ -69,17 +74,63 @@ public sealed class LlmClient : ILlmClient
         var secretKey = await ResolveSecretAsync(route, cfg, ct).ConfigureAwait(false);
         var temperature = GetTemperature(req, cfg);
 
-        var pipeline = ResiliencePipelines.CreateStreamingPipeline();
-
-        using var requestMessage = adapter.BuildRequest(req, route, secretKey, temperature);
-        using var responseMessage = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-
-        var rawStream = adapter.ParseStreamAsync(responseMessage, ct);
-
-        await foreach (var chunk in StreamingChannelPipeline.BatchThrottledAsync(rawStream, TimeSpan.FromMilliseconds(50), ct).ConfigureAwait(false))
+        // The pipeline covers connection establishment (transient 429/5xx/network
+        // failures are retried there). Mid-stream failures cannot be retried
+        // because chunks have already been yielded to the consumer.
+        HttpResponseMessage? response = null;
+        try
         {
-            yield return chunk;
+            response = await _streamingPipeline.ExecuteAsync(async cancellationToken =>
+            {
+                using var requestMessage = adapter.BuildRequest(req, route, secretKey, temperature);
+                var attempt = await _httpClient
+                    .SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
+                try
+                {
+                    // HttpClient does not throw on error statuses: without this
+                    // check the retry/circuit-breaker policies would never see
+                    // a 429/5xx raised at connection time.
+                    EnsureConnectionSuccess(attempt);
+                }
+                catch
+                {
+                    attempt.Dispose();
+                    throw;
+                }
+
+                return attempt;
+            }, ct).ConfigureAwait(false);
+
+            var rawStream = adapter.ParseStreamAsync(response, ct);
+
+            await foreach (var chunk in StreamingChannelPipeline.BatchThrottledAsync(rawStream, TimeSpan.FromMilliseconds(50), ct).ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
         }
+        finally
+        {
+            response?.Dispose();
+        }
+    }
+
+    private static void EnsureConnectionSuccess(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        TimeSpan? retryAfter = response.Headers.RetryAfter?.Delta;
+        var statusCode = (int)response.StatusCode;
+        var kind = statusCode switch
+        {
+            401 or 403 => LlmExceptionKind.Auth,
+            429 => LlmExceptionKind.RateLimited,
+            _ => LlmExceptionKind.Provider
+        };
+
+        throw new LlmException(kind, $"Provider returned status {response.StatusCode} before streaming started.", statusCode, retryAfter);
     }
 
     private async ValueTask<string?> ResolveSecretAsync(ProviderRoute route, AiRequestConfig cfg, CancellationToken ct)

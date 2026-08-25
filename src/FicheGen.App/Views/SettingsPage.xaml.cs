@@ -21,6 +21,7 @@ public sealed partial class SettingsPage : Page
     public SettingsViewModel ViewModel { get; }
 
     private bool _webViewReady;
+    private bool _webViewFailed;
     private bool _suppressStartupToggle;
 
     public SettingsPage()
@@ -30,7 +31,6 @@ public sealed partial class SettingsPage : Page
 
         InitializeComponent();
 
-        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.PreviewRefreshRequested += OnPreviewRefreshRequested;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -71,20 +71,14 @@ public sealed partial class SettingsPage : Page
             ViewModel.StartupStatusText = "Disponible uniquement en mode empaqueté (MSIX).";
         }
 
-        ApplyAppTheme();
-        try
-        {
-            await InitializePreviewAsync();
-        }
-        catch
-        {
-            // Ignore non-fatal initialization errors
-        }
+        // L'aperçu du StyleBuilder s'initialise paresseusement à la première
+        // ouverture de l'onglet Styles (voir UpdateStylePreviewVisibility) :
+        // initialisé au chargement de la page, hors écran, son HWND se peint
+        // à une position périmée et recouvre l'onglet.
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         ViewModel.PreviewRefreshRequested -= OnPreviewRefreshRequested;
     }
 
@@ -99,18 +93,77 @@ public sealed partial class SettingsPage : Page
 
     private void SwitchPanels(SelectorBarItem? selected)
     {
-        var map = new Dictionary<SelectorBarItem, UIElement>
+        var isStylesTab = ReferenceEquals(selected, TabStyles);
+
+        if (isStylesTab)
+        {
+            SettingsScrollViewer.Visibility = Visibility.Collapsed;
+            PanelStyles.Visibility = Visibility.Visible;
+            FicheGen.App.Services.UiMotion.FadeUp(PanelStyles, 12);
+            UpdateStylePreviewVisibility(true);
+            return;
+        }
+
+        PanelStyles.Visibility = Visibility.Collapsed;
+        SettingsScrollViewer.Visibility = Visibility.Visible;
+        UpdateStylePreviewVisibility(false);
+
+        var map = new Dictionary<SelectorBarItem, FrameworkElement>
         {
             { TabGeneral, PanelGeneral },
             { TabAi, PanelAi },
             { TabFolders, PanelFolders },
-            { TabStyles, PanelStyles },
             { TabPrivacy, PanelPrivacy },
             { TabPrompts, PanelPrompts },
         };
 
         foreach (var (tab, panel) in map)
-            panel.Visibility = ReferenceEquals(tab, selected) ? Visibility.Visible : Visibility.Collapsed;
+        {
+            var isSelected = ReferenceEquals(tab, selected);
+            if (isSelected && panel.Visibility != Visibility.Visible)
+            {
+                panel.Visibility = Visibility.Visible;
+                // Entrée en douceur du panneau nouvellement affiché.
+                FicheGen.App.Services.UiMotion.FadeUp(panel, 12);
+            }
+            else
+            {
+                panel.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+    }
+
+    /// <summary>
+    /// L'aperçu WebView2 n'est initialisé et affiché QUE lorsque l'onglet Styles est
+    /// actif : initialisé hors écran, l'HWND de WebView2 se peint à une position
+    /// périmée et recouvre l'onglet d'une surface blanche vide (airspaces HWND).
+    /// </summary>
+    private bool _isPreviewInitialized;
+
+    private void UpdateStylePreviewVisibility(bool isStylesTabSelected)
+    {
+        if (StylePreviewWebView is null) return;
+
+        if (!isStylesTabSelected)
+        {
+            if (WebViewFallback is not null) WebViewFallback.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (_webViewFailed)
+        {
+            if (WebViewFallback is not null) WebViewFallback.Visibility = Visibility.Visible;
+            return;
+        }
+
+        if (!_isPreviewInitialized)
+        {
+            _ = InitializePreviewAsync();
+        }
+        else
+        {
+            RefreshPreview();
+        }
     }
 
     private void ManageFolders_Click(object sender, RoutedEventArgs e)
@@ -120,22 +173,10 @@ public sealed partial class SettingsPage : Page
     //  Thème instantané
     // ─────────────────────────────────────────────
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SettingsViewModel.Theme))
-            ApplyAppTheme();
-    }
-
-    private void ApplyAppTheme()
-    {
-        if (((App)App.Current).MainWindow?.Content is not FrameworkElement root) return;
-        root.RequestedTheme = ViewModel.Theme switch
-        {
-            "light" => ElementTheme.Light,
-            "dark" => ElementTheme.Dark,
-            _ => ElementTheme.Default,
-        };
-    }
+    // Le thème est appliqué et persisté par MainWindow.ApplyShellTheme, déclenché
+    // par SettingsViewModel.OnThemeChanged. La page ne réécrit JAMAIS
+    // RootGrid.RequestedTheme elle-même : un réglage « Défaut » écrasait le thème
+    // du shell et basculait l'application en sombre à l'ouverture des Paramètres.
 
     // ─────────────────────────────────────────────
     //  Clés d'API (PasswordBox non-bindable)
@@ -224,18 +265,19 @@ public sealed partial class SettingsPage : Page
             var version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
             if (string.IsNullOrWhiteSpace(version))
             {
-                StylePreviewWebView.Visibility = Visibility.Collapsed;
+                _webViewFailed = true;
                 if (WebViewFallback != null) WebViewFallback.Visibility = Visibility.Visible;
                 return;
             }
 
             await StylePreviewWebView.EnsureCoreWebView2Async();
             _webViewReady = true;
+            _isPreviewInitialized = true;
             RefreshPreview();
         }
         catch (Exception)
         {
-            if (StylePreviewWebView != null) StylePreviewWebView.Visibility = Visibility.Collapsed;
+            _webViewFailed = true;
             if (WebViewFallback != null) WebViewFallback.Visibility = Visibility.Visible;
         }
     }
@@ -245,7 +287,13 @@ public sealed partial class SettingsPage : Page
 
     private void RefreshPreview_Click(object sender, RoutedEventArgs e) => RefreshPreview();
 
-    private void DarkPreviewToggle_Toggled(object sender, RoutedEventArgs e) => RefreshPreview();
+    private void PaletteChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string paletteKey })
+        {
+            ViewModel.ApplyPalette(paletteKey);
+        }
+    }
 
     private void RefreshPreview()
     {
@@ -253,8 +301,7 @@ public sealed partial class SettingsPage : Page
 
         try
         {
-            StylePreviewWebView.CoreWebView2.NavigateToString(
-                ViewModel.BuildPreviewHtml(DarkPreviewToggle.IsOn));
+            StylePreviewWebView.CoreWebView2.NavigateToString(ViewModel.BuildPreviewHtml());
         }
         catch (Exception)
         {
@@ -313,7 +360,7 @@ public sealed partial class SettingsPage : Page
         {
             XamlRoot = XamlRoot,
             Title = "Réinitialiser tous les paramètres ?",
-            Content = "Thème, routage IA, températures, styles et modèles de prompts seront rétablis aux valeurs d'usine. " +
+            Content = "Thème, routage IA, réglages de créativité, styles et modèles de prompts seront rétablis aux valeurs d'usine. " +
                       "Vos clés d'API (Coffre Windows), vos dossiers et votre historique de fiches sont conservés.",
             PrimaryButtonText = "Réinitialiser",
             CloseButtonText = "Annuler",
@@ -323,7 +370,6 @@ public sealed partial class SettingsPage : Page
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
         {
             await ViewModel.ResetToDefaultsAsync();
-            ApplyAppTheme();
         }
     }
 

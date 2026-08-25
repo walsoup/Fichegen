@@ -58,6 +58,10 @@ public sealed partial class MainWindow : Window
     private RectInt32 _lastNormalBounds;
     private bool _isPreviewVisible = true;
     private bool _wasOnSettings;
+    // UISettings (et non AccessibilitySettings) : l'abonnement à
+    // AccessibilitySettings.HighContrastChanged lève COMException 0x80070490
+    // dans une application de bureau WinUI 3 non packagée (pas de core window UWP).
+    private readonly Windows.UI.ViewManagement.UISettings _uiSettings = new();
 
     public MainWindow()
     {
@@ -106,6 +110,16 @@ public sealed partial class MainWindow : Window
         // ----- Thème (Clair / Sombre / Système) -----
         ApplyTheme(_shellState.Theme, persist: false);
         RootGrid.ActualThemeChanged += (_, _) => UpdateCaptionButtonColors();
+        // ColorValuesChanged couvre le basculement contraste élevé ; l'événement
+        // arrive sur un thread d'arrière-plan, donc repasse par le DispatcherQueue.
+        try
+        {
+            _uiSettings.ColorValuesChanged += (_, _) => DispatcherQueue.TryEnqueue(UpdateCaptionButtonColors);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not subscribe to high-contrast changes.");
+        }
 
         // ----- État initial de l'Assistant IA -----
         AssistantToggleButton.IsChecked = _shellState.IsAssistantVisible;
@@ -120,7 +134,7 @@ public sealed partial class MainWindow : Window
         RootGrid.KeyboardAccelerators.Add(commaAccelerator);
 
         // ----- Minuteur des astuces contextuelles -----
-        _hintTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.8) };
+        _hintTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _hintTimer.Tick += (_, _) => { _hintTimer.Stop(); ShellHintTip.IsOpen = false; };
 
         // ----- Restauration de la géométrie de la fenêtre -----
@@ -160,7 +174,11 @@ public sealed partial class MainWindow : Window
                                 resultVm.LoadDocument(doc, item.Html ?? string.Empty, item.StylePresetId);
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            // Historique corrompu/partial : on ouvre en HTML seul, mais on trace.
+                            Log.Warning(ex, "Désérialisation du document historique impossible (id {Id}).", item.Id);
+                        }
                     }
                     else if (string.IsNullOrEmpty(resultVm.CurrentHtml) && !string.IsNullOrEmpty(item.Html))
                     {
@@ -175,12 +193,30 @@ public sealed partial class MainWindow : Window
                     _ => "FichePage"
                 };
                 NavigateToTag(tag);
+
+                // Vol de la carte d'historique vers l'aperçu (animation connectée).
+                DispatcherQueue.TryEnqueue(
+                    () => (ContentFrame.Content as ICreationPage)?.RunIncomingDocumentAnimation());
             };
         }
 
         var resultViewModel = App.Services.GetService<ResultViewModel>();
         if (resultViewModel != null)
         {
+            // Voyant de la barre de titre : pulsation pendant une génération,
+            // et célébration de la toute première fiche générée.
+            resultViewModel.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(ResultViewModel.IsBusy))
+                {
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        UpdateAiPulse(resultViewModel.IsBusy);
+                        if (!resultViewModel.IsBusy) CelebrateFirstGeneration(resultViewModel);
+                    });
+                }
+            };
+
             resultViewModel.CreateEvaluationRequested += (s, doc) =>
             {
                 var evalVm = App.Services.GetService<EvaluationViewModel>();
@@ -268,85 +304,100 @@ public sealed partial class MainWindow : Window
     {
         Activated -= OnMainWindowActivated;
 
-        UpdateTitleBarLayout();
-        UpdateCaptionButtonColors();
-
-        var xamlRoot = await EnsureXamlRootAsync();
-        if (xamlRoot == null)
+        try
         {
-            Log.Warning("Boîte de dialogue annulée: XamlRoot introuvable.");
-            return;
-        }
+            UpdateTitleBarLayout();
+            UpdateCaptionButtonColors();
 
-        var dialogService = App.Services.GetService<DialogService>();
-        dialogService?.Initialize(xamlRoot);
-
-        // Vérification du composant WebView2
-        var checker = new WebView2RuntimeChecker();
-        if (!checker.IsWebView2Available())
-        {
-            var dialog = new ContentDialog
+            var xamlRoot = await EnsureXamlRootAsync();
+            if (xamlRoot == null)
             {
-                XamlRoot = xamlRoot,
-                Title = "Composant WebView2 requis",
-                Content = "Le composant WebView2 de Microsoft Edge n'est pas détecté. PROFstudio l'utilise pour afficher l'aperçu vectoriel des fiches.",
-                PrimaryButtonText = "Télécharger le programme d'installation",
-                SecondaryButtonText = "Plus tard",
-                DefaultButton = ContentDialogButton.Primary
-            };
+                Log.Warning("Boîte de dialogue annulée: XamlRoot introuvable.");
+                return;
+            }
 
-            var res = await dialog.ShowAsync();
-            if (res == ContentDialogResult.Primary)
+            var dialogService = App.Services.GetService<DialogService>();
+            dialogService?.Initialize(xamlRoot);
+
+            // Première exécution & transparence RGPD (avant tout autre dialogue)
+            await RunFirstRunFlowAsync(xamlRoot);
+
+            // Vérification du composant WebView2 (non bloquant : bouton « Plus tard » par défaut)
+            var checker = new WebView2RuntimeChecker();
+            if (!checker.IsWebView2Available())
             {
-                var uri = new Uri(checker.GetDownloadUrl());
-                await Windows.System.Launcher.LaunchUriAsync(uri);
+                var dialog = new ContentDialog
+                {
+                    XamlRoot = xamlRoot,
+                    Title = Services.L10n.Get("Dialog_WebView2Missing_Title"),
+                    Content = Services.L10n.Get("Dialog_WebView2Missing_Message"),
+                    PrimaryButtonText = Services.L10n.Get("Dialog_WebView2Missing_Primary"),
+                    CloseButtonText = Services.L10n.Get("Dialog_WebView2Missing_Close"),
+                    DefaultButton = ContentDialogButton.Close
+                };
+
+                var res = await dialog.ShowAsync();
+                if (res == ContentDialogResult.Primary)
+                {
+                    var uri = new Uri(checker.GetDownloadUrl());
+                    await Windows.System.Launcher.LaunchUriAsync(uri);
+                }
             }
         }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Échec de la séquence d'activation initiale.");
+            ShowHint(Services.L10n.Get("Hint_PartialStart_Title"),
+                Services.L10n.Get("Hint_PartialStart_Message"));
+        }
+    }
 
-        // Première exécution & transparence RGPD
+    private async Task RunFirstRunFlowAsync(XamlRoot xamlRoot)
+    {
         var settingsStore = App.Services.GetRequiredService<ISettingsStore>();
         var settings = settingsStore.GetSettings<AppSettings>();
-        if (!settings.IsFirstRunCompleted)
+        if (settings.IsFirstRunCompleted) return;
+
+        var firstRunDlg = new FirstRunDialog
         {
-            var firstRunDlg = new FirstRunDialog
-            {
-                XamlRoot = xamlRoot
-            };
+            XamlRoot = xamlRoot
+        };
 
-            var res = await firstRunDlg.ShowAsync();
-            settings.IsFirstRunCompleted = true; // Persiste le choix même en cas d'ignorance (UX-08)
-            if (res == ContentDialogResult.Primary)
+        var res = await firstRunDlg.ShowAsync();
+        if (res == ContentDialogResult.Primary)
+        {
+            settings.Features.Telemetry = firstRunDlg.TelemetryEnabled;
+            if (!string.IsNullOrWhiteSpace(firstRunDlg.GuidesPath))
             {
-                settings.Features.Telemetry = firstRunDlg.TelemetryEnabled;
-                if (!string.IsNullOrWhiteSpace(firstRunDlg.GuidesPath))
-                {
-                    settings.Folders.GuidesDir = firstRunDlg.GuidesPath;
-                }
-                if (!string.IsNullOrWhiteSpace(firstRunDlg.SelectedProviderKey))
-                {
-                    settings.Ai.GlobalProvider = firstRunDlg.SelectedProviderKey;
-                }
-                if (!string.IsNullOrWhiteSpace(firstRunDlg.ApiKey))
-                {
-                    var credentialStore = App.Services.GetRequiredService<ICredentialStore>();
-                    var keyName = firstRunDlg.SelectedProviderKey switch
-                    {
-                        "openai" => "openai_api_key",
-                        _ => "gemini_api_key"
-                    };
-                    credentialStore.Set(keyName, firstRunDlg.ApiKey);
-                }
-                await settingsStore.SaveSettingsAsync(settings);
-
-                ShowHint("Bienvenue dans PROFstudio 👋",
-                    "Votre espace est prêt ! Cliquez sur « Nouvelle fiche » pour démarrer votre premier document.");
+                settings.Folders.GuidesDir = firstRunDlg.GuidesPath;
             }
-            else
+            if (!string.IsNullOrWhiteSpace(firstRunDlg.SelectedProviderKey))
             {
-                await settingsStore.SaveSettingsAsync(settings);
+                settings.Ai.GlobalProvider = firstRunDlg.SelectedProviderKey;
             }
-            RefreshAiChip();
+            if (!string.IsNullOrWhiteSpace(firstRunDlg.ApiKey))
+            {
+                var credentialStore = App.Services.GetRequiredService<ICredentialStore>();
+                var keyName = firstRunDlg.SelectedProviderKey switch
+                {
+                    "openai" => "openai_api_key",
+                    _ => "gemini_api_key"
+                };
+                credentialStore.Set(keyName, firstRunDlg.ApiKey);
+            }
         }
+
+        // Persisté après application des choix — si l'écriture échoue, le flag
+        // n'est pas persisté et la boîte de première exécution sera reposée.
+        settings.IsFirstRunCompleted = true;
+        await settingsStore.SaveSettingsAsync(settings);
+
+        if (res == ContentDialogResult.Primary)
+        {
+            ShowHint(Services.L10n.Get("Hint_Welcome_Title"),
+                Services.L10n.Get("Hint_Welcome_Message"));
+        }
+        RefreshAiChip();
     }
 
     // ==========================================================================
@@ -404,12 +455,12 @@ public sealed partial class MainWindow : Window
 
         StatusSectionText.Text = tag switch
         {
-            "FichePage" => "Section : Fiche pédagogique",
-            "EvaluationPage" => "Section : Évaluation",
-            "QuizPage" => "Section : Quiz",
-            "HistoryPage" => "Section : Historique",
-            "SettingsPage" => "Section : Paramètres",
-            _ => "Section : Fiche pédagogique"
+            "FichePage" => Services.L10n.Get("Section_Fiche"),
+            "EvaluationPage" => Services.L10n.Get("Section_Evaluation"),
+            "QuizPage" => Services.L10n.Get("Section_Quiz"),
+            "HistoryPage" => Services.L10n.Get("Section_History"),
+            "SettingsPage" => Services.L10n.Get("Section_Settings"),
+            _ => Services.L10n.Get("Section_Fiche")
         };
 
         _shellState.LastNavigationTag = tag;
@@ -442,9 +493,8 @@ public sealed partial class MainWindow : Window
         NavView.MenuItems.OfType<NavigationViewItem>()
             .FirstOrDefault(i => string.Equals(i.Tag as string, tag, StringComparison.Ordinal));
 
-    private void NavigateToTag(string tag)
-    {
-        if (tag == "SettingsPage")
+    public void NavigateToTag(string tag)
+    {        if (tag == "SettingsPage")
         {
             NavView.SelectedItem = NavView.SettingsItem;
             return;
@@ -482,7 +532,7 @@ public sealed partial class MainWindow : Window
             NavigateToTag("HistoryPage");
         }
 
-        SetStatus("🔍 Recherche dans l'historique");
+        SetStatus(Services.L10n.Get("Status_SearchHistory"));
         GlobalSearchBox.Text = string.Empty;
     }
 
@@ -527,8 +577,6 @@ public sealed partial class MainWindow : Window
 
     private void OnSearchClicked(object sender, RoutedEventArgs e) => FocusHistorySearch();
 
-    private void OnSettingsClicked(object sender, RoutedEventArgs e) => NavigateToTag("SettingsPage");
-
     private void OnShortcutsClicked(object sender, RoutedEventArgs e) => ShowShortcutsDialog();
 
     private void OnProfileSettingsClicked(object sender, RoutedEventArgs e)
@@ -560,12 +608,12 @@ public sealed partial class MainWindow : Window
     private void CreateNewFiche()
     {
         NavigateToTag("FichePage");
-        SetStatus("📄 Nouvelle fiche");
+        SetStatus(Services.L10n.Get("Status_NewFiche"));
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
             ExecuteMatchingCommand(dc, out _, "ResetFormCommand", "NewFicheCommand"))
         {
-            ShowHint("Nouvelle fiche", "Le formulaire est prêt — à vous de jouer ! ✨");
+            ShowHint(Services.L10n.Get("Hint_NewFiche_Title"), Services.L10n.Get("Hint_NewFiche_Message"));
         }
     }
 
@@ -574,7 +622,7 @@ public sealed partial class MainWindow : Window
         if (ContentFrame.Content is HistoryPage hp)
         {
             hp.FocusSearchBox();
-            SetStatus("🔍 Recherche dans l'historique");
+            SetStatus(Services.L10n.Get("Status_SearchHistory"));
             return;
         }
 
@@ -585,7 +633,7 @@ public sealed partial class MainWindow : Window
         }
         ContentFrame.Navigated += handler;
         NavigateToTag("HistoryPage");
-        SetStatus("🔍 Recherche dans l'historique");
+        SetStatus(Services.L10n.Get("Status_SearchHistory"));
     }
 
     // ==========================================================================
@@ -622,17 +670,80 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Point d'entrée public pour les Paramètres : applique le thème clair / sombre /
+    /// système au shell et le persiste dans l'état de la coque (source de vérité unique).
+    /// </summary>
+    public void ApplyShellTheme(string theme) => ApplyTheme(theme);
+
+    /// <summary>Thème actuellement appliqué au shell (« Light » / « Dark » / « System »).</summary>
+    public string CurrentShellTheme => _shellState.Theme;
+
+    /// <summary>
+    /// Synchronise la bascule Assistant de la barre de titre avec l'état réellement
+    /// appliqué au volet (les pages peuvent modifier la visibilité de leur côté) —
+    /// sinon le volet « réapparaît » à la navigation suivante avec un état périmé.
+    /// </summary>
+    public void SyncAssistantToggle(bool isVisible)
+    {
+        AssistantToggleButton.IsChecked = isVisible;
+        _shellState.IsAssistantVisible = isVisible;
+        SaveShellState();
+    }
+
+    /// <summary>
+    /// État contraste élevé lu depuis le registre (SPI_GETHIGHCONTRACT) :
+    /// fiable dans une application non packagée, contrairement à
+    /// AccessibilitySettings dont l'abonnement aux événements échoue.
+    /// </summary>
+    private static bool IsHighContrastEnabled()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\Accessibility\HighContrast");
+            var raw = key?.GetValue("Flags");
+            var flags = raw switch
+            {
+                int i => i,
+                string s when int.TryParse(s, out var parsed) => parsed,
+                _ => 0
+            };
+            // HCF_HIGHCONTRASTON = 0x00000001
+            return (flags & 0x1) != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void UpdateCaptionButtonColors()
     {
         try
         {
             var tb = _appWindow.TitleBar;
-            bool dark = RootGrid.ActualTheme == ElementTheme.Dark;
+            bool hc = IsHighContrastEnabled();            bool dark = RootGrid.ActualTheme == ElementTheme.Dark;
 
             tb.BackgroundColor = Colors.Transparent;
             tb.ButtonBackgroundColor = Colors.Transparent;
             tb.InactiveBackgroundColor = Colors.Transparent;
             tb.ButtonInactiveBackgroundColor = Colors.Transparent;
+
+            if (hc)
+            {
+                var windowText = GetSystemColorResource("SystemColorWindowTextColor", Colors.White);
+                var highlight = GetSystemColorResource("SystemColorHighlightColor", Windows.UI.Color.FromArgb(255, 0, 120, 215));
+
+                tb.ForegroundColor = windowText;
+                tb.ButtonForegroundColor = windowText;
+                tb.InactiveForegroundColor = windowText;
+                tb.ButtonInactiveForegroundColor = windowText;
+                tb.ButtonHoverForegroundColor = windowText;
+                tb.ButtonHoverBackgroundColor = highlight;
+                tb.ButtonPressedForegroundColor = windowText;
+                tb.ButtonPressedBackgroundColor = highlight;
+                return;
+            }
 
             tb.ForegroundColor = dark ? Colors.White : Colors.Black;
             tb.ButtonForegroundColor = dark ? Colors.White : Colors.Black;
@@ -651,6 +762,9 @@ public sealed partial class MainWindow : Window
             Log.Debug(ex, "Couleurs des boutons de la barre de titre non appliquées.");
         }
     }
+
+    private static Windows.UI.Color GetSystemColorResource(string key, Windows.UI.Color fallback) =>
+        Application.Current.Resources[key] is SolidColorBrush brush ? brush.Color : fallback;
 
     // ==========================================================================
     //  Gestion de la fenêtre : insets, taille minimale, persistance
@@ -788,9 +902,6 @@ public sealed partial class MainWindow : Window
         return false;
     }
 
-    private static bool IsWindows11OrGreater() =>
-        Environment.OSVersion.Version >= new Version(10, 0, 22000);
-
     // ----- Sous-classement Win32 pour la taille minimale (1024 × 640) -----
 
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
@@ -893,6 +1004,60 @@ public sealed partial class MainWindow : Window
     // ==========================================================================
     //  Badges dynamiques : puce IA & profil enseignant (IReadinessService UX-05)
     // ==========================================================================
+    private bool _aiPulseStarted;
+
+    private const string CelebratedFirstDocKey = "FicheGen.CelebratedFirstDoc";
+
+    /// <summary>Un seul moment de félicitations, à la toute première fiche générée.</summary>
+    private void CelebrateFirstGeneration(ResultViewModel vm)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(vm.CurrentHtml)) return;
+
+            var values = Windows.Storage.ApplicationData.Current.LocalSettings.Values;
+            if (values.ContainsKey(CelebratedFirstDocKey)) return;
+            values[CelebratedFirstDocKey] = true;
+
+            ShowHint(Services.L10n.Get("Hint_FirstDoc_Title"),
+                Services.L10n.Get("Hint_FirstDoc_Message"));
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Célébration de première génération ignorée.");
+        }
+    }
+
+    /// <summary>Fait respirer le voyant IA de la barre de titre pendant une génération.</summary>
+    private void UpdateAiPulse(bool busy)
+    {
+        try
+        {
+            if (busy && Services.UiMotion.Enabled)
+            {
+                if (_aiPulseStarted) return;
+                if (RootGrid.Resources["AiPulseStoryboard"] is Microsoft.UI.Xaml.Media.Animation.Storyboard sb)
+                {
+                    sb.Begin();
+                    _aiPulseStarted = true;
+                }
+            }
+            else
+            {
+                if (_aiPulseStarted && RootGrid.Resources["AiPulseStoryboard"] is Microsoft.UI.Xaml.Media.Animation.Storyboard sb)
+                {
+                    sb.Stop();
+                }
+                _aiPulseStarted = false;
+                AiStatusGlyph.Opacity = 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Pulsation du voyant IA non appliquée.");
+        }
+    }
+
     public void RefreshAiChip()
     {
         var readiness = App.Services.GetService<IReadinessService>();
@@ -937,8 +1102,8 @@ public sealed partial class MainWindow : Window
         try
         {
             var settings = _settingsStore.GetSettings<AppSettings>();
-            var name = string.IsNullOrWhiteSpace(settings.Defaults.TeacherName) ? "Enseignant·e" : settings.Defaults.TeacherName;
-            var school = string.IsNullOrWhiteSpace(settings.Defaults.SchoolName) ? "Compte local — aucune donnée partagée" : settings.Defaults.SchoolName;
+            var name = string.IsNullOrWhiteSpace(settings.Defaults.TeacherName) ? Services.L10n.Get("Profile_DefaultName") : settings.Defaults.TeacherName;
+            var school = string.IsNullOrWhiteSpace(settings.Defaults.SchoolName) ? Services.L10n.Get("Profile_DefaultSchool") : settings.Defaults.SchoolName;
 
             TeacherPersonPicture.DisplayName = name;
             TeacherPersonPictureLarge.DisplayName = name;
@@ -951,50 +1116,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Recherche réflexive (profondeur limitée) d'une propriété texte dans le graphe
-    /// des paramètres — permet une puce IA réellement dynamique sans couplage fort.
-    /// </summary>
-    private static string? FindStringProperty(object? root, string key)
-    {
-        if (root is null) return null;
-
-        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
-        var queue = new Queue<(object Target, int Depth)>();
-        queue.Enqueue((root, 0));
-
-        while (queue.Count > 0)
-        {
-            var (target, depth) = queue.Dequeue();
-            if (!visited.Add(target)) continue;
-
-            foreach (var prop in target.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
-
-                object? value;
-                try { value = prop.GetValue(target); }
-                catch { continue; }
-
-                if (value is string s)
-                {
-                    if (!string.IsNullOrWhiteSpace(s) &&
-                        prop.Name.Contains(key, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return s;
-                    }
-                }
-                else if (value is not null && depth < 3 &&
-                         value.GetType().IsClass &&
-                         value is not System.Collections.IEnumerable)
-                {
-                    queue.Enqueue((value, depth + 1));
-                }
-            }
-        }
-        return null;
-    }
-
     // ==========================================================================
     //  Raccourcis clavier — dispatchers
     // ==========================================================================
@@ -1002,36 +1123,44 @@ public sealed partial class MainWindow : Window
     {
         args.Handled = true;
 
-        if (ContentFrame.Content is Page { DataContext: object dc })
+        // Les pages de création gèrent la validation + le focus sur le champ manquant.
+        if (ContentFrame.Content is ICreationPage creationPage)
         {
-            if (ExecuteMatchingCommand(dc, out bool found,
-                    "GenerateFicheCommand", "GenerateEvaluationCommand", "GenerateQuizCommand", "GenerateCommand"))
+            if (creationPage.TryStartGeneration())
             {
-                SetStatus("⏳ Génération en cours…");
-                return;
+                SetStatus(Services.L10n.Get("Status_Generating"));
             }
+            return;
+        }
 
-            ShowHint("Génération", found
-                ? "Une génération est déjà en cours… Patience ! ⏳"
-                : "Aucune génération n'est disponible sur cette page.");
-        }
-        else
-        {
-            NavigateToTag("FichePage");
-            ShowHint("Génération", "Ouvrez d'abord une page de création (Fiche, Évaluation ou Quiz).");
-        }
+        ShowHint(Services.L10n.Get("Hint_OpenCreationPage_Title"), Services.L10n.Get("Hint_OpenCreationPage_Message"));
     }
 
     private void OnEscInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
+
+        // La palette de commandes est prioritaire : Échap la referme d'abord.
+        if (CommandPaletteOverlay.IsOpen)
+        {
+            CommandPaletteOverlay.Close();
+            return;
+        }
+
         ShellHintTip.IsOpen = false;
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
             ExecuteMatchingCommand(dc, out _, "CancelCommand", "CancelGenerationCommand"))
         {
-            SetStatus("✋ Génération annulée");
-            ShowHint("Annulation", "La génération en cours a été annulée.");
+            SetStatus(Services.L10n.Get("Status_Cancelled"));
+            ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_Cancel_Message"));
+            return;
+        }
+
+        // En pleine saisie, Échap ne doit pas déclencher d'actions globales.
+        if (IsFocusInEditableField())
+        {
+            args.Handled = false;
             return;
         }
 
@@ -1049,6 +1178,103 @@ public sealed partial class MainWindow : Window
         SetAssistantVisible(AssistantToggleButton.IsChecked == true);
     }
 
+    // ==========================================================================
+    //  Palette de commandes (Ctrl+K)
+    // ==========================================================================
+    private void OnCtrlKInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        if (CommandPaletteOverlay.IsOpen) CommandPaletteOverlay.Close();
+        else OpenCommandPalette();
+    }
+
+    public void OpenCommandPalette()
+    {
+        var L = Services.L10n.Get;
+        var actions = new List<CommandPalette.CommandAction>
+        {
+            new(L("Palette_GotoFiche"), L("Palette_GotoFiche_Sub"), "\uE8A5", "Ctrl+1",
+                () => NavigateToTag("FichePage")),
+            new(L("Palette_GotoEvaluation"), L("Palette_GotoEvaluation_Sub"), "\uE70F", "Ctrl+2",
+                () => NavigateToTag("EvaluationPage")),
+            new(L("Palette_GotoQuiz"), L("Palette_GotoQuiz_Sub"), "\uE9D5", "Ctrl+3",
+                () => NavigateToTag("QuizPage")),
+            new(L("Palette_GotoHistory"), L("Palette_GotoHistory_Sub"), "\uE81C", "Ctrl+4",
+                () => NavigateToTag("HistoryPage")),
+
+            new(L("Palette_NewFiche"), L("Palette_NewFiche_Sub"), "\uE710", "Ctrl+N", CreateNewFiche),
+            new(L("Palette_ToggleAssistant"), L("Palette_ToggleAssistant_Sub"), "\uE99A", "Ctrl+B",
+                () =>
+                {
+                    AssistantToggleButton.IsChecked = AssistantToggleButton.IsChecked != true;
+                    SetAssistantVisible(AssistantToggleButton.IsChecked == true);
+                }),
+            new(L("Palette_ChangeTheme"), L("Palette_ChangeTheme_Sub"), "\uE793", "", CycleTheme),
+            new(L("Palette_SearchDocs"), L("Palette_SearchDocs_Sub"), "\uE721", "Ctrl+F",
+                FocusHistorySearch),
+            new(L("Palette_OpenSettings"), L("Palette_OpenSettings_Sub"), "\uE713", "Ctrl+,",
+                () => NavigateToTag("SettingsPage")),
+            new(L("Palette_Shortcuts"), L("Palette_Shortcuts_Sub"), "\uE765", "F1", ShowShortcutsDialog),
+        };
+
+        if (ContentFrame.Content is ICreationPage creationPage)
+        {
+            actions.Insert(4, new CommandPalette.CommandAction(
+                L("Palette_GenerateNow"), L("Palette_GenerateNow_Sub"), "\uE768", "Ctrl+G",
+                () => creationPage.TryStartGeneration()));
+        }
+
+        var resultVm = App.Services.GetService<ResultViewModel>();
+
+        // Génération en cours : proposition d'annulation en tête de liste.
+        if (resultVm is { IsBusy: true })
+        {
+            actions.Insert(0, new CommandPalette.CommandAction(
+                L("Palette_StopGeneration"), L("Palette_StopGeneration_Sub"), "\uE71A", "Échap",
+                () =>
+                {
+                    if (ContentFrame.Content is not Page page) return;
+                    switch (page.DataContext)
+                    {
+                        case FicheFormViewModel f: f.CancelGenerationCommand.Execute(null); break;
+                        case EvaluationViewModel ev: ev.CancelGenerationCommand.Execute(null); break;
+                        case QuizViewModel q: q.CancelGenerationCommand.Execute(null); break;
+                    }
+                }));
+        }
+
+        if (resultVm is { HasDocument: true })
+        {
+            actions.Add(new CommandPalette.CommandAction(
+                L("Palette_ExportPdf"), L("Palette_ExportPdf_Sub"), "\uEA90", "",
+                () => resultVm.ExportPdfCommand.Execute(null)));
+            actions.Add(new CommandPalette.CommandAction(
+                L("Palette_ExportWord"), L("Palette_ExportWord_Sub"), "\uE8A5", "",
+                () => resultVm.ExportDocxCommand.Execute(null)));
+            actions.Add(new CommandPalette.CommandAction(
+                L("Palette_PrintDoc"), L("Palette_PrintDoc_Sub"), "\uE749", "Ctrl+P",
+                () => resultVm.PrintCommand.Execute(null)));
+            actions.Add(new CommandPalette.CommandAction(
+                resultVm.IsStudentView ? L("Palette_ShowTeacherVersion") : L("Palette_ShowStudentVersion"),
+                L("Palette_ToggleView_Sub"), "\uE77B", "",
+                () => resultVm.ToggleStudentViewCommand.Execute(null)));
+        }
+
+        CommandPaletteOverlay.Open(actions);
+    }
+
+    private void CycleTheme()
+    {
+        var next = _shellState.Theme switch
+        {
+            "System" => "Light",
+            "Light" => "Dark",
+            _ => "System"
+        };
+        ApplyTheme(next);
+        SetStatus(Services.L10n.Format("Status_Theme", next switch { "Light" => Services.L10n.Get("Theme_Light"), "Dark" => Services.L10n.Get("Theme_Dark"), _ => Services.L10n.Get("Theme_System") }));
+    }
+
     private void OnCtrlNInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
@@ -1064,18 +1290,18 @@ public sealed partial class MainWindow : Window
             if (ExecuteMatchingCommand(dc, out bool found,
                     "ExportCommand", "ExportDocxCommand", "ExportPdfCommand", "ExportRtfCommand"))
             {
-                SetStatus("📄 Exportation du document…");
-                ShowHint("Exportation", "Exportation du document lancée… 📄");
+                SetStatus(Services.L10n.Get("Status_Exporting"));
+                ShowHint(Services.L10n.Get("Hint_Export_Title"), Services.L10n.Get("Hint_Export_Message"));
                 return;
             }
 
-            ShowHint("Exportation", found
-                ? "Exportation indisponible pour le moment."
-                : "Générez d'abord un document (Ctrl+G) pour pouvoir l'exporter.");
+            ShowHint(Services.L10n.Get("Hint_Export_Title"), found
+                ? Services.L10n.Get("Hint_Unavailable")
+                : Services.L10n.Get("Hint_Export_GenerateFirst"));
         }
         else
         {
-            ShowHint("Exportation", "Aucun document à exporter sur cette page.");
+            ShowHint(Services.L10n.Get("Hint_Export_Title"), Services.L10n.Get("Hint_NothingToExport"));
         }
     }
 
@@ -1090,9 +1316,9 @@ public sealed partial class MainWindow : Window
             handled = ExecuteMatchingCommand(dc, out _, "TogglePreviewCommand");
         }
 
-        ShowHint("Aperçu", handled
-            ? (_isPreviewVisible ? "Volet d'aperçu affiché." : "Volet d'aperçu masqué.")
-            : "Le volet d'aperçu n'est pas disponible sur cette page.");
+        ShowHint(Services.L10n.Get("Hint_Preview_Title"), handled
+            ? (_isPreviewVisible ? Services.L10n.Get("Hint_Preview_Shown") : Services.L10n.Get("Hint_Preview_Hidden"))
+            : Services.L10n.Get("Hint_Preview_Unavailable"));
     }
 
     private void OnCtrlPInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -1104,18 +1330,18 @@ public sealed partial class MainWindow : Window
             if (ExecuteMatchingCommand(dc, out bool found,
                     "PrintCommand", "ExportPdfCommand", "PrintPdfCommand"))
             {
-                SetStatus("🖨️ Préparation de l'impression…");
-                ShowHint("Impression", "Préparation de l'impression / du PDF… 🖨️");
+                SetStatus(Services.L10n.Get("Status_Printing"));
+                ShowHint(Services.L10n.Get("Hint_Print_Title"), Services.L10n.Get("Hint_Print_Message"));
                 return;
             }
 
-            ShowHint("Impression", found
-                ? "Impression indisponible pour le moment."
-                : "Générez d'abord un document (Ctrl+G) pour l'imprimer.");
+            ShowHint(Services.L10n.Get("Hint_Print_Title"), found
+                ? Services.L10n.Get("Hint_Unavailable")
+                : Services.L10n.Get("Hint_Print_GenerateFirst"));
         }
         else
         {
-            ShowHint("Impression", "Rien à imprimer sur cette page.");
+            ShowHint(Services.L10n.Get("Hint_Print_Title"), Services.L10n.Get("Hint_NothingToPrint"));
         }
     }
 
@@ -1127,24 +1353,38 @@ public sealed partial class MainWindow : Window
 
     private void OnCtrlFInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        // Ctrl+F dans un champ de saisie : on ne vole pas le raccourci d'édition.
+        if (IsFocusInEditableField()) return;
+
         args.Handled = true;
         FocusHistorySearch();
     }
 
     private void OnCtrlZInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        // Ctrl+Z dans un champ de saisie : l'annulation de FRAPPE prime sur celle du document.
+        if (IsFocusInEditableField()) return;
+
         args.Handled = true;
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
             ExecuteMatchingCommand(dc, out _, "UndoCommand", "RestoreLastDeletedCommand", "UndoDeleteCommand"))
         {
-            SetStatus("↩️ Action annulée");
-            ShowHint("Annulation", "Dernière action annulée. ↩️");
+            SetStatus(Services.L10n.Get("Status_Undone"));
+            ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_Undo_Message"));
         }
         else
         {
-            ShowHint("Annulation", "Rien à annuler pour le moment.");
+            ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_NothingToUndo"));
         }
+    }
+
+    private bool IsFocusInEditableField()
+    {
+        var xamlRoot = Content?.XamlRoot;
+        if (xamlRoot == null) return false;
+
+        return FocusManager.GetFocusedElement(xamlRoot) is TextBox or PasswordBox or RichEditBox;
     }
 
     private void OnCtrlTabInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -1192,6 +1432,12 @@ public sealed partial class MainWindow : Window
     {
         args.Handled = true;
         ShowShortcutsDialog();
+    }
+
+    private void OnCtrlZeroInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        (ContentFrame.Content as ICreationPage)?.ResetPreviewZoom();
     }
 
     // ==========================================================================
@@ -1273,6 +1519,12 @@ public sealed partial class MainWindow : Window
                 if (resultVm.ExportDocxCommand.CanExecute(null)) { resultVm.ExportDocxCommand.Execute(null); return true; }
                 return false;
             }
+            if (commandNames.Contains("PrintCommand") || commandNames.Contains("PrintPdfCommand"))
+            {
+                found = true;
+                if (resultVm.PrintCommand.CanExecute(null)) { resultVm.PrintCommand.Execute(null); return true; }
+                return false;
+            }
             if (commandNames.Contains("UndoCommand") && resultVm.CanUndo)
             {
                 found = true;
@@ -1303,22 +1555,25 @@ public sealed partial class MainWindow : Window
     // ==========================================================================
     //  Boîtes de dialogue : raccourcis & à propos
     // ==========================================================================
-    private static readonly (string Keys, string Description)[] ShortcutList =
+    private static (string Keys, string Description)[] BuildShortcutList() => new[]
     {
-        ("Ctrl + G", "Générer la fiche, l'évaluation ou le quiz"),
-        ("Échap", "Annuler la génération en cours"),
-        ("Ctrl + B", "Afficher ou masquer l'Assistant IA"),
-        ("Ctrl + N", "Créer une nouvelle fiche"),
-        ("Ctrl + Maj + E", "Exporter le document (Word, PDF…)"),
-        ("Ctrl + Maj + W", "Afficher ou masquer le volet d'aperçu"),
-        ("Ctrl + P", "Imprimer ou exporter en PDF"),
-        ("Ctrl + F", "Rechercher dans l'historique"),
-        ("Ctrl + Z", "Annuler la dernière action"),
-        ("Ctrl + Tab", "Passer à la section suivante"),
-        ("Ctrl + Maj + Tab", "Revenir à la section précédente"),
-        ("Ctrl + 1 à 4", "Accéder directement à une section"),
-        ("Ctrl + ,", "Ouvrir les Paramètres"),
-        ("F1", "Afficher cette aide"),
+        ("Ctrl + K", Services.L10n.Get("Shortcut_Palette")),
+        ("Ctrl + G", Services.L10n.Get("Shortcut_Generate")),
+        ("Ctrl + molette", Services.L10n.Get("Shortcut_WheelZoom")),
+        ("Ctrl + 0", Services.L10n.Get("Shortcut_ResetZoom")),
+        ("Échap", Services.L10n.Get("Shortcut_Escape")),
+        ("Ctrl + B", Services.L10n.Get("Shortcut_Assistant")),
+        ("Ctrl + N", Services.L10n.Get("Shortcut_NewFiche")),
+        ("Ctrl + Maj + E", Services.L10n.Get("Shortcut_Export")),
+        ("Ctrl + Maj + W", Services.L10n.Get("Shortcut_TogglePreview")),
+        ("Ctrl + P", Services.L10n.Get("Shortcut_Print")),
+        ("Ctrl + F", Services.L10n.Get("Shortcut_Search")),
+        ("Ctrl + Z", Services.L10n.Get("Shortcut_Undo")),
+        ("Ctrl + Tab", Services.L10n.Get("Shortcut_NextSection")),
+        ("Ctrl + Maj + Tab", Services.L10n.Get("Shortcut_PreviousSection")),
+        ("Ctrl + 1 à 4", Services.L10n.Get("Shortcut_GotoSection")),
+        ("Ctrl + ,", Services.L10n.Get("Shortcut_Settings")),
+        ("F1", Services.L10n.Get("Shortcut_Help")),
     };
 
     private async void ShowShortcutsDialog()
@@ -1345,15 +1600,15 @@ public sealed partial class MainWindow : Window
         var dialog = new ContentDialog
         {
             XamlRoot = xamlRoot,
-            Title = "Raccourcis clavier",
-            PrimaryButtonText = "Fermer",
+            Title = Services.L10n.Get("Dialog_Shortcuts_Title"),
+            PrimaryButtonText = Services.L10n.Get("Dialog_Close"),
             DefaultButton = ContentDialogButton.Primary,
             MaxWidth = 600
         };
 
         var stack = new StackPanel { Spacing = 12 };
 
-        foreach (var (keys, description) in ShortcutList)
+        foreach (var (keys, description) in BuildShortcutList())
         {
             var shortcutItem = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
             
@@ -1405,7 +1660,7 @@ public sealed partial class MainWindow : Window
             var dialog = new ContentDialog
             {
                 XamlRoot = xamlRoot,
-                Title = "À propos de PROFstudio",
+                Title = Services.L10n.Get("Dialog_About_Title"),
                 Content = new StackPanel
                 {
                     Spacing = 16,
@@ -1445,7 +1700,7 @@ public sealed partial class MainWindow : Window
                                         },
                                         new TextBlock
                                         {
-                                            Text = "Générateur de fiches pédagogiques intelligent",
+                                            Text = Services.L10n.Get("Dialog_About_Tagline"),
                                             FontSize = 14,
                                             Foreground = (SolidColorBrush)Application.Current.Resources["TextFillColorSecondaryBrush"]
                                         }
@@ -1455,24 +1710,24 @@ public sealed partial class MainWindow : Window
                         },
                         new TextBlock
                         {
-                            Text = $"Version : {version}",
+                            Text = Services.L10n.Format("Dialog_About_Version", version),
                             FontSize = 14
                         },
                         new TextBlock
                         {
-                            Text = "PROFstudio aide les enseignants à créer rapidement des fiches pédagogiques, des évaluations et des quiz avec l'aide de l'IA.",
+                            Text = Services.L10n.Get("Dialog_About_Description"),
                             FontSize = 14,
                             TextWrapping = TextWrapping.Wrap
                         },
                         new TextBlock
                         {
-                            Text = "© 2026 PROFstudio. Tous droits réservés.",
+                            Text = Services.L10n.Get("Dialog_About_Copyright"),
                             FontSize = 12,
                             Foreground = (SolidColorBrush)Application.Current.Resources["TextFillColorSecondaryBrush"]
                         }
                     }
                 },
-                PrimaryButtonText = "Fermer",
+                PrimaryButtonText = Services.L10n.Get("Dialog_Close"),
                 DefaultButton = ContentDialogButton.Primary
             };
 
@@ -1493,7 +1748,7 @@ public sealed partial class MainWindow : Window
     {
         NotificationActionButton.Visibility = Visibility.Collapsed;
         NotificationDismissButton.Visibility = Visibility.Collapsed;
-        StatusText.Text = "Prêt pour une nouvelle séance";
+        StatusText.Text = Services.L10n.Get("Status_Ready");
         NotificationIcon.Text = "✨";
     }
 }

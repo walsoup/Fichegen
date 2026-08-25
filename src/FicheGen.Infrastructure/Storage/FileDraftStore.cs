@@ -38,7 +38,9 @@ public sealed class FileDraftStore : IDraftStore
         {
             Directory.CreateDirectory(_draftsDirectory);
             var filePath = GetDraftFilePath(draftKey);
-            var tempPath = $"{filePath}.tmp";
+            // Unique temp name: two concurrent saves of the same key must not
+            // interleave on one shared temp file.
+            var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
 
             var json = JsonSerializer.Serialize(fields, new JsonSerializerOptions { WriteIndented = true });
 

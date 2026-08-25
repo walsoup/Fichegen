@@ -19,13 +19,10 @@
                         <GradientStop Color="#0078D4" Offset="0.0" />
                         <GradientStop Color="#002050" Offset="1.0" />
                     </LinearGradientBrush>
-                    <SolidColorBrush x:Key="AiChipBackgroundBrush" Color="#20FFFFFF" />
-                    <SolidColorBrush x:Key="AiChipBorderBrush" Color="#30FFFFFF" />
-                    <SolidColorBrush x:Key="AiStatusOnlineBrush" Color="#107C41" />
-                    <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
-                    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#20FFFFFF"/>
-                    <SolidColorBrush x:Key="CardBorderBrush" Color="#15FFFFFF"/>
-                    <SolidColorBrush x:Key="PillBackgroundBrush" Color="#15FFFFFF"/>
+                    <!-- Voile léger : assombrit à peine le contenu derrière le volet
+                         Assistant en superposition (un voile trop dense donnait
+                         l'impression d'une « ombre » injustifiée sur la fenêtre). -->
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#3D000000" />
                     <SolidColorBrush x:Key="StatusPositiveFgBrush" Color="#6CCB5F"/>
                     <SolidColorBrush x:Key="StatusPositiveBgBrush" Color="#1F6CCB5F"/>
                     <SolidColorBrush x:Key="StatusCautionFgBrush" Color="#FCE100"/>
@@ -38,13 +35,7 @@
                         <GradientStop Color="#0078D4" Offset="0.0" />
                         <GradientStop Color="#005A9E" Offset="1.0" />
                     </LinearGradientBrush>
-                    <SolidColorBrush x:Key="AiChipBackgroundBrush" Color="#0D000000" />
-                    <SolidColorBrush x:Key="AiChipBorderBrush" Color="#1A000000" />
-                    <SolidColorBrush x:Key="AiStatusOnlineBrush" Color="#107C41" />
-                    <SolidColorBrush x:Key="ScrimBrush" Color="#59000000" />
-                    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FBFBFB"/>
-                    <SolidColorBrush x:Key="CardBorderBrush" Color="#E5E5E5"/>
-                    <SolidColorBrush x:Key="PillBackgroundBrush" Color="#F0F0F0"/>
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#26000000" />
                     <SolidColorBrush x:Key="StatusPositiveFgBrush" Color="#0F7B0F"/>
                     <SolidColorBrush x:Key="StatusPositiveBgBrush" Color="#1F0F7B0F"/>
                     <SolidColorBrush x:Key="StatusCautionFgBrush" Color="#9D5D00"/>
@@ -54,13 +45,7 @@
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="PROFstudioLogoBrush" Color="{ThemeResource SystemColorHighlightColor}" />
-                    <SolidColorBrush x:Key="AiChipBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
-                    <SolidColorBrush x:Key="AiChipBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
-                    <SolidColorBrush x:Key="AiStatusOnlineBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="ScrimBrush" Color="{ThemeResource SystemColorWindowColor}" />
-                    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
-                    <SolidColorBrush x:Key="CardBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
-                    <SolidColorBrush x:Key="PillBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
                     <SolidColorBrush x:Key="StatusPositiveFgBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
                     <SolidColorBrush x:Key="StatusPositiveBgBrush" Color="{ThemeResource SystemColorWindowColor}"/>
                     <SolidColorBrush x:Key="StatusCautionFgBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
@@ -70,14 +55,9 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <!-- Application-wide Fallback Resources -->
-            <LinearGradientBrush x:Key="PROFstudioLogoBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#0078D4" Offset="0.0" />
-                <GradientStop Color="#005A9E" Offset="1.0" />
-            </LinearGradientBrush>
-            <SolidColorBrush x:Key="AiChipBackgroundBrush" Color="#0D000000" />
-            <SolidColorBrush x:Key="AiChipBorderBrush" Color="#1A000000" />
-            <SolidColorBrush x:Key="AiStatusOnlineBrush" Color="#107C41" />
+            <!-- ========================================================================= -->
+            <!-- PROFstudio DESIGN SYSTEM · COMPONENT STYLES & TOKENS                      -->
+            <!-- ========================================================================= -->
 
             <!-- ========================================================================= -->
             <!-- PROFstudio DESIGN SYSTEM · COMPONENT STYLES & TOKENS                      -->
@@ -136,8 +116,6 @@
                 </Setter>
             </Style>
 
-            <Style x:Key="SubtleTransparentButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}" />
-
             <!-- Conteneur de carte de formulaire (Étape 1, 2, 3) -->
             <Style x:Key="FormCardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
@@ -148,8 +126,6 @@
                 <Setter Property="Margin" Value="0,0,0,12"/>
             </Style>
 
-            <Style x:Key="CardBorderStyle" TargetType="Border" BasedOn="{StaticResource FormCardStyle}"/>
-
             <!-- Puce de sélection rapide (ChoiceChip) -->
             <Style x:Key="ChoiceChipStyle" TargetType="Button">
                 <Setter Property="Padding" Value="10,4"/>
@@ -159,26 +135,9 @@
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="FontSize" Value="12"/>
                 <Setter Property="HorizontalAlignment" Value="Left"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
-            </Style>
-
-            <!-- Pilule de métadonnées (Historique) -->
-            <Style x:Key="MetaPillStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                <Setter Property="CornerRadius" Value="10"/>
-                <Setter Property="Padding" Value="8,2"/>
-                <Setter Property="VerticalAlignment" Value="Center"/>
-            </Style>
-
-            <!-- Style d'élément conteneur d'historique -->
-            <Style x:Key="HistoryItemContainerStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="CornerRadius" Value="8"/>
-                <Setter Property="Padding" Value="14,10"/>
             </Style>
 
             <!-- Typographie -->
@@ -193,12 +152,6 @@
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <Setter Property="TextWrapping" Value="Wrap"/>
             </Style>
-
-            <!-- Spacing & Padding Tokens -->
-            <Thickness x:Key="CardPadding">16</Thickness>
-            <Thickness x:Key="CardMargin">0,0,0,12</Thickness>
-            <Thickness x:Key="FieldMargin">0,0,0,12</Thickness>
-            <Thickness x:Key="ChipPadding">12,6</Thickness>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

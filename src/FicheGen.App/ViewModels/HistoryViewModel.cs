@@ -297,6 +297,7 @@ public partial class HistoryViewModel : ObservableObject
     // ---- Propriétés observables ----------------------------------------------
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EmptyStateTitle))]
     public partial string SearchQuery { get; set; } = string.Empty;
 
     /// <summary>"Tout" | "Fiches" | "Évaluations" | "Quiz" | "Favoris".</summary>
@@ -312,6 +313,12 @@ public partial class HistoryViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string StatusMessage { get; set; } = string.Empty;
+
+    /// <summary>Titre de l'état vide : distingue « aucun document » de « aucun résultat ».</summary>
+    public string EmptyStateTitle
+        => !string.IsNullOrWhiteSpace(SearchQuery)
+            ? "Aucun résultat trouvé"
+            : "Votre bibliothèque est vide pour l'instant";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
@@ -341,15 +348,24 @@ public partial class HistoryViewModel : ObservableObject
 
     partial void OnSearchQueryChanged(string value)
     {
-        _debounceCts?.Cancel();
+        CancelDebounce();
         var cts = _debounceCts = new CancellationTokenSource();
         _ = DebouncedLoadAsync(cts);
     }
 
     partial void OnSelectedTypeFilterChanged(string value)
     {
-        _debounceCts?.Cancel();
+        CancelDebounce();
         _ = LoadHistoryAsync();
+    }
+
+    private void CancelDebounce()
+    {
+        var old = _debounceCts;
+        if (old is null) return;
+        _debounceCts = null;
+        old.Cancel();
+        old.Dispose();
     }
 
     private async Task DebouncedLoadAsync(CancellationTokenSource cts)
@@ -363,12 +379,20 @@ public partial class HistoryViewModel : ObservableObject
         {
             // Une frappe plus récente a pris le relais.
         }
+        finally
+        {
+            if (ReferenceEquals(_debounceCts, cts))
+            {
+                _debounceCts = null;
+            }
+            cts.Dispose();
+        }
     }
 
     /// <summary>Recherche immédiate (validation explicite dans la zone de recherche).</summary>
     public void SubmitSearch()
     {
-        _debounceCts?.Cancel();
+        CancelDebounce();
         _ = LoadHistoryAsync();
     }
 

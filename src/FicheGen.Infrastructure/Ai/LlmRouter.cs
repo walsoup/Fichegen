@@ -33,7 +33,7 @@ public class LlmRouter
         }
         else
         {
-            model = GetFallbackModel(providerKind);
+            model = GetFallbackModel(providerKind, providerStr);
         }
 
         var (endpoint, authStrategy, secretKeyName) = BuildEndpointAndAuth(providerStr, providerKind, model, cfg, isStreaming);

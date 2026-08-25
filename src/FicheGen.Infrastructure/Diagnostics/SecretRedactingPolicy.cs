@@ -10,7 +10,10 @@ public class SecretRedactingPolicy : ILogEventEnricher
     private static readonly Regex ApiKeyQueryRegex = new(@"(key|api_key|x-goog-api-key)\s*=\s*[A-Za-z0-9._~\-+//=]{16,}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex ApiKeyHeaderRegex = new(@"x-goog-api-key\s*:\s*[A-Za-z0-9._~\-+//=]{16,}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex BearerTokenRegex = new(@"AIzaSy[A-Za-z0-9_\-]{20,}|sk-[A-Za-z0-9]{20,}", RegexOptions.Compiled);
-    private static readonly Regex JsonKeyValRegex = new(@"(""[^""]*(?:ApiKey|Api_Key|Token|Secret|Password)[^""]*""\s*:\s*"")([^""]+)("")", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // Covers camelCase (apiKey), PascalCase (ApiKey), and snake_case store key
+    // names (gemini_api_key, proxy_api_key, …) as well as service-account
+    // fields (private_key) and generic credential names.
+    private static readonly Regex JsonKeyValRegex = new(@"(""[^""]*(?:ApiKey|Api_Key|PrivateKey|Private_Key|Token|Secret|Password|ServiceAccount)[^""]*""\s*:\s*"")([^""]+)("")", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {

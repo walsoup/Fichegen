@@ -1,23 +1,21 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
+using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using Windows.Storage;
 
 namespace FicheGen.App.Views;
 
 /// <summary>
 /// Espace de génération des fiches pédagogiques : modèles rapides, badges Eduscol,
-/// améliorateurs de prompt, validation en ligne et disposition adaptative.
+/// améliorateurs de prompt, validation au moment d'envoyer et disposition adaptative.
+/// Le squelette 3 colonnes (formulaire / aperçu / assistant) est mutualisé dans
+/// <see cref="Controls.CreationWorkspace"/> ; cette page ne conserve que ses cartes.
 /// </summary>
-public sealed partial class FichePage : Page, IAssistantHostPage
+public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
 {
-    private const string FormWidthSettingsKey = "FicheGen.FichePage.FormColumnWidth";
-    private bool _isAssistantVisible;
-    private bool _assistantOverlayOpen;
+    private bool _hasSubmitAttempted;
 
     private sealed class SubjectOption
     {
@@ -72,42 +70,37 @@ public sealed partial class FichePage : Page, IAssistantHostPage
     {
         InitializeComponent();
         SubjectCombo.ItemsSource = SubjectOptions;
-        AssistantHostHelper.WireAssistantPane(AssistantPaneControl);
+        AssistantHostHelper.WireAssistantPane(Workspace.AssistantPaneControl);
+
+        // Garde la bascule Assistant de la barre de titre synchronisée avec l'état
+        // réel du volet — sinon il « réapparaît » à la navigation suivante.
+        Workspace.AssistantVisibilityChanged += (_, isVisible) =>
+            (App.CurrentMainWindow as MainWindow)?.SyncAssistantToggle(isVisible);
+
+        // Le chemin du guide PDF arrive de façon asynchrôme (picker / glisser-déposer) :
+        // on se branche sur la propriété plutôt que sur un délai arbitraire.
+        PdfDropZoneControl.RegisterPropertyChangedCallback(
+            Controls.PdfDropZone.GuideFilePathProperty, (_, _) => ValidateForm());
+
+        // Un chapitre choisi dans la table des matières du guide préremplit le sujet.
+        PdfDropZoneControl.ChapterSelected += (_, entry) =>
+        {
+            if (DataContext is FicheFormViewModel vm && !string.IsNullOrWhiteSpace(entry.Title))
+            {
+                vm.Topic = entry.Title;
+                TopicBox.Focus(FocusState.Programmatic);
+            }
+        };
+
         Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    // ───────────────────────── Chargement / persistance ─────────────────────────
+    // ───────────────────────── Chargement ─────────────────────────
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        RestoreFormColumnWidth();
+        Workspace.RunFormEntranceAnimation();
         ValidateForm();
-    }
-
-    private void OnUnloaded(object sender, RoutedEventArgs e) => PersistFormColumnWidth();
-
-    private void RestoreFormColumnWidth()
-    {
-        try
-        {
-            var values = ApplicationData.Current.LocalSettings.Values;
-            if (values.TryGetValue(FormWidthSettingsKey, out var raw) && raw is double saved && !double.IsNaN(saved))
-            {
-                var clamped = Math.Clamp(saved, FormColumn.MinWidth, FormColumn.MaxWidth);
-                FormColumn.Width = new GridLength(clamped);
-            }
-        }
-        catch { /* Paramètres indisponibles : conserver la largeur par défaut. */ }
-    }
-
-    private void PersistFormColumnWidth()
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values[FormWidthSettingsKey] = FormColumn.ActualWidth;
-        }
-        catch { /* Non bloquant. */ }
     }
 
     // ───────────────────────── Niveau & Matière ─────────────────────────
@@ -161,118 +154,102 @@ public sealed partial class FichePage : Page, IAssistantHostPage
 
     // ───────────────────────── Guide PDF ─────────────────────────
 
-    private async void PdfDropZoneControl_Tapped(object sender, TappedRoutedEventArgs e)
+    // (Validation déclenchée par le callback sur GuideFilePath — voir le constructeur.)
+
+    // ───────────────────────── Validation au moment d'envoyer ─────────────────────────
+
+    private System.Collections.Generic.List<string> GetMissingFields()
     {
-        await Task.Delay(450);
-        ValidateForm();
+        var missing = new System.Collections.Generic.List<string>();
+        if (LevelCombo == null || SubjectCombo == null || TopicBox == null) return missing;
+
+        if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add(Services.L10n.Get("Validation_MissingLevel"));
+        if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add(Services.L10n.Get("Validation_MissingSubject"));
+        if (string.IsNullOrWhiteSpace(TopicBox.Text)) missing.Add(Services.L10n.Get("Validation_MissingTopic"));
+        return missing;
     }
 
-    private void PdfDropZoneControl_Drop(object sender, DragEventArgs e) => ValidateForm();
+    private void ShowMissingFieldsInfoBar(System.Collections.Generic.List<string> missing)
+    {
+        Workspace.FormInfoBar.Title = Services.L10n.Get("Validation_Title");
+        Workspace.FormInfoBar.Message = Services.L10n.Format("FP_MissingFields_Message", string.Join(", ", missing));
+        Workspace.FormInfoBar.Severity = InfoBarSeverity.Informational;
+        Workspace.FormInfoBar.IsOpen = true;
+    }
 
-    // ───────────────────────── Validation en ligne ─────────────────────────
+    private void FocusFirstMissingField(string field)
+    {
+        var target = field == Services.L10n.Get("Validation_MissingLevel")
+            ? (FrameworkElement)LevelCombo
+            : field == Services.L10n.Get("Validation_MissingSubject")
+                ? SubjectCombo
+                : TopicBox;
+        target?.Focus(FocusState.Keyboard);
+    }
 
+    /// <summary>Met à jour l'état du bouton Générer. L'InfoBar n'apparaît
+    /// qu'après une tentative d'envoi — jamais en pleine saisie.</summary>
     private void ValidateForm()
     {
-        if (LevelCombo == null || SubjectCombo == null || TopicBox == null || FormInfoBar == null)
+        if (LevelCombo == null || SubjectCombo == null || TopicBox == null || Workspace.FormInfoBar == null)
             return;
 
-        var missing = new System.Collections.Generic.List<string>();
-        if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add("le niveau");
-        if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add("la matière");
-        if (string.IsNullOrWhiteSpace(TopicBox.Text)) missing.Add("le sujet de la leçon");
+        var missing = GetMissingFields();
 
+        // Pendant une génération le bouton affiche « Arrêter » : il doit rester actif.
+        bool generating = DataContext is FicheFormViewModel gvm && gvm.IsGenerating;
+        if (Workspace.GenerateCta != null)
+            Workspace.GenerateCta.IsEnabled = generating || missing.Count == 0;
+
+        if (_hasSubmitAttempted)
+        {
+            if (missing.Count > 0 && !generating) ShowMissingFieldsInfoBar(missing);
+            else Workspace.FormInfoBar.IsOpen = false;
+        }
+    }
+
+    public bool TryStartGeneration()
+    {
+        var missing = GetMissingFields();
         if (missing.Count > 0)
         {
-            FormInfoBar.Title = "Informations requises";
-            FormInfoBar.Message = "Veuillez renseigner : " + string.Join(", ", missing) + ".";
-            FormInfoBar.Severity = InfoBarSeverity.Informational;
-            FormInfoBar.IsOpen = true;
-            if (CmdGenerate != null) CmdGenerate.IsEnabled = false;
+            _hasSubmitAttempted = true;
+            ShowMissingFieldsInfoBar(missing);
+            FocusFirstMissingField(missing[0]);
+            return false;
         }
-        else
+
+        if (DataContext is FicheFormViewModel vm && vm.GenerateFicheCommand.CanExecute(null))
         {
-            FormInfoBar.IsOpen = false;
-            if (CmdGenerate != null) CmdGenerate.IsEnabled = true;
+            Workspace.FormInfoBar.IsOpen = false;
+            vm.GenerateFicheCommand.Execute(null);
+            return true;
+        }
+        return false;
+    }
+
+    public void RunIncomingDocumentAnimation()
+        => _ = Workspace.Preview.RunIncomingAnimationAsync(Frame);
+
+    public void ResetPreviewZoom()
+        => _ = Workspace.Preview.ResetZoomAsync();
+
+    private void GenerateCta_GenerateRequested(object? sender, EventArgs e) => TryStartGeneration();
+
+    private void GenerateCta_CancelRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is FicheFormViewModel vm)
+        {
+            vm.CancelGenerationCommand.Execute(null);
         }
     }
 
     private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
     {
-        SetAssistantVisible(!_isAssistantVisible);
+        Workspace.SetAssistantVisible(!Workspace.IsAssistantVisible);
     }
 
-    // ───────────────────────── Assistant adaptatif (< 1380 px) ─────────────────────────
+    // ───────────────────────── Assistant adaptatif (délégué au workspace) ─────────────────────────
 
-    public void SetAssistantVisible(bool isVisible)
-    {
-        _isAssistantVisible = isVisible;
-        if (ActualWidth >= 1380)
-        {
-            AssistantColumn.Width = isVisible ? new GridLength(360) : new GridLength(0);
-            if (!isVisible) CloseAssistantOverlay();
-        }
-        else
-        {
-            if (isVisible)
-            {
-                _assistantOverlayOpen = true;
-                MoveAssistantTo(OverlayHost);
-                AssistantOverlay.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                CloseAssistantOverlay();
-            }
-        }
-    }
-
-    private void AdaptiveStates_CurrentStateChanged(object sender, VisualStateChangedEventArgs e)
-    {
-        if (e.NewState?.Name == "WideState")
-        {
-            _assistantOverlayOpen = false;
-            AssistantOverlay.Visibility = Visibility.Collapsed;
-            MoveAssistantTo(AssistantInlineHost);
-            AssistantColumn.Width = _isAssistantVisible ? new GridLength(340) : new GridLength(0);
-        }
-        else
-        {
-            AssistantColumn.Width = new GridLength(0);
-            if (_assistantOverlayOpen)
-            {
-                MoveAssistantTo(OverlayHost);
-            }
-        }
-    }
-
-    private void AssistantFab_Click(object sender, RoutedEventArgs e)
-    {
-        _assistantOverlayOpen = true;
-        MoveAssistantTo(OverlayHost);
-        AssistantOverlay.Visibility = Visibility.Visible;
-    }
-
-    private void OverlayClose_Click(object sender, RoutedEventArgs e) => CloseAssistantOverlay();
-    private void OverlayBackdrop_Tapped(object sender, TappedRoutedEventArgs e) => CloseAssistantOverlay();
-
-    private void CloseAssistantOverlay()
-    {
-        _assistantOverlayOpen = false;
-        AssistantOverlay.Visibility = Visibility.Collapsed;
-        MoveAssistantTo(AssistantInlineHost);
-    }
-
-    private void MoveAssistantTo(Panel host)
-    {
-        if (AssistantPaneControl.Parent == host) return;
-        if (AssistantPaneControl.Parent is Panel current)
-            current.Children.Remove(AssistantPaneControl);
-        host.Children.Add(AssistantPaneControl);
-    }
-
-    // ───────────────────────── Séparateur redimensionnable ─────────────────────────
-
-    private void FormSplitter_PointerEntered(object sender, PointerRoutedEventArgs e) => SplitterGrip.Opacity = 1;
-    private void FormSplitter_PointerExited(object sender, PointerRoutedEventArgs e) => SplitterGrip.Opacity = 0.45;
-    private void FormSplitter_PointerCaptureLost(object sender, PointerRoutedEventArgs e) => PersistFormColumnWidth();
+    public void SetAssistantVisible(bool isVisible) => Workspace.SetAssistantVisible(isVisible);
 }

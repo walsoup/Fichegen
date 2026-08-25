@@ -187,15 +187,19 @@ public sealed class RtfDocumentWriter : IRtfDocumentWriter
 
     private static (byte R, byte G, byte B) ParseHexColor(string hex)
     {
-        if (string.IsNullOrEmpty(hex)) return (15, 23, 42);
+        const byte fallbackR = 15, fallbackG = 23, fallbackB = 42;
+        if (string.IsNullOrWhiteSpace(hex)) return (fallbackR, fallbackG, fallbackB);
+
         var clean = hex.TrimStart('#');
-        if (clean.Length == 6)
+        if (clean.Length == 6
+            && byte.TryParse(clean.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, null, out var r)
+            && byte.TryParse(clean.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, null, out var g)
+            && byte.TryParse(clean.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
         {
-            var r = Convert.ToByte(clean.Substring(0, 2), 16);
-            var g = Convert.ToByte(clean.Substring(2, 2), 16);
-            var b = Convert.ToByte(clean.Substring(4, 2), 16);
             return (r, g, b);
         }
-        return (15, 23, 42);
+
+        // Malformed custom-preset colors (e.g. "ZZ1234") must not crash RTF export.
+        return (fallbackR, fallbackG, fallbackB);
     }
 }

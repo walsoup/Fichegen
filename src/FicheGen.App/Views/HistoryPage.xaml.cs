@@ -42,6 +42,8 @@ public sealed partial class HistoryPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        FicheGen.App.Services.UiMotion.StaggeredFadeUp(
+            new FrameworkElement[] { SearchBox, FilterRadioButtons, ResultsScrollViewer });
         await ViewModel.LoadHistoryAsync();
     }
 
@@ -65,6 +67,17 @@ public sealed partial class HistoryPage : Page
                 ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
         if (item != null)
         {
+            // Prépare le vol de la carte vers l'aperçu (animation connectée Fluent).
+            try
+            {
+                if (sender is FrameworkElement card && FicheGen.App.Services.UiMotion.Enabled)
+                {
+                    Microsoft.UI.Xaml.Media.Animation.ConnectedAnimationService
+                        .GetForCurrentView().PrepareToAnimate("openDoc", card);
+                }
+            }
+            catch { /* Animation optionnelle : ne jamais bloquer l'ouverture. */ }
+
             ViewModel.OpenItem(item);
         }
     }
@@ -80,6 +93,27 @@ public sealed partial class HistoryPage : Page
                 ViewModel.OpenItem(item);
                 e.Handled = true;
             }
+        }
+    }
+
+    // ───────────────────────── Survol carte par carte ─────────────────────────
+    // Le survol est appliqué à la carte seule (jamais au groupe du jour entier).
+
+    private void OnItemPointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        if (sender is Border card)
+        {
+            card.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
+            card.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+        }
+    }
+
+    private void OnItemPointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        if (sender is Border card)
+        {
+            card.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+            card.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
         }
     }
 
@@ -136,10 +170,10 @@ public sealed partial class HistoryPage : Page
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "Supprimer ce document ?",
-                    Content = $"« {item.Title} » sera retiré de vos documents.",
-                    PrimaryButtonText = "Supprimer",
-                    CloseButtonText = "Annuler",
+                    Title = FicheGen.App.Services.L10n.Get("HP_DeleteTitle"),
+                    Content = string.Format(FicheGen.App.Services.L10n.Get("HP_DeleteContent"), item.Title),
+                    PrimaryButtonText = FicheGen.App.Services.L10n.Get("HP_DeleteConfirm"),
+                    CloseButtonText = FicheGen.App.Services.L10n.Get("Dialog_Cancel"),
                     DefaultButton = ContentDialogButton.Close,
                     XamlRoot = this.XamlRoot
                 };
@@ -161,7 +195,7 @@ public sealed partial class HistoryPage : Page
 
     private void ShowUndoToast(string title)
     {
-        UndoToastText.Text = $"« {title} » supprimé.";
+        UndoToastText.Text = string.Format(FicheGen.App.Services.L10n.Get("HP_UndoToast"), title);
         UndoToast.Visibility = Visibility.Visible;
 
         _undoTimer?.Stop();

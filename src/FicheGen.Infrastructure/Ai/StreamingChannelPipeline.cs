@@ -17,51 +17,69 @@ public static class StreamingChannelPipeline
             FullMode = BoundedChannelFullMode.Wait
         });
 
-        _ = Task.Run(async () =>
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        // Captured once: the consumer's finally disposes the CTS while the
+        // producer may still be unwinding, and reading `.Token` on a disposed
+        // CTS throws ObjectDisposedException.
+        var producerToken = linkedCts.Token;
+
+        var producer = Task.Run(async () =>
         {
             try
             {
-                await foreach (var item in inputStream.WithCancellation(ct).ConfigureAwait(false))
+                await foreach (var item in inputStream.WithCancellation(producerToken).ConfigureAwait(false))
                 {
-                    await channel.Writer.WriteAsync(item, ct).ConfigureAwait(false);
+                    await channel.Writer.WriteAsync(item, producerToken).ConfigureAwait(false);
                 }
-                channel.Writer.Complete();
+                channel.Writer.TryComplete();
             }
             catch (Exception ex)
             {
-                channel.Writer.Complete(ex);
+                // TryComplete is safe even if the consumer already completed
+                // the writer (Complete would throw InvalidOperationException
+                // and escape as an unobserved task exception).
+                channel.Writer.TryComplete(ex);
             }
-        }, ct);
+        }, CancellationToken.None);
 
-        var reader = channel.Reader;
-        var batchBuilder = new System.Text.StringBuilder();
-        var lastFlush = DateTime.UtcNow;
-
-        while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
+        try
         {
-            while (reader.TryRead(out var item))
+            var reader = channel.Reader;
+            var batchBuilder = new System.Text.StringBuilder();
+            var lastFlush = DateTime.UtcNow;
+
+            while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
             {
-                batchBuilder.Append(item);
-                var now = DateTime.UtcNow;
-                if (now - lastFlush >= flushInterval)
+                // Flush strictly on the interval: yielding the residual batch
+                // after every drain would collapse batching to one UI update
+                // per SSE event and reintroduce render churn.
+                while (reader.TryRead(out var item))
                 {
-                    yield return batchBuilder.ToString();
-                    batchBuilder.Clear();
-                    lastFlush = now;
+                    batchBuilder.Append(item);
+                    var now = DateTime.UtcNow;
+                    if (now - lastFlush >= flushInterval)
+                    {
+                        yield return batchBuilder.ToString();
+                        batchBuilder.Clear();
+                        lastFlush = now;
+                    }
                 }
             }
 
             if (batchBuilder.Length > 0)
             {
                 yield return batchBuilder.ToString();
-                batchBuilder.Clear();
-                lastFlush = DateTime.UtcNow;
             }
         }
-
-        if (batchBuilder.Length > 0)
+        finally
         {
-            yield return batchBuilder.ToString();
+            // If the consumer abandons iteration (break/early return/disposal),
+            // stop the producer instead of letting it drain the HTTP response.
+            linkedCts.Cancel();
+            channel.Writer.TryComplete();
+            // Dispose only after the producer has fully exited: it still reads
+            // the token while unwinding, and racing Dispose throws.
+            _ = producer.ContinueWith(_ => linkedCts.Dispose(), TaskScheduler.Default);
         }
     }
 }

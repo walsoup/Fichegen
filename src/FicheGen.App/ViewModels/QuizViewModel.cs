@@ -322,10 +322,10 @@ public partial class QuizViewModel : ObservableValidator
                 Subject = document.Metadata.Subject,
                 CreatedUtc = DateTime.UtcNow,
                 IsFavorite = false,
-                PlainText = document.Metadata.Title,
+                PlainText = document.ToPlainText(),
                 Html = html,
                 SourceJson = document.SourceJson,
-                StylePresetId = appSettings.Defaults.StylePresetId
+                StylePresetId = preset
             };
 
             await _historyRepository.SaveAsync(historyItem);

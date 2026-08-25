@@ -9,15 +9,18 @@ public sealed class ExportWorkflowService : IExportWorkflowService
     private readonly PickerService _pickerService;
     private readonly IDocumentPdfExporter _pdfExporter;
     private readonly IDocxExporter _docxExporter;
+    private readonly IRtfDocumentWriter _rtfWriter;
 
     public ExportWorkflowService(
         PickerService pickerService,
         IDocumentPdfExporter pdfExporter,
-        IDocxExporter docxExporter)
+        IDocxExporter docxExporter,
+        IRtfDocumentWriter rtfWriter)
     {
         _pickerService = pickerService;
         _pdfExporter = pdfExporter;
         _docxExporter = docxExporter;
+        _rtfWriter = rtfWriter;
     }
 
     public async Task<string?> ExportPdfAsync(
@@ -55,9 +58,21 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         return file.Path;
     }
 
-    public Task PrintAsync(string html, string documentTitle, CancellationToken cancellationToken = default)
+    public async Task<string?> ExportRtfAsync(
+        GeneratedDocument document,
+        string suggestedFileName,
+        CancellationToken cancellationToken = default)
     {
-        // Handled directly by WebView2 PrintUI in PreviewHost
-        return Task.CompletedTask;
+        var choices = new Dictionary<string, IList<string>>
+        {
+            { "Document RTF (*.rtf)", new List<string> { ".rtf" } }
+        };
+
+        var file = await _pickerService.PickSaveFileAsync(suggestedFileName, choices);
+        if (file is null) return null;
+
+        var bytes = _rtfWriter.ExportRtfBytes(document);
+        await File.WriteAllBytesAsync(file.Path, bytes, cancellationToken);
+        return file.Path;
     }
 }

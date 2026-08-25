@@ -25,7 +25,21 @@ public sealed class DpapiCredentialStore : ICredentialStore
         var base64 = Convert.ToBase64String(protectedBytes);
         var storageFile = GetStoragePath(key);
         Directory.CreateDirectory(_credentialsDirectory);
-        File.WriteAllText(storageFile, base64);
+
+        // Atomic write with a unique temp name: concurrent Set calls for the
+        // same key must never interleave on one shared ".tmp" file, or a
+        // half-written blob can be promoted over a good credential.
+        var tempPath = $"{storageFile}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(tempPath, base64);
+            File.Move(tempPath, storageFile, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tempPath); } catch { /* best effort */ }
+            throw;
+        }
     }
 
     public string? Get(string key)

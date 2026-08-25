@@ -85,7 +85,7 @@ public interface IExportWorkflowService
 {
     Task<string?> ExportPdfAsync(GeneratedDocument document, string html, string suggestedFileName, CancellationToken cancellationToken = default);
     Task<string?> ExportDocxAsync(GeneratedDocument document, string suggestedFileName, CancellationToken cancellationToken = default);
-    Task PrintAsync(string html, string documentTitle, CancellationToken cancellationToken = default);
+    Task<string?> ExportRtfAsync(GeneratedDocument document, string suggestedFileName, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Produit une archive ZIP de diagnostic et retourne son chemin.</summary>
@@ -109,7 +109,6 @@ public partial class ResultViewModel : ObservableObject
 
     private readonly IDocumentPdfExporter _pdfExporter;
     private readonly IDocxExporter _docxExporter;
-    private readonly IRtfDocumentWriter _rtfWriter;
     private readonly StylePresetService _stylePresetService;
     private readonly IPreviewPreferencesStore? _preferencesStore;
     private readonly IExportWorkflowService? _exportWorkflow;
@@ -165,8 +164,9 @@ public partial class ResultViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(StudentViewButtonIcon))]
     public partial bool IsStudentView { get; set; }
 
-    public string StudentViewButtonLabel => IsStudentView ? "Version Élève" : "Corrigé Enseignant";
-    public string StudentViewButtonIcon => IsStudentView ? "\uE77B" : "\uE7BE";
+    // Le bouton annonce l'ACTION (ce qu'un clic fera), pas l'état courant.
+    public string StudentViewButtonLabel => IsStudentView ? "Corrigé Enseignant" : "Version Élève";
+    public string StudentViewButtonIcon => IsStudentView ? "\uE7BE" : "\uE77B";
 
     [ObservableProperty]
     public partial string? LastExportedFilePath { get; set; }
@@ -315,7 +315,6 @@ public partial class ResultViewModel : ObservableObject
     public ResultViewModel(
         IDocumentPdfExporter? pdfExporter = null,
         IDocxExporter? docxExporter = null,
-        IRtfDocumentWriter? rtfWriter = null,
         StylePresetService? stylePresetService = null,
         IPreviewPreferencesStore? previewPreferencesStore = null,
         IExportWorkflowService? exportWorkflow = null,
@@ -323,7 +322,6 @@ public partial class ResultViewModel : ObservableObject
     {
         _pdfExporter = pdfExporter!;
         _docxExporter = docxExporter!;
-        _rtfWriter = rtfWriter!;
         _stylePresetService = stylePresetService ?? new StylePresetService();
         _preferencesStore = previewPreferencesStore;
         _exportWorkflow = exportWorkflow;
@@ -405,6 +403,21 @@ public partial class ResultViewModel : ObservableObject
             CurrentHtml = HtmlRenderer.RenderToHtml(CurrentDocument, isStudentVersion: IsStudentView);
         }
         ComputeDocumentStats();
+    }
+
+    /// <summary>
+    /// Remplace le document courant par la version révisée par l'assistant IA.
+    /// Capture un instantané Ctrl+Z avant application, puis met à jour document,
+    /// aperçu HTML et statistiques — les exports portent bien sur le contenu édité.
+    /// </summary>
+    public bool ApplyEditedDocument(GeneratedDocument editedDocument, string snapshotLabel)
+    {
+        if (CurrentDocument is null || editedDocument is null) return false;
+
+        PushSnapshot(snapshotLabel);
+        CurrentDocument = editedDocument;
+        RefreshRendering();
+        return true;
     }
 
     /// <summary>Ferme le document courant et revient à l'état vide.</summary>
@@ -567,7 +580,7 @@ public partial class ResultViewModel : ObservableObject
         var suggestedFileName = BuildSuggestedFileName(kind);
 
         // Sans service de flux : la vue prend le relais (sélecteur de fichier).
-        if (_exportWorkflow is null && kind != ExportKind.Rtf)
+        if (_exportWorkflow is null)
         {
             ExportRequested?.Invoke(this, new ExportRequestedEventArgs(kind, CurrentDocument, CurrentHtml, suggestedFileName));
             return;
@@ -584,9 +597,9 @@ public partial class ResultViewModel : ObservableObject
         {
             var path = kind switch
             {
-                ExportKind.Pdf => await _exportWorkflow!.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, CancellationToken.None),
-                ExportKind.Docx => await _exportWorkflow!.ExportDocxAsync(CurrentDocument, suggestedFileName, CancellationToken.None),
-                _ => await ExportRtfDirectAsync(CurrentDocument, suggestedFileName, CancellationToken.None)
+                ExportKind.Pdf => await _exportWorkflow.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, CancellationToken.None),
+                ExportKind.Docx => await _exportWorkflow.ExportDocxAsync(CurrentDocument, suggestedFileName, CancellationToken.None),
+                _ => await _exportWorkflow.ExportRtfAsync(CurrentDocument, suggestedFileName, CancellationToken.None)
             };
 
             if (path is not null)
@@ -663,33 +676,13 @@ public partial class ResultViewModel : ObservableObject
         ShowExportSuccessBanner = false;
     }
 
-    /// <summary>Ctrl+P — Imprime le document courant.</summary>
+    /// <summary>Ctrl+P — Imprime le document courant via la boîte de dialogue d'impression
+    /// de l'aperçu (l'événement est traité par <see cref="Views.Controls.PreviewHost"/>).</summary>
     [RelayCommand(CanExecute = nameof(HasDocument))]
-    public async Task PrintAsync()
+    public void Print()
     {
         if (CurrentDocument is null) return;
-
-        if (_exportWorkflow is null)
-        {
-            PrintRequested?.Invoke(this, new PrintRequestedEventArgs(CurrentHtml, CurrentDocument.Metadata.Title));
-            return;
-        }
-
-        IsBusy = true;
-        SetStatus("Préparation de l'impression…", StatusSeverity.Info);
-        try
-        {
-            await _exportWorkflow.PrintAsync(CurrentHtml, CurrentDocument.Metadata.Title, CancellationToken.None);
-            SetStatus("Document envoyé vers l'impression.", StatusSeverity.Success);
-        }
-        catch (Exception ex)
-        {
-            SetStatus($"Impression impossible : {ex.Message}", StatusSeverity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        PrintRequested?.Invoke(this, new PrintRequestedEventArgs(CurrentHtml, CurrentDocument.Metadata.Title));
     }
 
     /// <summary>Copie le texte brut du document dans le presse-papiers (via la vue).</summary>
@@ -841,16 +834,6 @@ public partial class ResultViewModel : ObservableObject
             _ => ".rtf"
         };
         return $"{title}{extension}";
-    }
-
-    private async Task<string?> ExportRtfDirectAsync(GeneratedDocument document, string suggestedFileName, CancellationToken cancellationToken)
-    {
-        var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        Directory.CreateDirectory(targetDir);
-        var targetPath = Path.Combine(targetDir, suggestedFileName);
-        var bytes = _rtfWriter.ExportRtfBytes(document);
-        await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken).ConfigureAwait(false);
-        return targetPath;
     }
 
     public void SetStatus(string message, StatusSeverity severity)

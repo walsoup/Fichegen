@@ -53,30 +53,38 @@ public static class PageOffsetDetector
 
             if (agreeingCount >= 3)
             {
-                var confidence = (double)agreeingCount / pagesScanned;
+                var confidence = Math.Min(1.0, (double)agreeingCount / pagesScanned);
                 return new PageOffsetResult(modeOffset, confidence, confidence < 0.5);
             }
         }
 
-        // Fallback: whole-page standalone number scan
+        // Fallback: whole-page standalone number scan. Uses a fresh sample list —
+        // reusing the header/footer deltas would double-count and skew the mode.
+        var fallbackDeltas = new List<int>();
         for (var physicalPage = startPage; physicalPage <= endPage; physicalPage++)
         {
             var words = wordSource.GetWords(physicalPage);
+            if (words.Count == 0) continue;
+
+            var height = words[0].PageHeight;
             foreach (var word in words)
             {
-                var match = PageNumberRegex.Match(word.Text.Trim());
-                if (match.Success && int.TryParse(match.Groups[1].Value, out var printedPage) && printedPage > 0)
+                if (height > 0 && word.Bottom > height * 0.12 && word.Bottom < height * 0.88)
                 {
-                    deltas.Add(physicalPage - printedPage);
+                    var match = PageNumberRegex.Match(word.Text.Trim());
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out var printedPage) && printedPage > 0)
+                    {
+                        fallbackDeltas.Add(physicalPage - printedPage);
+                    }
                 }
             }
         }
 
-        if (deltas.Count > 0)
+        if (fallbackDeltas.Count > 0)
         {
-            var modeGroup = deltas.GroupBy(d => d).OrderByDescending(g => g.Count()).First();
+            var modeGroup = fallbackDeltas.GroupBy(d => d).OrderByDescending(g => g.Count()).First();
             var modeOffset = modeGroup.Key;
-            var confidence = (double)modeGroup.Count() / Math.Max(1, pagesScanned);
+            var confidence = Math.Min(1.0, (double)modeGroup.Count() / Math.Max(1, pagesScanned));
             return new PageOffsetResult(modeOffset, confidence, confidence < 0.5);
         }
 
