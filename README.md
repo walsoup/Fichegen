@@ -116,15 +116,16 @@ Plusieurs modes de distribution sont disponibles dans les [Releases GitHub](http
 
 | Format | Fichier | Description / Utilisation |
 | :--- | :--- | :--- |
-| **MSIX (Recommandé)** | `PROFstudio-v1.0.0-x64.msix` | Paquet moderne signé avec identité Windows, intégration du menu Démarrer et support du Credential Locker. |
-| **Archive Portable** | `PROFstudio-v1.0.0-win-x64-portable.zip` | Aucun droit administrateur requis. Décompressez le `.zip` et lancez `FicheGen.App.exe`. |
-| **Installateur Autonome** | `PROFstudio-Setup-win-x64.zip` | Contient le script `Setup.cmd` et l'application autonome pour un déploiement direct. |
+| **Assistant d'Installation (.exe)** ⭐ | `PROFstudio-Setup-v1.0.0-x64.exe` | **Recommandé pour tous** : Assistant graphique pas-à-pas en français, création de raccourcis, vérification automatique de WebView2 et désinstalleur Windows propre. |
+| **Paquet MSIX** | `PROFstudio-v1.0.0-x64.msix` | Paquet moderne signé pour Windows 10/11 avec identité d'application et support étendu du Credential Locker. |
+| **Archive Portable (.ZIP)** | `PROFstudio-v1.0.0-win-x64-portable.zip` | Aucun droit administrateur requis. Décompressez le `.zip` et lancez directement `FicheGen.App.exe`. |
+| **Bundle Standalone** | `PROFstudio-Setup-win-x64.zip` | Dossier complet autonome avec script `Setup.cmd` pour déploiement rapide en réseau ou clé USB. |
 | **Mises à jour Auto** | `PROFstudio.appinstaller` | Fichier manifeste pour l'installation et les mises à jour automatiques transparentes sous Windows. |
 
-### 🚀 Installation rapide du paquet MSIX
-1. Téléchargez `PROFstudio-v1.0.0-x64.msix` et `Install-MSIX.cmd` (ou `PROFstudio-DevCert.cer`).
-2. Faites un clic droit sur `Install-MSIX.cmd` ➔ **Exécuter en tant qu'administrateur** pour installer le certificat de développement et le paquet en une seule opération.
-3. Lancez **PROFstudio** depuis le menu Démarrer !
+### 🚀 Installation en 1 clic (Assistant Graphique)
+1. Téléchargez **`PROFstudio-Setup-v1.0.0-x64.exe`** depuis la section [Releases](https://github.com/walsoup/fichegen/releases).
+2. Double-cliquez sur le fichier téléchargé et suivez les étapes de l'assistant (choix du dossier, raccourci bureau).
+3. Cliquez sur **Terminer** : PROFstudio se lance instantanément !
 
 ---
 

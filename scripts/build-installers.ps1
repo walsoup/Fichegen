@@ -185,14 +185,24 @@ Set-Content -Path "$distDir\PROFstudio.appinstaller" -Value $appInstallerContent
 Write-Success "Manifeste auto-update généré : $distDir\PROFstudio.appinstaller"
 
 # Inno Setup compilation if ISCC is installed
-$isccPaths = @(
+$iscc = $null
+$candidatePaths = @(
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
     "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-    "C:\Program Files\Inno Setup 6\ISCC.exe",
-    (Get-Command iscc.exe -ErrorAction SilentlyContinue).Source
-) | Where-Object { $_ -and (Test-Path $_) }
+    "C:\Program Files\Inno Setup 6\ISCC.exe"
+)
+foreach ($p in $candidatePaths) {
+    if (Test-Path $p) {
+        $iscc = $p
+        break
+    }
+}
+if (-not $iscc) {
+    $cmd = Get-Command iscc.exe -ErrorAction SilentlyContinue
+    if ($cmd) { $iscc = $cmd.Source }
+}
 
-if ($isccPaths) {
-    $iscc = $isccPaths[0]
+if ($iscc -and (Test-Path $iscc)) {
     Write-Host "  Compilation avec Inno Setup ($iscc)..." -ForegroundColor Gray
     & $iscc "$repoRoot\installer\PROFstudio.iss"
     if ($LASTEXITCODE -eq 0) {
