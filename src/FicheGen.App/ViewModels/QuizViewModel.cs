@@ -277,8 +277,8 @@ public partial class QuizViewModel : ObservableValidator
         _elapsedTimer?.Start();
 
         _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
+        var currentCts = new CancellationTokenSource();
+        _cts = currentCts;
 
         try
         {
@@ -314,12 +314,12 @@ public partial class QuizViewModel : ObservableValidator
                 {
                     ResultViewModel.AppendStreamedChunk(chunk);
                 });
-                result = await _orchestrator.GenerateQuizStreamingAsync(parameters, config, progress, _cts.Token);
+                result = await _orchestrator.GenerateQuizStreamingAsync(parameters, config, progress, currentCts.Token);
             }
             else
             {
                 ResultViewModel.SetGenerationPhase(3, "Rédaction du quiz par l'IA…");
-                result = await _orchestrator.GenerateQuizAsync(parameters, config, _cts.Token);
+                result = await _orchestrator.GenerateQuizAsync(parameters, config, currentCts.Token);
             }
 
             ResultViewModel.SetGenerationPhase(4, "Génération du corrigé et mise en page…");
@@ -350,7 +350,10 @@ public partial class QuizViewModel : ObservableValidator
         }
         catch (OperationCanceledException)
         {
-            SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            if (_cts == currentCts)
+            {
+                SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            }
         }
         catch (Exception ex)
         {
@@ -359,11 +362,18 @@ public partial class QuizViewModel : ObservableValidator
         }
         finally
         {
-            _elapsedTimer?.Stop();
-            IsGenerating = false;
-            ResultViewModel.IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (_cts == currentCts)
+            {
+                _elapsedTimer?.Stop();
+                IsGenerating = false;
+                ResultViewModel.IsBusy = false;
+                _cts.Dispose();
+                _cts = null;
+            }
+            else
+            {
+                currentCts.Dispose();
+            }
         }
     }
 

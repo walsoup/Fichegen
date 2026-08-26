@@ -1,5 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using FicheGen.Core.Abstractions;
 using FicheGen.Infrastructure.Diagnostics;
 
@@ -39,9 +41,9 @@ public class DiagnosticBundleExporter : IDiagnosticBundleExporter
                 foreach (var logFile in Directory.GetFiles(_logDir, "*.log"))
                 {
                     var destLogFile = Path.Combine(logsTempDir, Path.GetFileName(logFile));
-                    var rawContent = await File.ReadAllTextAsync(logFile, ct);
-                    var redactedContent = SecretRedactingPolicy.RedactText(rawContent);
-                    await File.WriteAllTextAsync(destLogFile, redactedContent, ct);
+                    var rawContent = await File.ReadAllTextAsync(logFile, ct).ConfigureAwait(false);
+                    var redactedContent = SecretRedactingPolicy.RedactText(MaskPaths(rawContent));
+                    await File.WriteAllTextAsync(destLogFile, redactedContent, ct).ConfigureAwait(false);
                 }
             }
 
@@ -49,13 +51,14 @@ public class DiagnosticBundleExporter : IDiagnosticBundleExporter
             var settingsDestPath = Path.Combine(tempDir, "settings.json");
             if (File.Exists(_settingsFilePath))
             {
-                var settingsRaw = await File.ReadAllTextAsync(_settingsFilePath, ct);
-                var settingsRedacted = SecretRedactingPolicy.RedactText(settingsRaw);
-                await File.WriteAllTextAsync(settingsDestPath, settingsRedacted, ct);
+                var settingsRaw = await File.ReadAllTextAsync(_settingsFilePath, ct).ConfigureAwait(false);
+                var sanitizedSettings = SanitizeSettingsJson(settingsRaw);
+                var settingsRedacted = SecretRedactingPolicy.RedactText(sanitizedSettings);
+                await File.WriteAllTextAsync(settingsDestPath, settingsRedacted, ct).ConfigureAwait(false);
             }
             else
             {
-                await File.WriteAllTextAsync(settingsDestPath, "{\"notice\":\"No custom settings file found\"}", ct);
+                await File.WriteAllTextAsync(settingsDestPath, "{\"notice\":\"No custom settings file found\"}", ct).ConfigureAwait(false);
             }
 
             // Create Zip
@@ -74,5 +77,51 @@ public class DiagnosticBundleExporter : IDiagnosticBundleExporter
                 try { Directory.Delete(tempDir, true); } catch { }
             }
         }
+    }
+
+    private static string SanitizeSettingsJson(string json)
+    {
+        try
+        {
+            var node = JsonNode.Parse(json);
+            if (node is JsonObject obj)
+            {
+                if (obj["defaults"] is JsonObject defaults)
+                {
+                    if (defaults.ContainsKey("teacherName")) defaults["teacherName"] = "[REDACTED_TEACHER]";
+                    if (defaults.ContainsKey("schoolName")) defaults["schoolName"] = "[REDACTED_SCHOOL]";
+                }
+                if (obj["folders"] is JsonObject folders)
+                {
+                    if (folders["guidesDir"] is JsonValue gVal && gVal.TryGetValue<string>(out var gDir))
+                        folders["guidesDir"] = MaskUserPath(gDir);
+                    if (folders["exportsDir"] is JsonValue eVal && eVal.TryGetValue<string>(out var eDir))
+                        folders["exportsDir"] = MaskUserPath(eDir);
+                }
+                return obj.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+            }
+        }
+        catch
+        {
+            // Fallback to text masking if JSON parsing fails
+        }
+        return MaskPaths(json);
+    }
+
+    private static string MaskPaths(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        return Regex.Replace(text, @"([a-zA-Z]:\\Users\\)[^\\]+", "$1[USER]", RegexOptions.IgnoreCase);
+    }
+
+    private static string MaskUserPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(userProfile) && path.StartsWith(userProfile, StringComparison.OrdinalIgnoreCase))
+        {
+            return "%USERPROFILE%" + path[userProfile.Length..];
+        }
+        return MaskPaths(path);
     }
 }

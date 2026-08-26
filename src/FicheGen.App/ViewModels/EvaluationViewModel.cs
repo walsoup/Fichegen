@@ -269,8 +269,8 @@ public partial class EvaluationViewModel : ObservableValidator
         _elapsedTimer?.Start();
 
         _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
+        var currentCts = new CancellationTokenSource();
+        _cts = currentCts;
 
         try
         {
@@ -298,12 +298,12 @@ public partial class EvaluationViewModel : ObservableValidator
                 {
                     ResultViewModel.AppendStreamedChunk(chunk);
                 });
-                result = await _orchestrator.GenerateEvaluationStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, _cts.Token);
+                result = await _orchestrator.GenerateEvaluationStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, currentCts.Token);
             }
             else
             {
                 ResultViewModel.SetGenerationPhase(3, "Rédaction des exercices par l'IA…");
-                result = await _orchestrator.GenerateEvaluationAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+                result = await _orchestrator.GenerateEvaluationAsync(parameters, config, appSettings.Folders.GuidesDir, currentCts.Token);
             }
 
             ResultViewModel.SetGenerationPhase(4, "Calcul des points et mise en page…");
@@ -333,7 +333,10 @@ public partial class EvaluationViewModel : ObservableValidator
         }
         catch (OperationCanceledException)
         {
-            SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            if (_cts == currentCts)
+            {
+                SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            }
         }
         catch (Exception ex)
         {
@@ -342,11 +345,18 @@ public partial class EvaluationViewModel : ObservableValidator
         }
         finally
         {
-            _elapsedTimer?.Stop();
-            IsGenerating = false;
-            ResultViewModel.IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (_cts == currentCts)
+            {
+                _elapsedTimer?.Stop();
+                IsGenerating = false;
+                ResultViewModel.IsBusy = false;
+                _cts.Dispose();
+                _cts = null;
+            }
+            else
+            {
+                currentCts.Dispose();
+            }
         }
     }
 

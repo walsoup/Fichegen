@@ -17,7 +17,7 @@ public class DiagnosticBundleExporterTests
         await File.WriteAllTextAsync(logFile, "Log entry: Authorization: Bearer my_secret_token_12345");
 
         var settingsFile = Path.Combine(tempDir, "settings.json");
-        await File.WriteAllTextAsync(settingsFile, "{\"GeminiApiKey\":\"AIzaSyD1234567890123456789012345678901\"}");
+        await File.WriteAllTextAsync(settingsFile, "{\"GeminiApiKey\":\"AIzaSyD1234567890123456789012345678901\",\"defaults\":{\"teacherName\":\"Marie Curie\",\"schoolName\":\"Lycée Victor Hugo\"},\"folders\":{\"exportsDir\":\"C:\\\\Users\\\\mcurie\\\\Documents\\\\Exports\"}}");
 
         var zipPath = Path.Combine(tempDir, "bundle.zip");
 
@@ -36,6 +36,9 @@ public class DiagnosticBundleExporterTests
             using var reader = new StreamReader(settingsEntry!.Open());
             var text = await reader.ReadToEndAsync();
             Assert.DoesNotContain("AIzaSyD1234567890123456789012345678901", text);
+            Assert.DoesNotContain("Marie Curie", text);
+            Assert.DoesNotContain("Lycée Victor Hugo", text);
+            Assert.DoesNotContain("mcurie", text);
         }
 
         Directory.Delete(tempDir, true);

@@ -255,8 +255,8 @@ public partial class AssistantViewModel : ObservableObject
         SetStatus("L'assistant réfléchit…", StatusSeverity.Info);
 
         _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
+        var currentCts = new CancellationTokenSource();
+        _cts = currentCts;
 
         try
         {
@@ -291,7 +291,7 @@ public partial class AssistantViewModel : ObservableObject
                 SetStatus("L'assistant modifie le document…", StatusSeverity.Info);
 
                 var sb = new StringBuilder();
-                await foreach (var chunk in _assistantService.StreamEditAsync(_resultViewModel.CurrentDocument, userMessage, config, _cts.Token))
+                await foreach (var chunk in _assistantService.StreamEditAsync(_resultViewModel.CurrentDocument, userMessage, config, currentCts.Token))
                 {
                     sb.Append(chunk);
                     assistantMsg.Content = sb.ToString();
@@ -363,17 +363,20 @@ public partial class AssistantViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            var last = Messages.Count > 0 ? Messages[^1] : null;
-            if (last is not null)
+            if (_cts == currentCts)
             {
-                last.IsStreaming = false;
-                if (last.Sender == "Assistant")
+                var last = Messages.Count > 0 ? Messages[^1] : null;
+                if (last is not null)
                 {
-                    if (last.Content.Length == 0) Messages.Remove(last);
-                    else last.Content += "\n\n*(réponse interrompue)*";
+                    last.IsStreaming = false;
+                    if (last.Sender == "Assistant")
+                    {
+                        if (last.Content.Length == 0) Messages.Remove(last);
+                        else last.Content += "\n\n*(réponse interrompue)*";
+                    }
                 }
+                SetStatus("Traitement annulé par l'utilisateur.", StatusSeverity.Warning);
             }
-            SetStatus("Traitement annulé par l'utilisateur.", StatusSeverity.Warning);
         }
         catch (Exception ex)
         {
@@ -388,9 +391,16 @@ public partial class AssistantViewModel : ObservableObject
         }
         finally
         {
-            IsStreaming = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (_cts == currentCts)
+            {
+                IsStreaming = false;
+                _cts.Dispose();
+                _cts = null;
+            }
+            else
+            {
+                currentCts.Dispose();
+            }
         }
     }
 

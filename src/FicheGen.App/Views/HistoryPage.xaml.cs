@@ -215,14 +215,9 @@ public sealed partial class HistoryPage : Page
         _undoTimer?.Stop();
         UndoToast.Visibility = Visibility.Collapsed;
 
-        if (_lastDeletedItem?.Model is not null)
+        if (_lastDeletedItem is not null)
         {
-            var repo = App.Services.GetService<IHistoryRepository>();
-            if (repo is not null)
-            {
-                await repo.SaveAsync(_lastDeletedItem.Model);
-                await ViewModel.LoadHistoryAsync();
-            }
+            await ViewModel.RestoreItemCommand.ExecuteAsync(_lastDeletedItem);
         }
         _lastDeletedItem = null;
     }

@@ -274,8 +274,8 @@ public partial class FicheFormViewModel : ObservableValidator
         _elapsedTimer?.Start();
 
         _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
+        var currentCts = new CancellationTokenSource();
+        _cts = currentCts;
 
         try
         {
@@ -302,12 +302,12 @@ public partial class FicheFormViewModel : ObservableValidator
                 {
                     ResultViewModel.AppendStreamedChunk(chunk);
                 });
-                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, _cts.Token);
+                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, currentCts.Token);
             }
             else
             {
                 ResultViewModel.SetGenerationPhase(3, "Rédaction de la fiche pédagogique par l'IA…");
-                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, currentCts.Token);
             }
 
             ResultViewModel.SetGenerationPhase(4, "Mise en page et finalisation du document…");
@@ -337,7 +337,10 @@ public partial class FicheFormViewModel : ObservableValidator
         }
         catch (OperationCanceledException)
         {
-            SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            if (_cts == currentCts)
+            {
+                SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+            }
         }
         catch (Exception ex)
         {
@@ -346,11 +349,18 @@ public partial class FicheFormViewModel : ObservableValidator
         }
         finally
         {
-            _elapsedTimer?.Stop();
-            IsGenerating = false;
-            ResultViewModel.IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (_cts == currentCts)
+            {
+                _elapsedTimer?.Stop();
+                IsGenerating = false;
+                ResultViewModel.IsBusy = false;
+                _cts.Dispose();
+                _cts = null;
+            }
+            else
+            {
+                currentCts.Dispose();
+            }
         }
     }
 

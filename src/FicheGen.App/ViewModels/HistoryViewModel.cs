@@ -666,6 +666,23 @@ public partial class HistoryViewModel : ObservableObject
         StatusMessage = $"« {title} » supprimé de l'historique.";
     }
 
+    [RelayCommand]
+    public async Task RestoreItemAsync(HistoryItemViewModel? item)
+    {
+        if (item?.Model is null) return;
+
+        try
+        {
+            await _historyRepository.SaveAsync(item.Model);
+            await LoadHistoryAsync();
+            StatusMessage = $"« {item.Title} » restauré dans l'historique.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Échec de la restauration : {ex.Message}";
+        }
+    }
+
     // ---- Renommage en ligne ------------------------------------------------------
 
     [RelayCommand]

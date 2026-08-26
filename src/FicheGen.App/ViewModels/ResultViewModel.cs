@@ -108,8 +108,6 @@ public partial class ResultViewModel : ObservableObject
 
     private const int MaxHistoryDepth = 10;
 
-    private readonly IDocumentPdfExporter _pdfExporter;
-    private readonly IDocxExporter _docxExporter;
     private readonly StylePresetService _stylePresetService;
     private readonly IPreviewPreferencesStore? _preferencesStore;
     private readonly IExportWorkflowService? _exportWorkflow;
@@ -391,15 +389,11 @@ public partial class ResultViewModel : ObservableObject
     // ------------------------------------------------------------------
 
     public ResultViewModel(
-        IDocumentPdfExporter? pdfExporter = null,
-        IDocxExporter? docxExporter = null,
         StylePresetService? stylePresetService = null,
         IPreviewPreferencesStore? previewPreferencesStore = null,
         IExportWorkflowService? exportWorkflow = null,
         IDiagnosticZipExporter? diagnosticZipExporter = null)
     {
-        _pdfExporter = pdfExporter!;
-        _docxExporter = docxExporter!;
         _stylePresetService = stylePresetService ?? new StylePresetService();
         _preferencesStore = previewPreferencesStore;
         _exportWorkflow = exportWorkflow;
