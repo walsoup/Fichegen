@@ -84,6 +84,20 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Applique la langue persistée avant la création de la fenêtre.
+        try
+        {
+            var settings = Services.GetRequiredService<ISettingsStore>().GetSettings<FicheGen.Core.Storage.AppSettings>();
+            if (!string.IsNullOrWhiteSpace(settings.Ui.Language))
+            {
+                Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = settings.Ui.Language;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Application de la langue au démarrage impossible.");
+        }
+
         // Applique la couleur d'accentuation persistée avant la création de la fenêtre,
         // pour que la première frame utilise déjà la teinte choisie.
         try

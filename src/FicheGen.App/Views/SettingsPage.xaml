@@ -162,9 +162,21 @@
                     </controls:SettingsCard>
 
                     <controls:SettingsCard Header="Langue de l'interface"
-                                           Description="PROFstudio est conçu et optimisé pour le système éducatif francophone (Français uniquement).">
+                                           Description="Sélectionnez la langue de l'application (Français, English, العربية).">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE774;"/></controls:SettingsCard.HeaderIcon>
-                        <TextBlock Text="🇫🇷 Français" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <ComboBox MinWidth="260"
+                                  ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneWay}"
+                                  SelectedValuePath="Code"
+                                  SelectedValue="{x:Bind ViewModel.Language, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:LanguageOption">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="{x:Bind Icon}" FontSize="14"/>
+                                        <TextBlock Text="{x:Bind Label}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </controls:SettingsCard>
 
                     <controls:SettingsCard Header="Affichage du texte en direct (Streaming)"

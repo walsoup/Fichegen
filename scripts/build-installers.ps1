@@ -15,7 +15,7 @@ param (
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "1.0.0.0"
+    [string]$Version = "1.2.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +25,7 @@ $appProj = "$repoRoot\src\FicheGen.App\FicheGen.App.csproj"
 $publishDir = "$repoRoot\artifacts\publish\$RuntimeIdentifier"
 $distDir = "$repoRoot\artifacts\dist"
 $assetsDir = "$repoRoot\src\FicheGen.App\Assets"
+$shortVersion = "1.2.0"
 
 function Write-Step([string]$msg) {
     Write-Host ""
@@ -90,7 +91,7 @@ Write-Success "Bundle d'installation autonome créé : $standaloneDir"
 # Étape 3 : Création de l'archive Portable .ZIP
 # ==============================================================================
 Write-Step "3/5. Compression de l'archive portable .ZIP..."
-$zipPath = "$distDir\PROFstudio-v1.0.0-$RuntimeIdentifier-portable.zip"
+$zipPath = "$distDir\PROFstudio-v$shortVersion-$RuntimeIdentifier-portable.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
@@ -120,7 +121,7 @@ $sdkBin = "C:\Program Files (x86)\Windows Kits\10\bin"
 $makeAppx = (Get-ChildItem -Path $sdkBin -Recurse -Filter "makeappx.exe" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*x64*" } | Select-Object -First 1).FullName
 $signtool = (Get-ChildItem -Path $sdkBin -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*x64*" } | Select-Object -First 1).FullName
 
-$msixFile = "$distDir\PROFstudio-v1.0.0-$Platform.msix"
+$msixFile = "$distDir\PROFstudio-v$shortVersion-$Platform.msix"
 $certFile = "$distDir\PROFstudio-DevCert.cer"
 
 if ($makeAppx -and (Test-Path $makeAppx)) {
@@ -173,7 +174,7 @@ $appInstallerContent = @"
         Publisher="CN=FicheGen"
         Version="$Version"
         ProcessorArchitecture="$Platform"
-        Uri="https://github.com/walsoup/fichegen/releases/latest/download/PROFstudio-v1.0.0-$Platform.msix" />
+        Uri="https://github.com/walsoup/fichegen/releases/latest/download/PROFstudio-v$shortVersion-$Platform.msix" />
     <UpdateSettings>
         <OnLaunch HoursBetweenUpdateChecks="12" />
         <AutomaticBackgroundTask />

@@ -37,6 +37,7 @@ public partial class SettingsViewModel
     {
         new("fr-FR", "Français (France)", "🇫🇷"),
         new("en-US", "English (United States)", "🇺🇸"),
+        new("ar-SA", "العربية (Arabic)", "🇸🇦"),
     };
 
     public ObservableCollection<AccentOption> AccentOptions { get; } = new()
@@ -134,6 +135,23 @@ public partial class SettingsViewModel
             _ => "System"
         };
         (App.CurrentMainWindow as MainWindow)?.ApplyShellTheme(shellTheme);
+    }
+
+    partial void OnLanguageChanged(string value)
+    {
+        if (_isLoadingSettings) return;
+
+        try
+        {
+            Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = value;
+            StatusMessage = value switch
+            {
+                "ar-SA" => "تم تغيير لغة التطبيق إلى العربية — يرجى إعادة تشغيل التطبيق لتحديث جميع الواجهات.",
+                "en-US" => "Language changed to English — please restart the app for all interface elements to update.",
+                _ => "Langue modifiée en français — redémarrez l'application pour appliquer l'ensemble des textes."
+            };
+        }
+        catch { }
     }
 
     partial void OnSelectedPresetChanged(StylePresetItem? value)
