@@ -32,10 +32,10 @@ public partial class SettingsViewModel
         {
             _authService.AuthStateChanged += (s, user) =>
             {
-                var queue = DispatcherQueue.GetForCurrentThread();
-                if (queue != null)
+                var dispatcher = App.CurrentMainWindow?.DispatcherQueue;
+                if (dispatcher != null && !dispatcher.HasThreadAccess)
                 {
-                    queue.TryEnqueue(() => UpdateAccountProperties(user));
+                    dispatcher.TryEnqueue(() => UpdateAccountProperties(user));
                 }
                 else
                 {

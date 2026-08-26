@@ -145,7 +145,7 @@ public sealed class SupabaseAuthService : IAuthService
             // Sauvegarde sécurisée dans le coffre Windows
             SaveSessionToVault(accessToken, refreshToken, profile);
 
-            AuthStateChanged?.Invoke(this, _currentUser);
+            SafeNotifyAuthStateChanged(_currentUser);
             return new AuthResult(true, null, profile, accessToken);
         }
         catch (Exception ex)
@@ -239,7 +239,7 @@ public sealed class SupabaseAuthService : IAuthService
         }
         catch { }
 
-        AuthStateChanged?.Invoke(this, null);
+        SafeNotifyAuthStateChanged(null);
         return Task.CompletedTask;
     }
 
@@ -295,7 +295,7 @@ public sealed class SupabaseAuthService : IAuthService
                 CreatedAt: _currentUser?.CreatedAt ?? DateTimeOffset.UtcNow
             );
 
-            AuthStateChanged?.Invoke(this, _currentUser);
+            SafeNotifyAuthStateChanged(_currentUser);
             return _currentUser;
         }
         catch (Exception ex)
@@ -333,7 +333,7 @@ public sealed class SupabaseAuthService : IAuthService
                     CreatedAt: DateTimeOffset.UtcNow
                 );
 
-                AuthStateChanged?.Invoke(this, _currentUser);
+                SafeNotifyAuthStateChanged(_currentUser);
             }
         }
         catch (Exception ex)
@@ -401,6 +401,23 @@ public sealed class SupabaseAuthService : IAuthService
         catch (Exception ex)
         {
             Log.Warning(ex, "Enregistrement de la session dans le coffre Windows impossible.");
+        }
+    }
+
+    private void SafeNotifyAuthStateChanged(UserProfile? profile)
+    {
+        if (AuthStateChanged == null) return;
+
+        foreach (var handler in AuthStateChanged.GetInvocationList())
+        {
+            try
+            {
+                ((EventHandler<UserProfile?>)handler).Invoke(this, profile);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Erreur dans un gestionnaire d'événement AuthStateChanged.");
+            }
         }
     }
 

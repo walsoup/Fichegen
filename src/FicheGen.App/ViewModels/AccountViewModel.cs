@@ -122,7 +122,7 @@ public partial class AccountViewModel : ObservableObject
 
         try
         {
-            var result = await Task.Run(() => _authService.SignInAsync(Email, Password));
+            var result = await _authService.SignInAsync(Email, Password);
             if (result.Success)
             {
                 StatusMessage = "✅ Connexion réussie !";
@@ -200,7 +200,7 @@ public partial class AccountViewModel : ObservableObject
                 Academie: Academie,
                 Discipline: Discipline);
 
-            var result = await Task.Run(() => _authService.SignUpAsync(req));
+            var result = await _authService.SignUpAsync(req);
             if (result.Success)
             {
                 if (result.RequiresEmailConfirmation)
