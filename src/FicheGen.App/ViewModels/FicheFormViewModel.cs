@@ -268,8 +268,7 @@ public partial class FicheFormViewModel : ObservableValidator
         IsGenerating = true;
         ResultViewModel.IsBusy = true;
         ResultViewModel.CurrentHtml = string.Empty;
-        ResultViewModel.SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
-        SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
+        ResultViewModel.ResetStreaming();
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
         _elapsedTimer?.Start();
@@ -292,9 +291,26 @@ public partial class FicheFormViewModel : ObservableValidator
                 UsePedagogicalGuide
             );
 
-            SetStatus("Rédaction de la fiche pédagogique par l'IA…", StatusSeverity.Info);
-            ResultViewModel.SetStatus("Rédaction de la fiche pédagogique par l'IA…", StatusSeverity.Info);
-            var result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+            ResultViewModel.SetGenerationPhase(1, "Analyse du sujet et préparation des objectifs…");
+            SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
+
+            FicheGen.Core.Services.GenerationResult result;
+            if (appSettings.Ui.EnableStreaming)
+            {
+                ResultViewModel.SetGenerationPhase(2, "Élaboration de la structure pédagogique…");
+                var progress = new Progress<string>(chunk =>
+                {
+                    ResultViewModel.AppendStreamedChunk(chunk);
+                });
+                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, _cts.Token);
+            }
+            else
+            {
+                ResultViewModel.SetGenerationPhase(3, "Rédaction de la fiche pédagogique par l'IA…");
+                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+            }
+
+            ResultViewModel.SetGenerationPhase(4, "Mise en page et finalisation du document…");
             var document = result.Document;
             var html = result.PreviewHtml;
 

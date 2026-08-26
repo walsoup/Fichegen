@@ -270,12 +270,14 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] public partial AccentOption? SelectedAccent { get; set; }
     [ObservableProperty] public partial bool LaunchAtStartup { get; set; }
     [ObservableProperty] public partial string StartupStatusText { get; set; } = "Vérification de l'état du démarrage…";
+    [ObservableProperty] public partial bool EnableStreaming { get; set; } = true;
 
     public IReadOnlyList<ThemeOption> ThemeOptions { get; } = new List<ThemeOption>
     {
         new("system", "Par défaut du système", "🖥️"),
         new("light", "Clair", "☀️"),
         new("dark", "Sombre", "🌙"),
+        new("oled", "Noir absolu (OLED)", "⬛"),
     };
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } = new List<LanguageOption>
@@ -601,6 +603,7 @@ public partial class SettingsViewModel : ObservableObject
         HistoryRetentionDays = appSettings.Features.HistoryRetentionDays;
         TelemetryEnabled = appSettings.Features.Telemetry;
         ExpMultiPassGen = appSettings.Features.ExpMultiPassGen;
+        EnableStreaming = appSettings.Ui.EnableStreaming;
 
         // Secrets (Coffre d'identification Windows)
         GeminiApiKey = _credentialStore.Get("gemini_api_key") ?? string.Empty;
@@ -792,6 +795,7 @@ public partial class SettingsViewModel : ObservableObject
             s.Features.HistoryRetentionDays = (int)Math.Round(HistoryRetentionDays);
             s.Features.Telemetry = TelemetryEnabled;
             s.Features.ExpMultiPassGen = ExpMultiPassGen;
+            s.Ui.EnableStreaming = EnableStreaming;
 
             PersistCredentials();
 
@@ -1110,18 +1114,25 @@ public partial class SettingsViewModel : ObservableObject
         StatusMessage = $"🎨 Accentuation « {value?.Name} » appliquée à l'interface — pensez à enregistrer (Ctrl+S).";
     }
 
-    /// <summary>Application immédiate du thème clair / sombre / système au shell.</summary>
+    /// <summary>Application immédiate du thème clair / sombre / oled / système au shell.</summary>
     partial void OnThemeChanged(string value)
     {
         if (_isLoadingSettings) return;
 
-        var shellTheme = value switch
+        var shellTheme = value?.ToLowerInvariant() switch
         {
             "light" => "Light",
             "dark" => "Dark",
+            "oled" => "Oled",
             _ => "System"
         };
         (App.CurrentMainWindow as MainWindow)?.ApplyShellTheme(shellTheme);
+    }
+
+    [RelayCommand]
+    private void ShowAbout()
+    {
+        (App.CurrentMainWindow as MainWindow)?.ShowAboutDialog();
     }
 
     /// <summary>Charge le préréglage choisi dans le StyleBuilder (couleurs, police,

@@ -559,20 +559,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void OnAiChipClicked(object sender, RoutedEventArgs e)
-    {
-        var readiness = App.Services.GetService<IReadinessService>();
-        if (readiness != null && (readiness.State == ReadinessState.Degraded || readiness.State == ReadinessState.Offline))
-        {
-            await readiness.RefreshAsync();
-            UpdateAiChipUi(readiness);
-        }
-        else
-        {
-            NavigateToTag("SettingsPage");
-        }
-    }
-
     private void OnNewFicheClicked(object sender, RoutedEventArgs e) => CreateNewFiche();
 
     private void OnSearchClicked(object sender, RoutedEventArgs e) => FocusHistorySearch();
@@ -637,7 +623,7 @@ public sealed partial class MainWindow : Window
     }
 
     // ==========================================================================
-    //  Thème (Clair / Sombre / Système)
+    //  Thème (Clair / Sombre / Sombre OLED / Système)
     // ==========================================================================
     private void OnThemeItemClick(object sender, RoutedEventArgs e)
     {
@@ -649,18 +635,69 @@ public sealed partial class MainWindow : Window
 
     private void ApplyTheme(string theme, bool persist = true)
     {
-        _shellState.Theme = theme is "Light" or "Dark" or "System" ? theme : "System";
+        _shellState.Theme = theme is "Light" or "Dark" or "Oled" or "System" ? theme : "System";
+        bool isOled = _shellState.Theme == "Oled";
 
         RootGrid.RequestedTheme = _shellState.Theme switch
         {
             "Light" => ElementTheme.Light,
-            "Dark" => ElementTheme.Dark,
+            "Dark" or "Oled" => ElementTheme.Dark,
             _ => ElementTheme.Default
         };
+
+        if (isOled)
+        {
+            try
+            {
+                SystemBackdrop = null;
+            }
+            catch { }
+
+            RootGrid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 0, 0));
+            ContentFrame.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 0, 0));
+
+            // Surcharges de ressources pour un thème OLED noir pur absolu (#000000)
+            RootGrid.Resources["ApplicationPageBackgroundThemeBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 0, 0));
+            RootGrid.Resources["SolidBackgroundFillColorBaseBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 0, 0));
+            RootGrid.Resources["CardBackgroundFillColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 13, 13, 13));
+            RootGrid.Resources["CardBackgroundFillColorSecondaryBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 20, 20, 20));
+            RootGrid.Resources["CardStrokeColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 38, 38, 38));
+            RootGrid.Resources["DividerStrokeColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 30, 30));
+            RootGrid.Resources["LayerFillColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 8, 8, 8));
+            RootGrid.Resources["ControlFillColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 20, 20, 20));
+            RootGrid.Resources["ControlFillColorSecondaryBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 28, 28, 28));
+            RootGrid.Resources["ControlStrokeColorDefaultBrush"] = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 45, 45, 45));
+        }
+        else
+        {
+            RootGrid.Background = null;
+            ContentFrame.Background = (Brush)Application.Current.Resources["ApplicationPageBackgroundThemeBrush"];
+
+            RootGrid.Resources.Remove("ApplicationPageBackgroundThemeBrush");
+            RootGrid.Resources.Remove("SolidBackgroundFillColorBaseBrush");
+            RootGrid.Resources.Remove("CardBackgroundFillColorDefaultBrush");
+            RootGrid.Resources.Remove("CardBackgroundFillColorSecondaryBrush");
+            RootGrid.Resources.Remove("CardStrokeColorDefaultBrush");
+            RootGrid.Resources.Remove("DividerStrokeColorDefaultBrush");
+            RootGrid.Resources.Remove("LayerFillColorDefaultBrush");
+            RootGrid.Resources.Remove("ControlFillColorDefaultBrush");
+            RootGrid.Resources.Remove("ControlFillColorSecondaryBrush");
+            RootGrid.Resources.Remove("ControlStrokeColorDefaultBrush");
+
+            try
+            {
+                if (MicaController.IsSupported())
+                    SystemBackdrop = new MicaBackdrop { Kind = MicaKind.BaseAlt };
+                else if (DesktopAcrylicController.IsSupported())
+                    SystemBackdrop = new DesktopAcrylicBackdrop();
+            }
+            catch { }
+        }
 
         ThemeSystemItem.IsChecked = _shellState.Theme == "System";
         ThemeLightItem.IsChecked = _shellState.Theme == "Light";
         ThemeDarkItem.IsChecked = _shellState.Theme == "Dark";
+        ThemeOledItem.IsChecked = _shellState.Theme == "Oled";
 
         UpdateCaptionButtonColors();
 
@@ -676,7 +713,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     public void ApplyShellTheme(string theme) => ApplyTheme(theme);
 
-    /// <summary>Thème actuellement appliqué au shell (« Light » / « Dark » / « System »).</summary>
+    /// <summary>Thème actuellement appliqué au shell (« Light » / « Dark » / « Oled » / « System »).</summary>
     public string CurrentShellTheme => _shellState.Theme;
 
     /// <summary>
@@ -722,7 +759,8 @@ public sealed partial class MainWindow : Window
         try
         {
             var tb = _appWindow.TitleBar;
-            bool hc = IsHighContrastEnabled();            bool dark = RootGrid.ActualTheme == ElementTheme.Dark;
+            bool hc = IsHighContrastEnabled();
+            bool dark = RootGrid.ActualTheme == ElementTheme.Dark || _shellState.Theme is "Dark" or "Oled";
 
             tb.BackgroundColor = Colors.Transparent;
             tb.ButtonBackgroundColor = Colors.Transparent;
@@ -1002,10 +1040,8 @@ public sealed partial class MainWindow : Window
     }
 
     // ==========================================================================
-    //  Badges dynamiques : puce IA & profil enseignant (IReadinessService UX-05)
+    //  Badges dynamiques : profil enseignant
     // ==========================================================================
-    private bool _aiPulseStarted;
-
     private const string CelebratedFirstDocKey = "FicheGen.CelebratedFirstDoc";
 
     /// <summary>Un seul moment de félicitations, à la toute première fiche générée.</summary>
@@ -1031,31 +1067,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Fait respirer le voyant IA de la barre de titre pendant une génération.</summary>
     private void UpdateAiPulse(bool busy)
     {
-        try
-        {
-            if (busy && Services.UiMotion.Enabled)
-            {
-                if (_aiPulseStarted) return;
-                if (RootGrid.Resources["AiPulseStoryboard"] is Microsoft.UI.Xaml.Media.Animation.Storyboard sb)
-                {
-                    sb.Begin();
-                    _aiPulseStarted = true;
-                }
-            }
-            else
-            {
-                if (_aiPulseStarted && RootGrid.Resources["AiPulseStoryboard"] is Microsoft.UI.Xaml.Media.Animation.Storyboard sb)
-                {
-                    sb.Stop();
-                }
-                _aiPulseStarted = false;
-                AiStatusGlyph.Opacity = 1;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(ex, "Pulsation du voyant IA non appliquée.");
-        }
+        // Safe no-op after AI status chip removal from title bar
     }
 
     public void RefreshAiChip()
@@ -1064,37 +1076,11 @@ public sealed partial class MainWindow : Window
         if (readiness == null) return;
 
         _ = readiness.RefreshAsync();
-        UpdateAiChipUi(readiness);
     }
 
     private void UpdateAiChipUi(IReadinessService readiness)
     {
-        AiStatusGlyph.Text = readiness.ShapeGlyph;
-        AiProviderChipText.Text = readiness.StatusTitle;
-
-        switch (readiness.State)
-        {
-            case ReadinessState.Ready:
-                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129));
-                break;
-            case ReadinessState.Checking:
-                AiStatusGlyph.Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
-                break;
-            case ReadinessState.Degraded:
-            case ReadinessState.Offline:
-                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 234, 179, 8));
-                break;
-            case ReadinessState.Blocked:
-                AiStatusGlyph.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68));
-                break;
-            case ReadinessState.NotConfigured:
-            default:
-                AiStatusGlyph.Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"];
-                break;
-        }
-
-        ToolTipService.SetToolTip(AiProviderChip, readiness.StatusDetails);
-        AutomationProperties.SetName(AiProviderChip, $"{readiness.StatusTitle}. {readiness.StatusDetails}");
+        // Safe no-op
     }
 
     private void RefreshTeacherBadge()
@@ -1269,10 +1255,18 @@ public sealed partial class MainWindow : Window
         {
             "System" => "Light",
             "Light" => "Dark",
+            "Dark" => "Oled",
+            "Oled" => "System",
             _ => "System"
         };
         ApplyTheme(next);
-        SetStatus(Services.L10n.Format("Status_Theme", next switch { "Light" => Services.L10n.Get("Theme_Light"), "Dark" => Services.L10n.Get("Theme_Dark"), _ => Services.L10n.Get("Theme_System") }));
+        SetStatus(Services.L10n.Format("Status_Theme", next switch
+        {
+            "Light" => Services.L10n.Get("Theme_Light") ?? "Clair",
+            "Dark" => Services.L10n.Get("Theme_Dark") ?? "Sombre",
+            "Oled" => Services.L10n.Get("Theme_Oled") ?? "Sombre OLED",
+            _ => Services.L10n.Get("Theme_System") ?? "Système"
+        }));
     }
 
     private void OnCtrlNInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -1543,7 +1537,7 @@ public sealed partial class MainWindow : Window
     {
         ShellHintTip.Title = title;
         ShellHintTip.Subtitle = message;
-        ShellHintTip.Target = AiProviderChip;
+        ShellHintTip.Target = ThemeButton;
         ShellHintTip.IsOpen = true;
 
         _hintTimer.Stop();
@@ -1551,6 +1545,29 @@ public sealed partial class MainWindow : Window
     }
 
     private void SetStatus(string message) => StatusText.Text = message;
+
+    private string? _lastExportedFilePath;
+
+    /// <summary>
+    /// Affiche une notification visuelle claire pour l'enseignant après l'export d'un document,
+    /// avec un bouton permettant d'ouvrir directement le dossier dans l'Explorateur Windows.
+    /// </summary>
+    public void ShowExportNotification(string kind, string fileName, string path)
+    {
+        _lastExportedFilePath = path;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            StatusText.Text = $"✓ Document {kind} exporté : {fileName}";
+            NotificationIcon.Text = "📁";
+            NotificationActionButton.Content = "Ouvrir dans l'Explorateur";
+            NotificationActionButton.Visibility = Visibility.Visible;
+            NotificationDismissButton.Visibility = Visibility.Visible;
+
+            ShowHint(
+                "Document exporté avec succès 🎉",
+                $"Le fichier « {fileName} » a été enregistré.\nCliquez sur « Ouvrir dans l'Explorateur » pour le retrouver.");
+        });
+    }
 
     // ==========================================================================
     //  Boîtes de dialogue : raccourcis & à propos
@@ -1594,7 +1611,8 @@ public sealed partial class MainWindow : Window
 
     private async Task<ContentDialog?> CreateShortcutsDialogAsync()
     {
-        var xamlRoot = await EnsureXamlRootAsync();
+        var xamlRoot = RootGrid.XamlRoot ?? Content?.XamlRoot;
+        if (xamlRoot == null) xamlRoot = await EnsureXamlRootAsync();
         if (xamlRoot == null) return null;
 
         var dialog = new ContentDialog
@@ -1648,19 +1666,31 @@ public sealed partial class MainWindow : Window
         return dialog;
     }
 
-    private async void ShowAboutDialog()
+    public async void ShowAboutDialog()
     {
         try
         {
-            var xamlRoot = await EnsureXamlRootAsync();
+            var xamlRoot = RootGrid.XamlRoot ?? Content?.XamlRoot;
+            if (xamlRoot == null)
+            {
+                xamlRoot = await EnsureXamlRootAsync();
+            }
             if (xamlRoot == null) return;
 
-            var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "Dev";
+            var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.0.0";
             
+            var logoBrush = Application.Current.Resources.TryGetValue("PROFstudioLogoBrush", out var lb) && lb is Brush b
+                ? b
+                : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 120, 212));
+
+            var secondaryBrush = Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var sb) && sb is Brush sBrush
+                ? sBrush
+                : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 160, 160, 160));
+
             var dialog = new ContentDialog
             {
                 XamlRoot = xamlRoot,
-                Title = Services.L10n.Get("Dialog_About_Title"),
+                Title = Services.L10n.Get("Dialog_About_Title") ?? "À propos de PROFstudio",
                 Content = new StackPanel
                 {
                     Spacing = 16,
@@ -1678,7 +1708,7 @@ public sealed partial class MainWindow : Window
                                     Width = 48,
                                     Height = 48,
                                     CornerRadius = new CornerRadius(12),
-                                    Background = (SolidColorBrush)Application.Current.Resources["PROFstudioLogoBrush"],
+                                    Background = logoBrush,
                                     Child = new TextBlock
                                     {
                                         Text = "📘",
@@ -1700,9 +1730,9 @@ public sealed partial class MainWindow : Window
                                         },
                                         new TextBlock
                                         {
-                                            Text = Services.L10n.Get("Dialog_About_Tagline"),
+                                            Text = Services.L10n.Get("Dialog_About_Tagline") ?? "Générateur de fiches pédagogiques intelligent",
                                             FontSize = 14,
-                                            Foreground = (SolidColorBrush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                                            Foreground = secondaryBrush
                                         }
                                     }
                                 }
@@ -1711,23 +1741,24 @@ public sealed partial class MainWindow : Window
                         new TextBlock
                         {
                             Text = Services.L10n.Format("Dialog_About_Version", version),
-                            FontSize = 14
+                            FontSize = 14,
+                            FontWeight = FontWeights.SemiBold
                         },
                         new TextBlock
                         {
-                            Text = Services.L10n.Get("Dialog_About_Description"),
+                            Text = Services.L10n.Get("Dialog_About_Description") ?? "PROFstudio aide les enseignants à concevoir rapidement des fiches pédagogiques, des évaluations et des quiz avec l'aide de l'IA.",
                             FontSize = 14,
                             TextWrapping = TextWrapping.Wrap
                         },
                         new TextBlock
                         {
-                            Text = Services.L10n.Get("Dialog_About_Copyright"),
+                            Text = Services.L10n.Get("Dialog_About_Copyright") ?? "© 2026 PROFstudio. Tous droits réservés.",
                             FontSize = 12,
-                            Foreground = (SolidColorBrush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                            Foreground = secondaryBrush
                         }
                     }
                 },
-                PrimaryButtonText = Services.L10n.Get("Dialog_Close"),
+                PrimaryButtonText = Services.L10n.Get("Dialog_Close") ?? "Fermer",
                 DefaultButton = ContentDialogButton.Primary
             };
 
@@ -1735,12 +1766,31 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "Affichage de la boîte de dialogue À propos impossible.");
+            Log.Warning(ex, "Affichage de la boîte de dialogue À propos impossible via ContentDialog, utilisation de ShowHint.");
+            ShowHint(Services.L10n.Get("Dialog_About_Title") ?? "À propos de PROFstudio", "PROFstudio v1.0 — Conçu pour les enseignants.");
         }
     }
 
     private void NotificationAction_Click(object sender, RoutedEventArgs e)
     {
+        if (!string.IsNullOrWhiteSpace(_lastExportedFilePath) && File.Exists(_lastExportedFilePath))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{_lastExportedFilePath}\"",
+                    UseShellExecute = true
+                });
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Impossible d'ouvrir l'Explorateur sur le fichier exporté.");
+            }
+        }
+
         NavigateToTag("SettingsPage");
     }
 
@@ -1750,6 +1800,7 @@ public sealed partial class MainWindow : Window
         NotificationDismissButton.Visibility = Visibility.Collapsed;
         StatusText.Text = Services.L10n.Get("Status_Ready");
         NotificationIcon.Text = "✨";
+        _lastExportedFilePath = null;
     }
 }
 

@@ -13,6 +13,7 @@ using FicheGen.App.Services;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FicheGen.App.ViewModels;
 
@@ -201,6 +202,7 @@ public partial class ResultViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(FindNextCommand))]
+    [NotifyCanExecuteChangedFor(nameof(FindPreviousCommand))]
     public partial bool IsFindBarVisible { get; set; }
 
     [ObservableProperty]
@@ -227,6 +229,82 @@ public partial class ResultViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DocumentStatsText))]
     public partial int EstimatedReadingMinutes { get; set; }
+
+    // ------------------------------------------------------------------
+    // Rendu en direct (Streaming) & Étapes de génération
+    // ------------------------------------------------------------------
+
+    [ObservableProperty]
+    public partial string StreamedContent { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int StreamedWordCount { get; set; } = 0;
+
+    [ObservableProperty]
+    public partial string GenerationPhaseText { get; set; } = "Préparation…";
+
+    [ObservableProperty]
+    public partial int GenerationPhaseStep { get; set; } = 1;
+
+    public void ResetStreaming()
+    {
+        StreamedContent = string.Empty;
+        StreamedWordCount = 0;
+        GenerationPhaseStep = 1;
+        GenerationPhaseText = "Analyse du sujet et préparation pédagogique…";
+    }
+
+    public void SetGenerationPhase(int step, string text)
+    {
+        GenerationPhaseStep = step;
+        GenerationPhaseText = text;
+        SetStatus(text, StatusSeverity.Info);
+    }
+
+    public void AppendStreamedChunk(string chunk)
+    {
+        if (string.IsNullOrEmpty(chunk)) return;
+        StreamedContent += chunk;
+        StreamedWordCount += chunk.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        GenerationPhaseStep = 3;
+        GenerationPhaseText = $"Rédaction par l'IA ({StreamedWordCount} mots générés)…";
+        SetStatus($"Rédaction en direct : {StreamedWordCount} mots générés…", StatusSeverity.Info);
+    }
+
+    // ------------------------------------------------------------------
+    // Édition manuelle du document
+    // ------------------------------------------------------------------
+
+    /// <summary>Déclenché quand l'utilisateur demande à ouvrir l'éditeur de document.</summary>
+    public event EventHandler? EditRequested;
+
+    [RelayCommand(CanExecute = nameof(HasDocument))]
+    public void RequestEdit()
+    {
+        if (CurrentDocument is null) return;
+        EditRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Applique les modifications manuelles de texte au document courant.</summary>
+    public bool ApplyManualEdits(string title, string? subtitle, string bodyMarkdown)
+    {
+        if (CurrentDocument is null) return false;
+
+        PushSnapshot("Modification manuelle");
+
+        var meta = CurrentDocument.Metadata with
+        {
+            Title = string.IsNullOrWhiteSpace(title) ? CurrentDocument.Metadata.Title : title.Trim(),
+            Subtitle = subtitle
+        };
+
+        var parsedDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(bodyMarkdown, meta.Title);
+        CurrentDocument = new GeneratedDocument(meta, parsedDoc.Blocks, bodyMarkdown);
+
+        RefreshRendering();
+        SetStatus("Modifications enregistrées avec succès.", StatusSeverity.Success);
+        return true;
+    }
 
     // ------------------------------------------------------------------
     // Propriétés calculées
@@ -606,14 +684,20 @@ public partial class ResultViewModel : ObservableObject
             {
                 LastExportedFilePath = path;
                 var fileName = Path.GetFileName(path);
+                var dirName = Path.GetDirectoryName(path) ?? string.Empty;
                 ExportSuccessMessage = kind switch
                 {
-                    ExportKind.Pdf => $"Document PDF prêt : {fileName}",
-                    ExportKind.Docx => $"Document Word prêt : {fileName}",
-                    _ => $"Document RTF prêt : {fileName}"
+                    ExportKind.Pdf => $"PDF enregistré : {fileName}",
+                    ExportKind.Docx => $"Word enregistré : {fileName}",
+                    _ => $"RTF enregistré : {fileName}"
                 };
                 ShowExportSuccessBanner = true;
-                SetStatus($"Document exporté : {path}", StatusSeverity.Success);
+                SetStatus($"Document exporté avec succès : {path}", StatusSeverity.Success);
+
+                (App.CurrentMainWindow as MainWindow)?.ShowExportNotification(
+                    kind switch { ExportKind.Pdf => "PDF", ExportKind.Docx => "Word", _ => "RTF" },
+                    fileName,
+                    path);
             }
             else
             {
@@ -649,19 +733,41 @@ public partial class ResultViewModel : ObservableObject
         }
     }
 
-    /// <summary>Ouvre l'Explorateur Windows et sélectionne le dernier fichier exporté.</summary>
+    /// <summary>Ouvre l'Explorateur Windows et sélectionne le dernier fichier exporté ou ouvre le dossier d'export.</summary>
     [RelayCommand]
     public void OpenLastExportedFolder()
     {
-        if (string.IsNullOrWhiteSpace(LastExportedFilePath) || !File.Exists(LastExportedFilePath)) return;
         try
         {
+            if (!string.IsNullOrWhiteSpace(LastExportedFilePath) && File.Exists(LastExportedFilePath))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{LastExportedFilePath}\"",
+                    UseShellExecute = true
+                });
+                SetStatus("Dossier ouvert dans l'Explorateur Windows.", StatusSeverity.Success);
+                return;
+            }
+
+            var settingsStore = App.Services.GetService<ISettingsStore>();
+            var exportsDir = settingsStore?.GetSettings<FicheGen.Core.Storage.AppSettings>()?.Folders?.ExportsDir;
+            var folderToOpen = !string.IsNullOrWhiteSpace(exportsDir) && Directory.Exists(exportsDir)
+                ? exportsDir
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "PROFstudio", "Exports");
+
+            if (!Directory.Exists(folderToOpen))
+            {
+                Directory.CreateDirectory(folderToOpen);
+            }
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = "explorer.exe",
-                Arguments = $"/select,\"{LastExportedFilePath}\"",
+                FileName = folderToOpen,
                 UseShellExecute = true
             });
+            SetStatus($"Dossier d'exportation ouvert : {folderToOpen}", StatusSeverity.Info);
         }
         catch (Exception ex)
         {
@@ -724,6 +830,13 @@ public partial class ResultViewModel : ObservableObject
     {
         RefreshFindMatches();
         // La mise en surbrillance et le défilement sont gérés par la vue (WebView2).
+    }
+
+    /// <summary>Demande à la vue de faire défiler vers l'occurrence précédente.</summary>
+    [RelayCommand(CanExecute = nameof(IsFindBarVisible))]
+    public void FindPrevious()
+    {
+        RefreshFindMatches();
     }
 
     private void RefreshFindMatches()

@@ -11,6 +11,7 @@
     <UserControl.Resources>
         <!-- Converters -->
         <converters:StringFormatConverter x:Key="StringFormatConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
 
         <!-- Styles de boutons de la barre d'outils -->
         <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
@@ -138,8 +139,19 @@
                     </Button>
                 </StackPanel>
 
-                <!-- 3. Exports, Impression, Lecture, Presse-papiers -->
+                <!-- 3. Exports, Impression, Modification, Autres actions -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button x:Name="EditDocButton" x:Uid="PH_EditButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="OnEditDocumentClicked"
+                            ToolTipService.ToolTip="Modifier le texte et la structure du document"
+                            AutomationProperties.Name="Modifier le document">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <TextBlock x:Uid="PH_EditLabel" Text="Modifier" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="ExportWordButton" x:Uid="PH_ExportWord"
                             Style="{StaticResource ToolbarButtonStyle}"
                             Click="OnExportWordClicked"
@@ -179,6 +191,10 @@
                         <FontIcon Glyph="&#xE712;" FontSize="13"/>
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuFlyoutItem x:Uid="PH_MenuEdit" Text="✏️ Modifier le document" Click="OnEditDocumentClicked">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" FontSize="14"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
                                 <MenuFlyoutItem x:Uid="PH_MenuRtf" Text="📄 Exporter en RTF" Click="OnExportRtfClicked">
                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C6;" FontSize="14"/></MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
@@ -203,20 +219,27 @@
             </Grid>
         </Border>
 
-        <!-- Bannière d'exportation réussie -->
+        <!-- Bannière d'exportation réussie avec actions rapides -->
         <InfoBar x:Name="ExportSuccessInfoBar" x:Uid="PH_ExportBanner"
                  Grid.Row="1"
                  IsOpen="{Binding ShowExportSuccessBanner, Mode=TwoWay}"
                  Severity="Success"
+                 Title="Document exporté avec succès"
                  Message="{Binding ExportSuccessMessage}"
                  IsClosable="True"
                  Margin="12,6"
                  AutomationProperties.LiveSetting="Polite">
             <InfoBar.ActionButton>
-                <Button x:Uid="PH_OpenExportedFile" Content="Ouvrir le fichier"
+                <Button x:Uid="PH_OpenExportedFolder" Content="Ouvrir le dossier"
                         Style="{ThemeResource AccentButtonStyle}"
-                        Command="{Binding OpenLastExportedFileCommand}"/>
+                        Command="{Binding OpenLastExportedFolderCommand}"/>
             </InfoBar.ActionButton>
+            <InfoBar.Content>
+                <Button x:Uid="PH_OpenExportedFile" Content="Ouvrir le fichier"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Margin="0,0,0,4"
+                        Command="{Binding OpenLastExportedFileCommand}"/>
+            </InfoBar.Content>
         </InfoBar>
 
         <!-- Bannière de rendu progressif (streaming) -->
@@ -345,48 +368,133 @@
                 </Border>
             </StackPanel>
 
-            <!-- Squelette shimmer pendant la génération -->
+            <!-- Squelette & Suivi multi-étapes pendant la génération -->
             <Grid x:Name="SkeletonOverlay"
                   Visibility="Collapsed"
                   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
                   x:Uid="PH_Skeleton">
-                <Grid MaxWidth="640"
-                      HorizontalAlignment="Center"
-                      Width="{x:Bind Root.ActualWidth, Mode=OneWay}"
-                      Padding="48,40">
-                    <StackPanel Spacing="12">
-                        <Border x:Name="SkelTitle" Height="28" Width="340" HorizontalAlignment="Left" CornerRadius="6"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelSub" Height="14" Width="220" HorizontalAlignment="Left" CornerRadius="4"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL1" Height="12" CornerRadius="4" Margin="0,16,0,0"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL2" Height="12" CornerRadius="4"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL3" Height="12" CornerRadius="4"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL4" Height="12" CornerRadius="4" Margin="0,0,180,0"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelCard" Height="110" CornerRadius="8" Margin="0,12,0,0"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL5" Height="12" CornerRadius="4" Margin="0,12,0,0"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL6" Height="12" CornerRadius="4"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
-                        <Border x:Name="SkelL7" Height="12" CornerRadius="4" Margin="0,0,240,0"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel MaxWidth="680" HorizontalAlignment="Center" Spacing="16" Padding="32,24">
+                        
+                        <!-- ══════ Indicateur multi-étapes de génération ══════ -->
+                        <Border Padding="16,14" CornerRadius="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <ProgressRing IsActive="True" Width="18" Height="18"/>
+                                        <TextBlock Text="{Binding GenerationPhaseText}"
+                                                   FontWeight="SemiBold" FontSize="13"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
+                                               FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- 4 Jalons pédagogiques -->
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Étape 1 : Analyse -->
+                                    <Border Grid.Column="0" Padding="8,6" CornerRadius="6"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <TextBlock Text="🔍" FontSize="11"/>
+                                            <TextBlock Text="1. Analyse" FontSize="11" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Étape 2 : Structure -->
+                                    <Border Grid.Column="1" Padding="8,6" CornerRadius="6"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <TextBlock Text="📑" FontSize="11"/>
+                                            <TextBlock Text="2. Structure" FontSize="11" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Étape 3 : Rédaction -->
+                                    <Border Grid.Column="2" Padding="8,6" CornerRadius="6"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <TextBlock Text="✍️" FontSize="11"/>
+                                            <TextBlock Text="3. Rédaction" FontSize="11" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Étape 4 : Rendu -->
+                                    <Border Grid.Column="3" Padding="8,6" CornerRadius="6"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <TextBlock Text="🎨" FontSize="11"/>
+                                            <TextBlock Text="4. Rendu" FontSize="11" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ══════ Aperçu du texte en direct (Streaming) ══════ -->
+                        <Border x:Name="StreamedPreviewCard"
+                                Visibility="Collapsed"
+                                Padding="16" CornerRadius="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE99A;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="Rédaction en direct par l'IA" FontWeight="SemiBold" FontSize="12"/>
+                                    <TextBlock Text="{Binding StreamedWordCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0} mots'}"
+                                               FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                                    <TextBlock Text="{Binding StreamedContent}"
+                                               FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
+                                               LineHeight="19" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Squelette shimmer -->
+                        <StackPanel x:Name="SkelShimmerGroup" Spacing="10" Margin="8,0">
+                            <Border x:Name="SkelTitle" Height="28" Width="340" HorizontalAlignment="Left" CornerRadius="6"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelSub" Height="14" Width="220" HorizontalAlignment="Left" CornerRadius="4"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelL1" Height="12" CornerRadius="4" Margin="0,12,0,0"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelL2" Height="12" CornerRadius="4"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelL3" Height="12" CornerRadius="4"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelCard" Height="80" CornerRadius="8" Margin="0,8,0,0"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelL5" Height="12" CornerRadius="4" Margin="0,8,0,0"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                            <Border x:Name="SkelL6" Height="12" CornerRadius="4"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
+                        </StackPanel>
                     </StackPanel>
-                </Grid>
-                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,32"
-                            Orientation="Horizontal" Spacing="10">
-                    <ProgressRing IsActive="True" Width="20" Height="20"/>
-                    <TextBlock x:Name="StatusTextBlock"
-                               Text="{Binding StatusText, ElementName=Root}"
-                               Style="{ThemeResource BodyTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"
-                               AutomationProperties.LiveSetting="Polite"/>
-                </StackPanel>
+                </ScrollViewer>
             </Grid>
 
             <!-- Aperçu WebView2 -->
@@ -396,6 +504,53 @@
                       VerticalAlignment="Stretch"
                       PointerWheelChanged="OnPreviewWheelChanged"
                       x:Uid="PH_WebView"/>
+
+            <!-- Barre de recherche dans le document (Ctrl+F) -->
+            <Border x:Name="FindBarBorder"
+                    Visibility="{Binding IsFindBarVisible, Converter={StaticResource BoolToVis}}"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,12,24,0"
+                    Padding="10,6"
+                    CornerRadius="8"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Canvas.ZIndex="100">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBox x:Name="FindQueryTextBox"
+                             Text="{Binding FindQuery, Mode=TwoWay}"
+                             PlaceholderText="Rechercher dans la fiche…"
+                             Width="200"
+                             TextChanged="FindQueryTextBox_TextChanged"
+                             KeyDown="FindQueryTextBox_KeyDown"/>
+                    <TextBlock Text="{Binding FindStatusText}"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                            Command="{Binding FindPreviousCommand}"
+                            ToolTipService.ToolTip="Précédent (Maj+Entrée)">
+                        <FontIcon Glyph="&#xE70E;" FontSize="12"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                            Command="{Binding FindNextCommand}"
+                            ToolTipService.ToolTip="Suivant (Entrée)">
+                        <FontIcon Glyph="&#xE70D;" FontSize="12"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                            Command="{Binding ToggleFindBarCommand}"
+                            ToolTipService.ToolTip="Fermer la recherche (Échap)">
+                        <FontIcon Glyph="&#xE711;" FontSize="12"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Bulle de notification pour la copie dans le presse-papiers -->
+            <TeachingTip x:Name="CopiedTip"
+                         Title="Presse-papiers"
+                         Subtitle="✓ Le texte complet a été copié dans le presse-papiers."
+                         PreferredPlacement="Bottom"
+                         IsLightDismissEnabled="True"/>
 
             <!-- État d'erreur WebView2 absent (UX-04) -->
             <StackPanel x:Name="WebView2ErrorPanel"

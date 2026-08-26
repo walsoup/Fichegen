@@ -13,6 +13,9 @@
   <data name="Shell_ThemeLightItem.AutomationProperties.Name" xml:space="preserve"><value>Thème clair</value></data>
   <data name="Shell_ThemeDarkItem.ToolTipService.ToolTip" xml:space="preserve"><value>Interface sombre</value></data>
   <data name="Shell_ThemeDarkItem.AutomationProperties.Name" xml:space="preserve"><value>Thème sombre</value></data>
+  <data name="Shell_ThemeOledItem.ToolTipService.ToolTip" xml:space="preserve"><value>Interface noir profond pour écran OLED</value></data>
+  <data name="Shell_ThemeOledItem.AutomationProperties.Name" xml:space="preserve"><value>Thème noir absolu OLED</value></data>
+  <data name="Shell_ThemeOledItem.Text" xml:space="preserve"><value>Sombre OLED</value></data>
   <data name="Shell_SettingsButton.ToolTipService.ToolTip" xml:space="preserve"><value>Paramètres (Ctrl+,)</value></data>
   <data name="Shell_SettingsButton.AutomationProperties.Name" xml:space="preserve"><value>Paramètres</value></data>
   <data name="Shell_ProfileButton.ToolTipService.ToolTip" xml:space="preserve"><value>Profil enseignant</value></data>
@@ -57,6 +60,7 @@
   <data name="Status_Theme" xml:space="preserve"><value>🎨 Thème : {0}</value></data>
   <data name="Theme_Light" xml:space="preserve"><value>Clair</value></data>
   <data name="Theme_Dark" xml:space="preserve"><value>Sombre</value></data>
+  <data name="Theme_Oled" xml:space="preserve"><value>Sombre OLED</value></data>
   <data name="Theme_System" xml:space="preserve"><value>Système</value></data>
   <data name="Section_Fiche" xml:space="preserve"><value>Section : Fiche pédagogique</value></data>
   <data name="Section_Evaluation" xml:space="preserve"><value>Section : Évaluation</value></data>
@@ -207,8 +211,12 @@
   <data name="PH_PrintButton.ToolTipService.ToolTip" xml:space="preserve"><value>Imprimer le document (Ctrl+P)</value></data>
   <data name="PH_PrintButton.AutomationProperties.Name" xml:space="preserve"><value>Imprimer le document</value></data>
   <data name="PH_PrintLabel.Text" xml:space="preserve"><value>Imprimer</value></data>
+  <data name="PH_EditButton.ToolTipService.ToolTip" xml:space="preserve"><value>Modifier le texte et les consignes du document</value></data>
+  <data name="PH_EditButton.AutomationProperties.Name" xml:space="preserve"><value>Modifier le document</value></data>
+  <data name="PH_EditLabel.Text" xml:space="preserve"><value>Modifier</value></data>
   <data name="PH_MoreActions.ToolTipService.ToolTip" xml:space="preserve"><value>Autres actions</value></data>
   <data name="PH_MoreActions.AutomationProperties.Name" xml:space="preserve"><value>Autres options d'export et d'écoute</value></data>
+  <data name="PH_MenuEdit.Text" xml:space="preserve"><value>✏️ Modifier le document</value></data>
   <data name="PH_MenuRtf.Text" xml:space="preserve"><value>📄 Exporter en RTF</value></data>
   <data name="PH_MenuCopyText.Text" xml:space="preserve"><value>📋 Copier le texte complet</value></data>
   <data name="PH_MenuFind.Text" xml:space="preserve"><value>🔎 Rechercher dans le document</value></data>
@@ -218,6 +226,9 @@
   <data name="PH_ExportBanner.Title" xml:space="preserve"><value>Document exporté avec succès</value></data>
   <data name="PH_OpenExportedFile.Content" xml:space="preserve"><value>Ouvrir le fichier</value></data>
   <data name="PH_OpenExportedFile.AutomationProperties.Name" xml:space="preserve"><value>Ouvrir le fichier exporté</value></data>
+  <data name="PH_OpenExportedFolder.Content" xml:space="preserve"><value>Ouvrir le dossier</value></data>
+  <data name="PH_OpenExportedFolder.AutomationProperties.Name" xml:space="preserve"><value>Ouvrir le dossier dans l'Explorateur Windows</value></data>
+  <data name="PH_CopiedToast" xml:space="preserve"><value>✓ Texte complet copié dans le presse-papiers</value></data>
   <data name="PH_StreamingBanner.AutomationProperties.Name" xml:space="preserve"><value>Rendu progressif du document en cours</value></data>
   <data name="PH_EmptyState.AutomationProperties.Name" xml:space="preserve"><value>Aucun document généré</value></data>
   <data name="PH_EmptyTitle.Text" xml:space="preserve"><value>Générez votre première fiche</value></data>

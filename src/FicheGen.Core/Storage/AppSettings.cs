@@ -7,6 +7,7 @@ public sealed class UiSettings
     public string AccentColor { get; set; } = string.Empty;
     public bool AssistantPaneOpen { get; set; } = true;
     public double SplitRatio { get; set; } = 0.38;
+    public bool EnableStreaming { get; set; } = true;
 }
 
 public sealed class DefaultSettings

@@ -263,8 +263,7 @@ public partial class EvaluationViewModel : ObservableValidator
         IsGenerating = true;
         ResultViewModel.IsBusy = true;
         ResultViewModel.CurrentHtml = string.Empty;
-        ResultViewModel.SetStatus("Structuration de l'évaluation et du barème…", StatusSeverity.Info);
-        SetStatus("Structuration de l'évaluation et du barème…", StatusSeverity.Info);
+        ResultViewModel.ResetStreaming();
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
         _elapsedTimer?.Start();
@@ -288,9 +287,26 @@ public partial class EvaluationViewModel : ObservableValidator
                 UsePedagogicalGuide: UsePedagogicalGuide
             );
 
-            SetStatus("Rédaction des exercices par l'IA…", StatusSeverity.Info);
-            ResultViewModel.SetStatus("Rédaction des exercices par l'IA…", StatusSeverity.Info);
-            var result = await _orchestrator.GenerateEvaluationAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+            ResultViewModel.SetGenerationPhase(1, "Structuration de l'évaluation et du barème…");
+            SetStatus("Structuration de l'évaluation et du barème…", StatusSeverity.Info);
+
+            FicheGen.Core.Services.GenerationResult result;
+            if (appSettings.Ui.EnableStreaming)
+            {
+                ResultViewModel.SetGenerationPhase(2, "Conception des compétences et exercices…");
+                var progress = new Progress<string>(chunk =>
+                {
+                    ResultViewModel.AppendStreamedChunk(chunk);
+                });
+                result = await _orchestrator.GenerateEvaluationStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, _cts.Token);
+            }
+            else
+            {
+                ResultViewModel.SetGenerationPhase(3, "Rédaction des exercices par l'IA…");
+                result = await _orchestrator.GenerateEvaluationAsync(parameters, config, appSettings.Folders.GuidesDir, _cts.Token);
+            }
+
+            ResultViewModel.SetGenerationPhase(4, "Calcul des points et mise en page…");
             var document = result.Document;
             var html = result.PreviewHtml;
 

@@ -271,8 +271,7 @@ public partial class QuizViewModel : ObservableValidator
         IsGenerating = true;
         ResultViewModel.IsBusy = true;
         ResultViewModel.CurrentHtml = string.Empty;
-        ResultViewModel.SetStatus("Conception des questions et des distracteurs…", StatusSeverity.Info);
-        SetStatus("Conception des questions et des distracteurs…", StatusSeverity.Info);
+        ResultViewModel.ResetStreaming();
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
         _elapsedTimer?.Start();
@@ -304,9 +303,26 @@ public partial class QuizViewModel : ObservableValidator
                 promptInstructions
             );
 
-            SetStatus("Rédaction du quiz par l'IA…", StatusSeverity.Info);
-            ResultViewModel.SetStatus("Rédaction du quiz par l'IA…", StatusSeverity.Info);
-            var result = await _orchestrator.GenerateQuizAsync(parameters, config, _cts.Token);
+            ResultViewModel.SetGenerationPhase(1, "Conception des questions et des distracteurs…");
+            SetStatus("Conception des questions et des distracteurs…", StatusSeverity.Info);
+
+            FicheGen.Core.Services.GenerationResult result;
+            if (appSettings.Ui.EnableStreaming)
+            {
+                ResultViewModel.SetGenerationPhase(2, "Rédaction des énoncés et des propositions…");
+                var progress = new Progress<string>(chunk =>
+                {
+                    ResultViewModel.AppendStreamedChunk(chunk);
+                });
+                result = await _orchestrator.GenerateQuizStreamingAsync(parameters, config, progress, _cts.Token);
+            }
+            else
+            {
+                ResultViewModel.SetGenerationPhase(3, "Rédaction du quiz par l'IA…");
+                result = await _orchestrator.GenerateQuizAsync(parameters, config, _cts.Token);
+            }
+
+            ResultViewModel.SetGenerationPhase(4, "Génération du corrigé et mise en page…");
             var document = result.Document;
             var html = result.PreviewHtml;
 

@@ -10,14 +10,6 @@
 
     <!-- Pas de Background opaque : laisse Mica / Acrylic (voir MainWindow.xaml.cs) visible. -->
     <Grid x:Name="RootGrid" KeyboardAcceleratorPlacementMode="Hidden">
-        <Grid.Resources>
-            <!-- Pulsation du voyant IA pendant une génération -->
-            <Storyboard x:Key="AiPulseStoryboard" RepeatBehavior="Forever">
-                <DoubleAnimation Storyboard.TargetName="AiStatusGlyph"
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="1" To="0.35" Duration="0:0:0.9" AutoReverse="True"/>
-            </Storyboard>
-        </Grid.Resources>
         <!-- ===== Raccourcis clavier (voir aussi Ctrl+, ajouté dans le code) ===== -->
         <Grid.KeyboardAccelerators>
             <!-- Génération & annulation -->
@@ -73,25 +65,6 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- Titre central / état -->
-            <Button x:Name="AiProviderChip" Grid.Column="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="14,4" CornerRadius="16"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    Click="OnAiChipClicked"
-                    AutomationProperties.Name="Assistant IA"
-                    ToolTipService.ToolTip="Statut de l'assistant IA">
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock x:Name="AiStatusGlyph" Text="○" FontSize="11" FontWeight="Bold"
-                               VerticalAlignment="Center"/>
-                    <TextBlock x:Name="AiProviderChipText" Text="Assistant IA — vérification…" FontSize="12"
-                               x:Uid="Shell_AiChipText"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-
             <!-- Actions rapides + profil -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
                         VerticalAlignment="Center" Margin="0,0,12,0">
@@ -127,6 +100,12 @@
                                                  x:Uid="Shell_ThemeDarkItem">
                                 <RadioMenuFlyoutItem.Icon>
                                     <FontIcon Glyph="&#xE708;"/>
+                                </RadioMenuFlyoutItem.Icon>
+                            </RadioMenuFlyoutItem>
+                            <RadioMenuFlyoutItem x:Name="ThemeOledItem" Tag="Oled" Click="OnThemeItemClick"
+                                                 x:Uid="Shell_ThemeOledItem" Text="Sombre OLED">
+                                <RadioMenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xEA3B;"/>
                                 </RadioMenuFlyoutItem.Icon>
                             </RadioMenuFlyoutItem>
                         </MenuFlyout>

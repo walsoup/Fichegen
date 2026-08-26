@@ -167,6 +167,14 @@
                         <TextBlock Text="🇫🇷 Français" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </controls:SettingsCard>
 
+                    <controls:SettingsCard Header="Affichage du texte en direct (Streaming)"
+                                           Description="Affiche le document au fur et à mesure de sa rédaction par l'IA.">
+                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch IsOn="{x:Bind ViewModel.EnableStreaming, Mode=TwoWay}"
+                                      OnContent="Activé" OffContent="Désactivé"
+                                      AutomationProperties.Name="Affichage du texte en direct"/>
+                    </controls:SettingsCard>
+
                     <TextBlock Text="Préférences pédagogiques" Style="{StaticResource SectionHeaderStyle}"/>
 
                     <controls:SettingsCard Header="Niveau scolaire par défaut"
@@ -209,6 +217,15 @@
                         <ToggleSwitch x:Name="StartupToggle" Toggled="StartupToggle_Toggled"
                                       OnContent="Activé" OffContent="Désactivé"
                                       AutomationProperties.Name="Lancer PROFstudio au démarrage"/>
+                    </controls:SettingsCard>
+
+                    <TextBlock Text="À propos de l'application" Style="{StaticResource SectionHeaderStyle}"/>
+
+                    <controls:SettingsCard Header="À propos de PROFstudio"
+                                           Description="Version 1.0 — Conçu pour les enseignants. Génération pédagogique locale et sécurisée.">
+                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE946;"/></controls:SettingsCard.HeaderIcon>
+                        <Button Content="Afficher les informations…" Command="{x:Bind ViewModel.ShowAboutCommand}"
+                                ToolTipService.ToolTip="Informations sur l'application et mentions légales"/>
                     </controls:SettingsCard>
                 </StackPanel>
 

@@ -6,6 +6,7 @@ using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Serilog;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -150,6 +151,7 @@ public sealed partial class PreviewHost : UserControl
         _currentViewModel = vm;
         vm.PropertyChanged += OnViewModelPropertyChanged;
         vm.PrintRequested += OnViewModelPrintRequested;
+        vm.EditRequested += OnViewModelEditRequested;
         _isViewModelWired = true;
         SyncPresetComboBox(vm.ActivePresetId);
     }
@@ -162,6 +164,7 @@ public sealed partial class PreviewHost : UserControl
         }
         _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _currentViewModel.PrintRequested -= OnViewModelPrintRequested;
+        _currentViewModel.EditRequested -= OnViewModelEditRequested;
         _isViewModelWired = false;
     }
 
@@ -189,6 +192,20 @@ public sealed partial class PreviewHost : UserControl
                 else if (!vm.IsBusy && string.IsNullOrWhiteSpace(vm.CurrentHtml))
                 {
                     State = PreviewState.Empty;
+                }
+            }
+            else if (e.PropertyName == nameof(ResultViewModel.StreamedContent))
+            {
+                if (!string.IsNullOrWhiteSpace(vm.StreamedContent))
+                {
+                    if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Visible;
+                    if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Collapsed;
+                    State = PreviewState.Generating;
+                }
+                else
+                {
+                    if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Collapsed;
+                    if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Visible;
                 }
             }
             else if (e.PropertyName == nameof(ResultViewModel.StatusMessage))
@@ -228,6 +245,9 @@ public sealed partial class PreviewHost : UserControl
 
     private async void SyncHtmlFromViewModel(ResultViewModel vm)
     {
+        if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Collapsed;
+        if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Visible;
+
         if (!string.IsNullOrWhiteSpace(vm.CurrentHtml))
         {
             await NavigateToStringAsync(vm.CurrentHtml);
@@ -332,6 +352,7 @@ public sealed partial class PreviewHost : UserControl
 
         // Activation / désactivation des contrôles de la barre d'outils
         var hasDoc = state == PreviewState.Streaming || state == PreviewState.Ready;
+        if (EditDocButton != null) EditDocButton.IsEnabled = hasDoc;
         if (ExportWordButton != null) ExportWordButton.IsEnabled = hasDoc;
         if (ExportPdfButton != null) ExportPdfButton.IsEnabled = hasDoc;
         if (PrintButton != null) PrintButton.IsEnabled = hasDoc;
@@ -463,8 +484,95 @@ public sealed partial class PreviewHost : UserControl
     }
 
     // ------------------------------------------------------------------
-    // Exports / Presse-papiers / Impression / Lecture / Version Élève
+    // Édition / Exports / Presse-papiers / Impression / Lecture / Version Élève
     // ------------------------------------------------------------------
+
+    private void OnViewModelEditRequested(object? sender, EventArgs e)
+        => _ = ShowDocumentEditDialogAsync();
+
+    private void OnEditDocumentClicked(object sender, RoutedEventArgs e)
+        => _ = ShowDocumentEditDialogAsync();
+
+    private async Task ShowDocumentEditDialogAsync()
+    {
+        if (DataContext is not ResultViewModel vm || vm.CurrentDocument == null) return;
+
+        var xamlRoot = Root.XamlRoot ?? this.XamlRoot ?? (App.CurrentMainWindow as MainWindow)?.Content?.XamlRoot;
+        if (xamlRoot == null) return;
+
+        var titleBox = new TextBox
+        {
+            Header = "Titre du document",
+            Text = vm.CurrentDocument.Metadata.Title ?? string.Empty,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+
+        var subtitleBox = new TextBox
+        {
+            Header = "Sous-titre / Objectif pédagogique (facultatif)",
+            Text = vm.CurrentDocument.Metadata.Subtitle ?? string.Empty,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+
+        var bodyBox = new TextBox
+        {
+            Header = "Contenu du document (Markdown / Texte structuré)",
+            Text = vm.CurrentDocument.ToPlainText(),
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 260,
+            MaxHeight = 400
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(bodyBox, ScrollBarVisibility.Auto);
+
+        var dialogContent = new StackPanel
+        {
+            Spacing = 6,
+            MinWidth = 520,
+            MaxWidth = 720,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = "Ajustez les titres, consignes ou exercices ci-dessous. Le document et l'aperçu seront actualisés instantanément.",
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 0, 0, 8)
+                },
+                titleBox,
+                subtitleBox,
+                bodyBox
+            }
+        };
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = xamlRoot,
+            Title = "✏️ Modifier le document",
+            Content = dialogContent,
+            PrimaryButtonText = "Enregistrer les modifications",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            var success = vm.ApplyManualEdits(titleBox.Text, subtitleBox.Text, bodyBox.Text);
+            if (success)
+            {
+                try
+                {
+                    CopiedTip.Title = "Document mis à jour";
+                    CopiedTip.Subtitle = "✓ Vos modifications ont été enregistrées avec succès.";
+                    CopiedTip.Target = TopToolbarBorder;
+                    CopiedTip.IsOpen = true;
+                }
+                catch { }
+            }
+        }
+    }
 
     private void OnStudentViewClicked(object sender, RoutedEventArgs e)
     {
@@ -525,6 +633,65 @@ public sealed partial class PreviewHost : UserControl
         {
             await CopyDocumentToClipboardAsync();
         }
+
+        // Notification visuelle pour confirmer la copie
+        try
+        {
+            CopiedTip.Target = TopToolbarBorder;
+            CopiedTip.IsOpen = true;
+        }
+        catch { }
+    }
+
+    private void FindQueryTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (DataContext is ResultViewModel vm && sender is TextBox tb)
+        {
+            vm.FindQuery = tb.Text;
+        }
+    }
+
+    private void FindQueryTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (DataContext is not ResultViewModel vm) return;
+
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            e.Handled = true;
+            bool isShift = (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift) & Windows.UI.Core.CoreVirtualKeyStates.Down) != 0;
+            if (isShift)
+            {
+                if (vm.FindPreviousCommand.CanExecute(null)) vm.FindPreviousCommand.Execute(null);
+                _ = ExecuteInPageSearchAsync(vm.FindQuery, backwards: true);
+            }
+            else
+            {
+                if (vm.FindNextCommand.CanExecute(null)) vm.FindNextCommand.Execute(null);
+                _ = ExecuteInPageSearchAsync(vm.FindQuery, backwards: false);
+            }
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            e.Handled = true;
+            if (vm.ToggleFindBarCommand.CanExecute(null)) vm.ToggleFindBarCommand.Execute(null);
+        }
+    }
+
+    private async Task ExecuteInPageSearchAsync(string query, bool backwards)
+    {
+        try
+        {
+            if (WebViewControl?.CoreWebView2 != null && !string.IsNullOrWhiteSpace(query))
+            {
+                var escaped = JsonSerializer.Serialize(query);
+                var script = $"window.find({escaped}, false, {(backwards ? "true" : "false")}, true);";
+                await WebViewControl.ExecuteScriptAsync(script);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Recherche dans la WebView non complétée.");
+        }
     }
 
     private async void OnPrintClicked(object sender, RoutedEventArgs e)
@@ -576,15 +743,22 @@ public sealed partial class PreviewHost : UserControl
 
     private void OnFindClicked(object sender, RoutedEventArgs e)
     {
-        if (DataContext is ResultViewModel vm && vm.ToggleFindBarCommand.CanExecute(null))
+        if (DataContext is ResultViewModel vm)
         {
-            vm.ToggleFindBarCommand.Execute(null);
+            if (vm.ToggleFindBarCommand.CanExecute(null))
+            {
+                vm.ToggleFindBarCommand.Execute(null);
+            }
+            if (vm.IsFindBarVisible)
+            {
+                FindQueryTextBox?.Focus(FocusState.Programmatic);
+            }
         }
     }
 
     private void OnOpenExportFolderClicked(object sender, RoutedEventArgs e)
     {
-        if (DataContext is ResultViewModel vm && vm.OpenLastExportedFolderCommand.CanExecute(null))
+        if (DataContext is ResultViewModel vm)
         {
             vm.OpenLastExportedFolderCommand.Execute(null);
         }

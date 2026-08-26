@@ -37,6 +37,25 @@ public sealed class GenerationOrchestrator
         return await ProcessGenerationAsync(req, config, parameters.Topic, lessonContext, sw, ct).ConfigureAwait(false);
     }
 
+    public async Task<GenerationResult> GenerateFicheStreamingAsync(
+        FicheParameters parameters,
+        AiRequestConfig config,
+        string? guidesDir = null,
+        IProgress<string>? chunkProgress = null,
+        CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        string? lessonContext = null;
+
+        if (parameters.UsePedagogicalGuide && _guideService != null && !string.IsNullOrWhiteSpace(guidesDir))
+        {
+            lessonContext = await ResolveGuideContextAsync(parameters.ClassLevel, parameters.Topic, guidesDir, _guideService, ct).ConfigureAwait(false);
+        }
+
+        var req = PromptBuilder.BuildFichePrompt(parameters, lessonContext);
+        return await ProcessStreamingGenerationAsync(req, config, parameters.Topic, lessonContext, sw, chunkProgress, ct).ConfigureAwait(false);
+    }
+
     public async Task<GenerationResult> GenerateEvaluationAsync(
         EvalParameters parameters,
         AiRequestConfig config,
@@ -59,6 +78,28 @@ public sealed class GenerationOrchestrator
         return ReferenceEquals(normalizedDoc, result.Document) ? result : result with { Document = normalizedDoc };
     }
 
+    public async Task<GenerationResult> GenerateEvaluationStreamingAsync(
+        EvalParameters parameters,
+        AiRequestConfig config,
+        string? guidesDir = null,
+        IProgress<string>? chunkProgress = null,
+        CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        string? lessonContext = null;
+
+        if (parameters.UsePedagogicalGuide && _guideService != null && !string.IsNullOrWhiteSpace(guidesDir))
+        {
+            lessonContext = await ResolveGuideContextAsync(parameters.ClassLevel, parameters.Topic, guidesDir, _guideService, ct).ConfigureAwait(false);
+        }
+
+        var req = PromptBuilder.BuildEvalPrompt(parameters, lessonContext);
+        var result = await ProcessStreamingGenerationAsync(req, config, parameters.Topic, lessonContext, sw, chunkProgress, ct).ConfigureAwait(false);
+
+        var normalizedDoc = NormalizeBaremeIfNeeded(result.Document, parameters.TargetPoints);
+        return ReferenceEquals(normalizedDoc, result.Document) ? result : result with { Document = normalizedDoc };
+    }
+
     public async Task<GenerationResult> GenerateQuizAsync(
         QuizParameters parameters,
         AiRequestConfig config,
@@ -67,6 +108,17 @@ public sealed class GenerationOrchestrator
         var sw = Stopwatch.StartNew();
         var req = PromptBuilder.BuildQuizPrompt(parameters, lessonContext: null);
         return await ProcessGenerationAsync(req, config, parameters.Topic, lessonContext: null, sw, ct).ConfigureAwait(false);
+    }
+
+    public async Task<GenerationResult> GenerateQuizStreamingAsync(
+        QuizParameters parameters,
+        AiRequestConfig config,
+        IProgress<string>? chunkProgress = null,
+        CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        var req = PromptBuilder.BuildQuizPrompt(parameters, lessonContext: null);
+        return await ProcessStreamingGenerationAsync(req, config, parameters.Topic, lessonContext: null, sw, chunkProgress, ct).ConfigureAwait(false);
     }
 
     private async Task<GenerationResult> ProcessGenerationAsync(
@@ -78,6 +130,49 @@ public sealed class GenerationOrchestrator
         CancellationToken ct)
     {
         var rawResponse = await _llmClient.GenerateAsync(req, config, ct).ConfigureAwait(false);
+
+        bool isFallback = false;
+        string? warningMessage = null;
+
+        if (!JsonCleaner.TryDeserializeDocument(rawResponse, out var doc) || doc == null)
+        {
+            isFallback = true;
+            warningMessage = "Format JSON invalide — conversion dégradée depuis le Markdown.";
+            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(rawResponse, fallbackTitle);
+        }
+
+        var html = HtmlRenderer.RenderToFullHtml(doc);
+        sw.Stop();
+
+        return new GenerationResult(
+            Document: doc,
+            PreviewHtml: html,
+            RawResponse: rawResponse,
+            Elapsed: sw.Elapsed,
+            LessonContextUsed: lessonContext,
+            IsFallback: isFallback,
+            WarningMessage: warningMessage
+        );
+    }
+
+    private async Task<GenerationResult> ProcessStreamingGenerationAsync(
+        LlmRequest req,
+        AiRequestConfig config,
+        string fallbackTitle,
+        string? lessonContext,
+        Stopwatch sw,
+        IProgress<string>? chunkProgress,
+        CancellationToken ct)
+    {
+        var sb = new StringBuilder();
+
+        await foreach (var chunk in _llmClient.GenerateStreamAsync(req, config, ct).ConfigureAwait(false))
+        {
+            sb.Append(chunk);
+            chunkProgress?.Report(chunk);
+        }
+
+        var rawResponse = sb.ToString();
 
         bool isFallback = false;
         string? warningMessage = null;
