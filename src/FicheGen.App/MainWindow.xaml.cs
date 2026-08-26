@@ -143,6 +143,16 @@ public sealed partial class MainWindow : Window
                 DispatcherQueue.TryEnqueue(() => UpdateAiChipUi(readinessService));
             };
         }
+
+        var authService = App.Services.GetService<FicheGen.Core.Auth.IAuthService>();
+        if (authService != null)
+        {
+            authService.AuthStateChanged += (s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(RefreshTeacherBadge);
+            };
+        }
+
         RefreshAiChip();
         RefreshTeacherBadge();
 
@@ -652,7 +662,7 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             Log.Warning(ex, "Affichage de la boîte de dialogue À propos impossible via ContentDialog, utilisation de ShowHint.");
-            ShowHint(Services.L10n.Get("Dialog_About_Title") ?? "À propos de PROFstudio", "PROFstudio v1.0 — Conçu pour les enseignants.");
+            ShowHint(Services.L10n.Get("Dialog_About_Title") ?? "À propos de PROFstudio", "PROFstudio v1.4 — Conçu pour les enseignants.");
         }
     }
 

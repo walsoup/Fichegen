@@ -373,9 +373,18 @@ public sealed partial class SettingsPage : Page
         }
     }
 
+    private async void OpenAccountDialog_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new FicheGen.App.Views.Controls.AccountDialog
+        {
+            XamlRoot = this.XamlRoot
+        };
+        await dlg.ShowAsync();
+    }
+
     // ─────────────────────────────────────────────
     //  Raccourci global Ctrl+S
-    // ─────────────────────────────────────────────
+    // ──────────────────────────────────────��──────
 
     private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {

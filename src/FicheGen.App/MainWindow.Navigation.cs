@@ -182,6 +182,21 @@ public sealed partial class MainWindow
 
     private void OnShortcutsClicked(object sender, RoutedEventArgs e) => ShowShortcutsDialog();
 
+    private void OnAccountClicked(object sender, RoutedEventArgs e)
+    {
+        ProfileButton.Flyout?.Hide();
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            await Task.Delay(100);
+            var dlg = new FicheGen.App.Views.Controls.AccountDialog
+            {
+                XamlRoot = Content.XamlRoot
+            };
+            await dlg.ShowAsync();
+            RefreshTeacherBadge();
+        });
+    }
+
     private void OnProfileSettingsClicked(object sender, RoutedEventArgs e)
     {
         ProfileButton.Flyout?.Hide();
@@ -255,12 +270,23 @@ public sealed partial class MainWindow
         _shellState.Theme = theme is "Light" or "Dark" or "Oled" or "System" ? theme : "System";
         bool isOled = _shellState.Theme == "Oled";
 
-        RootGrid.RequestedTheme = _shellState.Theme switch
+        var elementTheme = _shellState.Theme switch
         {
             "Light" => ElementTheme.Light,
             "Dark" or "Oled" => ElementTheme.Dark,
             _ => ElementTheme.Default
         };
+
+        if (this.Content is FrameworkElement rootElem)
+        {
+            rootElem.RequestedTheme = elementTheme;
+        }
+        RootGrid.RequestedTheme = elementTheme;
+        ContentFrame.RequestedTheme = elementTheme;
+        if (ContentFrame.Content is FrameworkElement pageElem)
+        {
+            pageElem.RequestedTheme = elementTheme;
+        }
 
         if (isOled)
         {
@@ -381,9 +407,37 @@ public sealed partial class MainWindow
     {
         try
         {
+            var authService = App.Services.GetService<FicheGen.Core.Auth.IAuthService>();
             var settings = _settingsStore.GetSettings<AppSettings>();
-            var name = string.IsNullOrWhiteSpace(settings.Defaults.TeacherName) ? Services.L10n.Get("Profile_DefaultName") : settings.Defaults.TeacherName;
-            var school = string.IsNullOrWhiteSpace(settings.Defaults.SchoolName) ? Services.L10n.Get("Profile_DefaultSchool") : settings.Defaults.SchoolName;
+
+            string name;
+            string school;
+            bool isAuth = authService?.IsAuthenticated == true && authService.CurrentUser != null;
+
+            if (isAuth && authService!.CurrentUser is { } user)
+            {
+                name = !string.IsNullOrWhiteSpace(user.DisplayName)
+                    ? user.DisplayName
+                    : (!string.IsNullOrWhiteSpace(user.Nom) ? $"{user.Civilite} {user.Prenom} {user.Nom}".Trim() : user.Email);
+                school = !string.IsNullOrWhiteSpace(user.SchoolName)
+                    ? user.SchoolName
+                    : "Compte Enseignant Actif";
+
+                if (ProfileAccountLabel != null)
+                {
+                    ProfileAccountLabel.Text = $"Mon compte ({user.Email})";
+                }
+            }
+            else
+            {
+                name = string.IsNullOrWhiteSpace(settings.Defaults.TeacherName) ? Services.L10n.Get("Profile_DefaultName") : settings.Defaults.TeacherName;
+                school = string.IsNullOrWhiteSpace(settings.Defaults.SchoolName) ? Services.L10n.Get("Profile_DefaultSchool") : settings.Defaults.SchoolName;
+
+                if (ProfileAccountLabel != null)
+                {
+                    ProfileAccountLabel.Text = "Connexion / Créer un compte";
+                }
+            }
 
             TeacherPersonPicture.DisplayName = name;
             TeacherPersonPictureLarge.DisplayName = name;

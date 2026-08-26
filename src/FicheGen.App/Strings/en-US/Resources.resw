@@ -440,4 +440,9 @@
   <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve"><value>Open the page providing the key</value></data>
   <data name="FRD_LocalKeyNote" xml:space="preserve"><value>With a local server, no data leaves your institution. Your IT administrator can assist with setup.</value></data>
   <data name="FRD_KeyOptionalNote.Text" xml:space="preserve"><value>In a hurry? Finish without a key: PROFstudio will prompt you when needed.</value></data>
+  <data name="FRD_CloudName.Text" xml:space="preserve"><value>PROFstudio Cloud Service</value></data>
+  <data name="FRD_CloudBadge.Text" xml:space="preserve"><value>Included · Ready to use</value></data>
+  <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>Ready immediately: no API key or manual setup required.</value></data>
+  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>My Teacher Account</value></data>
+  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>My Teacher Account</value></data>
 </root>

@@ -195,6 +195,7 @@ internal static class ProviderCatalog
 {
     public static readonly IReadOnlyList<ProviderOption> Providers = new List<ProviderOption>
     {
+        new("cloud", "Service Cloud PROFstudio (Recommandé)", "⚡"),
         new("aistudio", "Google AI Studio", "💠"),
         new("openai", "OpenAI", "🤖"),
         new("anthropic", "Anthropic Claude", "✒️"),
@@ -205,6 +206,7 @@ internal static class ProviderCatalog
 
     private static readonly Dictionary<string, string[]> Models = new()
     {
+        ["cloud"] = new[] { "profstudio-standard", "profstudio-fast" },
         ["aistudio"] = new[] { "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash" },
         ["openai"] = new[] { "gpt-4o", "gpt-4o-mini", "gpt-4.1", "o4-mini" },
         ["anthropic"] = new[] { "claude-sonnet-4", "claude-3-5-sonnet", "claude-3-5-haiku" },
@@ -270,7 +272,8 @@ public partial class SettingsViewModel : ObservableObject
         IDiagnosticBundleExporter? diagnosticExporter = null,
         IConnectionTester? connectionTester = null,
         IProxyModelScanner? proxyScanner = null,
-        AccentColorService? accentColorService = null)
+        AccentColorService? accentColorService = null,
+        FicheGen.Core.Auth.IAuthService? authService = null)
     {
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
@@ -280,6 +283,7 @@ public partial class SettingsViewModel : ObservableObject
         _connectionTester = connectionTester;
         _proxyScanner = proxyScanner;
         _accentColorService = accentColorService;
+        _authService = authService;
 
         _isLoadingSettings = true;
         SelectedAccent = AccentOptions[0];
@@ -288,6 +292,7 @@ public partial class SettingsViewModel : ObservableObject
 
         BuildRoutingMatrixDefaults();
         LoadSettings();
+        InitializeAccountState();
 
         _ = RefreshTocCacheSizeAsync();
     }
@@ -316,7 +321,9 @@ public partial class SettingsViewModel : ObservableObject
             "Dark" => "dark",
             _ => "system"
         };
+        SelectedThemeOption = ThemeOptions.FirstOrDefault(t => t.Key == Theme) ?? ThemeOptions[0];
         Language = appSettings.Ui.Language;
+        SelectedLanguageOption = LanguageOptions.FirstOrDefault(l => l.Code == Language) ?? LanguageOptions[0];
         TeacherName = string.IsNullOrWhiteSpace(appSettings.Defaults.TeacherName) ? "Enseignant·e" : appSettings.Defaults.TeacherName;
         SchoolName = string.IsNullOrWhiteSpace(appSettings.Defaults.SchoolName) ? "École / Établissement" : appSettings.Defaults.SchoolName;
         DefaultClassLevel = appSettings.Defaults.ClassLevel;
@@ -347,6 +354,7 @@ public partial class SettingsViewModel : ObservableObject
         TelemetryEnabled = appSettings.Features.Telemetry;
         ExpMultiPassGen = appSettings.Features.ExpMultiPassGen;
         EnableStreaming = appSettings.Ui.EnableStreaming;
+        EnableExpertMode = appSettings.Features.EnableExpertMode;
 
         GeminiApiKey = _credentialStore.Get("gemini_api_key") ?? string.Empty;
         OpenAiApiKey = _credentialStore.Get("openai_api_key") ?? string.Empty;
@@ -464,6 +472,7 @@ public partial class SettingsViewModel : ObservableObject
             s.Defaults.ClassLevel = DefaultClassLevel;
             s.Defaults.Subject = DefaultSubject;
             s.Defaults.StylePresetId = SelectedStylePresetId;
+            s.Features.EnableExpertMode = EnableExpertMode;
 
             s.Ai.GlobalProvider = SelectedGlobalProvider?.Key ?? "aistudio";
             s.Ai.ProxyBaseUrl = ProxyBaseUrl;

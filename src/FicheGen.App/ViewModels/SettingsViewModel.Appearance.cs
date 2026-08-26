@@ -16,6 +16,8 @@ public partial class SettingsViewModel
 
     [ObservableProperty] public partial string Theme { get; set; } = "system";
     [ObservableProperty] public partial string Language { get; set; } = "fr-FR";
+    [ObservableProperty] public partial ThemeOption? SelectedThemeOption { get; set; }
+    [ObservableProperty] public partial LanguageOption? SelectedLanguageOption { get; set; }
     [ObservableProperty] public partial string TeacherName { get; set; } = "Enseignant·e";
     [ObservableProperty] public partial string SchoolName { get; set; } = "École / Établissement";
     [ObservableProperty] public partial string DefaultClassLevel { get; set; } = "CM2";
@@ -24,6 +26,22 @@ public partial class SettingsViewModel
     [ObservableProperty] public partial bool LaunchAtStartup { get; set; }
     [ObservableProperty] public partial string StartupStatusText { get; set; } = "Vérification de l'état du démarrage…";
     [ObservableProperty] public partial bool EnableStreaming { get; set; } = true;
+
+    partial void OnSelectedThemeOptionChanged(ThemeOption? value)
+    {
+        if (value is not null && Theme != value.Key)
+        {
+            Theme = value.Key;
+        }
+    }
+
+    partial void OnSelectedLanguageOptionChanged(LanguageOption? value)
+    {
+        if (value is not null && Language != value.Code)
+        {
+            Language = value.Code;
+        }
+    }
 
     public IReadOnlyList<ThemeOption> ThemeOptions { get; } = new List<ThemeOption>
     {
@@ -125,6 +143,11 @@ public partial class SettingsViewModel
 
     partial void OnThemeChanged(string value)
     {
+        if (SelectedThemeOption?.Key != value)
+        {
+            SelectedThemeOption = ThemeOptions.FirstOrDefault(t => t.Key == value) ?? ThemeOptions[0];
+        }
+
         if (_isLoadingSettings) return;
 
         var shellTheme = value?.ToLowerInvariant() switch
@@ -139,16 +162,22 @@ public partial class SettingsViewModel
 
     partial void OnLanguageChanged(string value)
     {
+        if (SelectedLanguageOption?.Code != value)
+        {
+            SelectedLanguageOption = LanguageOptions.FirstOrDefault(l => l.Code == value) ?? LanguageOptions[0];
+        }
+
+        L10n.SetLanguage(value);
+
         if (_isLoadingSettings) return;
 
         try
         {
-            Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = value;
             StatusMessage = value switch
             {
-                "ar-SA" => "تم تغيير لغة التطبيق إلى العربية — يرجى إعادة تشغيل التطبيق لتحديث جميع الواجهات.",
-                "en-US" => "Language changed to English — please restart the app for all interface elements to update.",
-                _ => "Langue modifiée en français — redémarrez l'application pour appliquer l'ensemble des textes."
+                "ar-SA" => "تم تغيير لغة التطبيق إلى العربية — تم تحديث النصوص فورياً.",
+                "en-US" => "Language changed to English — interface strings updated.",
+                _ => "Langue modifiée en français — textes de l'interface mis à jour."
             };
         }
         catch { }

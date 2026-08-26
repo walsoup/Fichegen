@@ -79,6 +79,7 @@ public sealed class FeatureSettings
     public bool ExpMultiPassGen { get; set; } = false;
     public bool Telemetry { get; set; } = false;
     public int HistoryRetentionDays { get; set; } = 0;
+    public bool EnableExpertMode { get; set; } = false;
 }
 
 public sealed class AppSettings

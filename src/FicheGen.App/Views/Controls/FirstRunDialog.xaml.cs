@@ -23,9 +23,10 @@ public sealed partial class FirstRunDialog : ContentDialog
     public string SelectedProviderKey =>
         ProviderRadioButtons.SelectedIndex switch
         {
-            1 => "openai",
-            2 => "proxy",
-            _ => "aistudio"
+            1 => "aistudio",
+            2 => "openai",
+            3 => "proxy",
+            _ => "cloud"
         };
 
     public string ApiKey => ApiKeyPasswordBox.Password;
@@ -140,21 +141,27 @@ public sealed partial class FirstRunDialog : ContentDialog
 
         switch (ProviderRadioButtons.SelectedIndex)
         {
-            case 0: // Google AI Studio
+            case 0: // Service Cloud PROFstudio (Recommandé)
+                ApiKeySection.Visibility = Visibility.Collapsed;
+                KeyOptionalNote.Text = "Prêt immédiatement : aucun réglage ni clé d'API requise. Vous pouvez vous connecter à votre compte enseignant à tout moment.";
+                KeyOptionalNote.Visibility = Visibility.Visible;
+                break;
+
+            case 1: // Google AI Studio
                 ApiKeySection.Visibility = Visibility.Visible;
                 KeyOptionalNote.Visibility = Visibility.Visible;
                 GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLink.Content");
                 GetKeyHyperlink.NavigateUri = new Uri("https://aistudio.google.com/app/apikey");
                 break;
 
-            case 1: // OpenAI
+            case 2: // OpenAI
                 ApiKeySection.Visibility = Visibility.Visible;
                 KeyOptionalNote.Visibility = Visibility.Visible;
                 GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLinkOpenAi");
                 GetKeyHyperlink.NavigateUri = new Uri("https://platform.openai.com/api-keys");
                 break;
 
-            case 2: // Proxy local / Ollama — aucune clé requise pour l'essentiel
+            case 3: // Proxy local / Ollama — aucune clé requise pour l'essentiel
                 ApiKeySection.Visibility = Visibility.Collapsed;
                 KeyOptionalNote.Text = FicheGen.App.Services.L10n.Get("FRD_LocalKeyNote");
                 KeyOptionalNote.Visibility = Visibility.Visible;

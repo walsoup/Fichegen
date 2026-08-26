@@ -1,0 +1,6 @@
+name = "profstudio-proxy"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+[vars]
+SUPABASE_URL = "https://wzbxqvxuufhyykwubvqk.supabase.co"

@@ -132,10 +132,20 @@
                                                    FontSize="12" TextWrapping="Wrap"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>                                    </StackPanel>
                                 </StackPanel>
-                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
-                                        Click="OnProfileSettingsClicked"
-                                        x:Uid="Shell_ProfileSettingsButton">
+                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
+                                         Click="OnAccountClicked"
+                                         x:Uid="Shell_ProfileAccountButton">
+                                      <StackPanel Orientation="Horizontal" Spacing="10">
+                                          <FontIcon Glyph="&#xE77B;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                          <TextBlock x:Name="ProfileAccountLabel" Text="Mon compte enseignant" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                     x:Uid="Shell_ProfileAccountLabel"/>
+                                      </StackPanel>
+                                 </Button>
+                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
+                                         Click="OnProfileSettingsClicked"
+                                         x:Uid="Shell_ProfileSettingsButton">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <FontIcon Glyph="&#xE713;" FontSize="13"/>
                                         <TextBlock Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"

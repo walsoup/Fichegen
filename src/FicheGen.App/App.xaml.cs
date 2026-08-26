@@ -46,6 +46,7 @@ public partial class App : Application
                 // Core & Infrastructure Services
                 services.AddSingleton<ICredentialStore, CredentialLockerStore>();
                 services.AddSingleton<ISettingsStore, SettingsStore>();
+                services.AddSingleton<FicheGen.Core.Auth.IAuthService, FicheGen.Infrastructure.Auth.SupabaseAuthService>();
                 services.AddSingleton<IClock, SystemClock>();
                 services.AddSingleton<IHistoryRepository, HistoryRepository>();
                 services.AddSingleton<IDraftStore, FileDraftStore>();
@@ -60,6 +61,7 @@ public partial class App : Application
                 services.AddSingleton<ILlmClient, LlmClient>();
                 services.AddSingleton<IConnectionTester, ConnectionTester>();
                 services.AddSingleton<IProxyModelScanner, ProxyModelScanner>();
+                services.AddSingleton<IOcrService, FicheGen.Infrastructure.Ocr.WindowsNativeOcrService>();
                 services.AddSingleton<IPdfGuideService, PdfGuideService>();
                 services.AddSingleton<IDocxExporter, DocxExporter>();
                 services.AddSingleton<IRtfDocumentWriter, RtfDocumentWriter>();
@@ -78,6 +80,7 @@ public partial class App : Application
                 services.AddSingleton<AssistantViewModel>();
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<SettingsViewModel>();
+                services.AddTransient<AccountViewModel>();
             })
             .Build();
     }
@@ -90,7 +93,7 @@ public partial class App : Application
             var settings = Services.GetRequiredService<ISettingsStore>().GetSettings<FicheGen.Core.Storage.AppSettings>();
             if (!string.IsNullOrWhiteSpace(settings.Ui.Language))
             {
-                Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = settings.Ui.Language;
+                L10n.SetLanguage(settings.Ui.Language);
             }
         }
         catch (Exception ex)
@@ -131,6 +134,20 @@ public partial class App : Application
         MainWindow.Activate();
 
         await _host.StartAsync();
+
+        // Restauration de la session enseignant en arrière-plan
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var authService = Services.GetRequiredService<FicheGen.Core.Auth.IAuthService>();
+                await authService.RestoreSessionAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Restauration de la session enseignant impossible au démarrage.");
+            }
+        });
 
         // Background retention policy sweep
         _ = Task.Run(async () =>

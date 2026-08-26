@@ -9,7 +9,7 @@
   <Identity
     Name="PROFstudio.App"
     Publisher="CN=FicheGen"
-    Version="1.2.0.0"
+    Version="1.4.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

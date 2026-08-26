@@ -42,3 +42,9 @@ GUIDE-ETINCELLE-MANUEL-MATHS-1AC.pdf
 # Duplicate manifest (tracked as Package.appxmanifest.xml)
 src/FicheGen.App/Package.appxmanifest
 
+# Supabase local CLI temp
+supabase/.temp/
+.env
+.env.*
+!.env.example
+

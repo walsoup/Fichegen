@@ -179,18 +179,36 @@
                           SelectionChanged="ProviderRadioButtons_SelectionChanged"
                           AutomationProperties.Name="Assistant IA utilisé pour la rédaction">
 
+                <RadioButton x:Uid="FRD_ProviderCloud">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <StackPanel Spacing="1">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock x:Uid="FRD_CloudName" Text="Service Cloud PROFstudio" FontWeight="SemiBold"/>
+                                <Border Padding="7,1" CornerRadius="9"
+                                        Background="{ThemeResource StatusPositiveBgBrush}">
+                                    <TextBlock x:Uid="FRD_CloudBadge" Text="Inclus · Prêt à l'emploi" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock x:Uid="FRD_CloudDesc" Text="Prêt immédiatement : aucune clé d'API ni démarche requise."
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </RadioButton>
+
                 <RadioButton x:Uid="FRD_ProviderGoogle">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <StackPanel Spacing="1">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock x:Uid="FRD_GoogleName" Text="Google AI Studio" FontWeight="SemiBold"/>
+                                <TextBlock x:Uid="FRD_GoogleName" Text="Google AI Studio (Personnel)" FontWeight="SemiBold"/>
                                 <Border Padding="7,1" CornerRadius="9"
-                                        Background="{ThemeResource StatusPositiveBgBrush}">
-                                    <TextBlock x:Uid="FRD_GoogleBadge" Text="Gratuit · Recommandé" FontSize="10.5" FontWeight="SemiBold"
-                                               Foreground="{ThemeResource StatusPositiveFgBrush}"/>
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <TextBlock Text="Gratuit" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </Border>
                             </StackPanel>
-                            <TextBlock x:Uid="FRD_GoogleDesc" Text="Le plus simple pour débuter : il suffit d'une adresse Google."
+                            <TextBlock x:Uid="FRD_GoogleDesc" Text="Utiliser votre propre clé d'accès Google AI Studio."
                                        FontSize="11"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
@@ -199,7 +217,7 @@
 
                 <RadioButton x:Uid="FRD_ProviderOpenAi">
                     <StackPanel Spacing="1">
-                        <TextBlock x:Uid="FRD_OpenAiName" Text="OpenAI (ChatGPT)" FontWeight="SemiBold"/>
+                        <TextBlock x:Uid="FRD_OpenAiName" Text="OpenAI / ChatGPT (Personnel)" FontWeight="SemiBold"/>
                         <TextBlock x:Uid="FRD_OpenAiDesc" Text="Pour celles et ceux qui ont déjà une clé OpenAI."
                                    FontSize="11"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -208,8 +226,8 @@
 
                 <RadioButton x:Uid="FRD_ProviderLocal">
                     <StackPanel Spacing="1">
-                        <TextBlock x:Uid="FRD_LocalName" Text="Serveur local — avancé" FontWeight="SemiBold"/>
-                        <TextBlock x:Uid="FRD_LocalDesc" Text="100 % hors ligne, rien ne quitte l'école. Nécessite Ollama installé par votre référent informatique."
+                        <TextBlock x:Uid="FRD_LocalName" Text="Serveur local — 100 % hors ligne" FontWeight="SemiBold"/>
+                        <TextBlock x:Uid="FRD_LocalDesc" Text="100 % confidentiel sur le poste. Nécessite Ollama."
                                    FontSize="11"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"/>

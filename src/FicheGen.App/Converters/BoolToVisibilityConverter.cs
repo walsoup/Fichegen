@@ -15,8 +15,9 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         string language)
     {
         var flag = value is true;
+        var invert = IsInverted || (parameter is string s && s.Equals("invert", StringComparison.OrdinalIgnoreCase));
 
-        if (IsInverted)
+        if (invert)
         {
             flag = !flag;
         }
@@ -36,6 +37,7 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         string language)
     {
         var flag = value is Visibility.Visible;
-        return IsInverted ? !flag : flag;
+        var invert = IsInverted || (parameter is string s && s.Equals("invert", StringComparison.OrdinalIgnoreCase));
+        return invert ? !flag : flag;
     }
 }

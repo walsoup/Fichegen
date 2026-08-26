@@ -1,0 +1,191 @@
+<ContentDialog
+    x:Class="FicheGen.App.Views.Controls.AccountDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:FicheGen.App.ViewModels"
+    xmlns:converters="using:FicheGen.App.Converters"
+    mc:Ignorable="d"
+    Title="Compte Enseignant PROFstudio"
+    CloseButtonText="Fermer"
+    DefaultButton="None">
+
+    <ContentDialog.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" IsInverted="False"/>
+        <converters:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" IsInverted="True"/>
+    </ContentDialog.Resources>
+
+    <ScrollViewer MaxHeight="540" MinWidth="460" MaxWidth="520">
+        <StackPanel Spacing="14" Padding="0,4,0,4">
+
+            <!-- ══════════ Mode Connecté ══════════ -->
+            <StackPanel Spacing="14" Visibility="{x:Bind ViewModel.IsAuthenticated, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <Border Padding="16" CornerRadius="12"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <PersonPicture DisplayName="{x:Bind ViewModel.UserDisplayName, Mode=OneWay}" Width="48" Height="48"/>
+                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="{x:Bind ViewModel.UserDisplayName, Mode=OneWay}" FontWeight="SemiBold" FontSize="16"/>
+                                <TextBlock Text="{x:Bind ViewModel.UserEmail, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                        <Grid ColumnSpacing="8" RowSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Établissement" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind ViewModel.UserSchool, Mode=OneWay}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Padding="8,3" CornerRadius="6"
+                                    Background="{ThemeResource StatusPositiveBgBrush}" VerticalAlignment="Center">
+                                <TextBlock Text="Actif" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold" FontSize="12"/>
+                            </Border>
+
+                            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="2" Margin="0,4,0,0">
+                                <TextBlock Text="Accès &amp; Quota Cloud" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind ViewModel.QuotaInfo, Mode=OneWay}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Button Content="Se déconnecter" Command="{x:Bind ViewModel.SignOutCommand}"
+                        HorizontalAlignment="Right" Style="{ThemeResource DefaultButtonStyle}"/>
+            </StackPanel>
+
+            <!-- ══════════ Écran de Confirmation d'E-mail ══════════ -->
+            <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.EmailConfirmationSent, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <Border Padding="16" CornerRadius="10"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <FontIcon Glyph="&#xE715;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Vérification de votre adresse e-mail" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" TextWrapping="Wrap" FontSize="13"/>
+                        <TextBlock Text="Une fois que vous avez cliqué sur le lien reçu dans votre messagerie, cliquez ci-dessous pour vous connecter :"
+                                   Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                        <Button Content="Passer à la connexion" Command="{x:Bind ViewModel.ToggleModeCommand}"
+                                Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ══════════ Mode Déconnecté ══════════ -->
+            <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsNotAuthenticated, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+
+                <!-- Mode Inscription Complète Enseignant -->
+                <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Créer un compte enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                    <TextBlock Text="Renseignez vos informations professionnelles pour activer votre accès."
+                               Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                    <!-- Civilité / Nom / Prénom -->
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Header="Civilité" ItemsSource="{x:Bind ViewModel.Civilites}" SelectedItem="{x:Bind ViewModel.Civilite, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                        <TextBox Grid.Column="1" Header="Nom" Text="{x:Bind ViewModel.Nom, Mode=TwoWay}" PlaceholderText="ex. Dupont"/>
+                        <TextBox Grid.Column="2" Header="Prénom" Text="{x:Bind ViewModel.Prenom, Mode=TwoWay}" PlaceholderText="ex. Marie"/>
+                    </Grid>
+
+                    <!-- Date de naissance -->
+                    <CalendarDatePicker Header="Date de naissance" Date="{x:Bind ViewModel.DateDeNaissance, Mode=TwoWay}"
+                                        HorizontalAlignment="Stretch" PlaceholderText="Sélectionnez votre date de naissance"/>
+
+                    <!-- Établissement & Académie -->
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Header="École / Établissement" Text="{x:Bind ViewModel.SchoolName, Mode=TwoWay}" PlaceholderText="ex. Collège Victor Hugo"/>
+                        <ComboBox Grid.Column="1" Header="Académie" ItemsSource="{x:Bind ViewModel.Academies}" SelectedItem="{x:Bind ViewModel.Academie, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <!-- Discipline / Niveau -->
+                    <TextBox Header="Discipline / Niveau enseigné" Text="{x:Bind ViewModel.Discipline, Mode=TwoWay}" PlaceholderText="ex. Professeur des écoles (CM1/CM2) ou Mathématiques"/>
+
+                    <!-- E-mail & Mot de passe -->
+                    <TextBox Header="Adresse e-mail académique ou personnelle" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
+
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox Header="Mot de passe (min. 6 car.)" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                        <PasswordBox Grid.Column="1" Header="Confirmer le mot de passe" Password="{x:Bind ViewModel.ConfirmPassword, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Mode Connexion Standard -->
+                <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
+                    <TextBlock Text="Connexion Enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                    <TextBlock Text="Connectez-vous pour accéder à vos modèles et quotas cloud."
+                               Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                    <TextBox Header="Adresse e-mail" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
+                    <PasswordBox Header="Mot de passe" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                </StackPanel>
+
+                <!-- Message d'état -->
+                <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                           FontSize="12" TextWrapping="Wrap"
+                           Visibility="{x:Bind ViewModel.EmailConfirmationSent, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"/>
+
+                <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="20" Height="20" HorizontalAlignment="Center"/>
+
+                <!-- Boutons d'action -->
+                <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Content="Créer un compte enseignant"
+                            Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"
+                            Command="{x:Bind ViewModel.ToggleModeCommand}"
+                            Style="{ThemeResource SubtleButtonStyle}" HorizontalAlignment="Left"/>
+
+                    <Button Content="Déjà un compte ? Se connecter"
+                            Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                            Command="{x:Bind ViewModel.ToggleModeCommand}"
+                            Style="{ThemeResource SubtleButtonStyle}" HorizontalAlignment="Left"/>
+
+                    <Button Grid.Column="1"
+                            Content="Se connecter"
+                            Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"
+                            Command="{x:Bind ViewModel.SignInCommand}"
+                            Style="{ThemeResource AccentButtonStyle}"/>
+
+                    <Button Grid.Column="1"
+                            Content="Créer mon compte"
+                            Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                            Command="{x:Bind ViewModel.SignUpCommand}"
+                            Style="{ThemeResource AccentButtonStyle}"/>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

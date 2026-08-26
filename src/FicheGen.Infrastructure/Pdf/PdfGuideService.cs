@@ -1,6 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Toc;
+using Serilog;
 using UglyToad.PdfPig;
 
 namespace FicheGen.Infrastructure.Pdf;
@@ -8,10 +15,12 @@ namespace FicheGen.Infrastructure.Pdf;
 public sealed class PdfGuideService : IPdfGuideService
 {
     private readonly TocCacheStore _cacheStore;
+    private readonly IOcrService? _ocrService;
 
-    public PdfGuideService(TocCacheStore? cacheStore = null)
+    public PdfGuideService(TocCacheStore? cacheStore = null, IOcrService? ocrService = null)
     {
         _cacheStore = cacheStore ?? new TocCacheStore();
+        _ocrService = ocrService;
     }
 
     public string? FindGuideFile(string classLevel, string guidesDir)
@@ -74,6 +83,45 @@ public sealed class PdfGuideService : IPdfGuideService
 
             if (isScanned)
             {
+                // Si l'OCR est disponible, tentons d'extraire la ToC des premières pages scannées
+                if (_ocrService != null && _ocrService.IsSupported)
+                {
+                    try
+                    {
+                        var tocSb = new StringBuilder();
+                        var ocrPages = Math.Min(10, pageCount);
+                        for (var p = 1; p <= ocrPages; p++)
+                        {
+                            var pageOcr = _ocrService.ExtractTextFromPdfPageAsync(pdfPath, p, ct).GetAwaiter().GetResult();
+                            if (!string.IsNullOrWhiteSpace(pageOcr))
+                            {
+                                tocSb.AppendLine(pageOcr);
+                            }
+                        }
+
+                        var ocrToc = TocParser.ParseToc(tocSb.ToString());
+                        if (ocrToc.Count > 0)
+                        {
+                            var ocrEntries = ocrToc.Select(t => new ToCEntry(t.Title, t.PrintedPage, t.PrintedPage)).ToList();
+                            var ocrResult = new TocResult(
+                                pdfPath,
+                                pdfHash,
+                                Offset: 0,
+                                OffsetConfidence: 0.8,
+                                LowConfidenceWarning: false,
+                                IsScanned: true,
+                                ocrEntries
+                            );
+                            _cacheStore.SaveCache(ocrResult);
+                            return ocrResult;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "Échec de l'extraction ToC par OCR pour le PDF scanné {File}.", Path.GetFileName(pdfPath));
+                    }
+                }
+
                 var scannedResult = new TocResult(
                     pdfPath,
                     pdfHash,
@@ -142,7 +190,7 @@ public sealed class PdfGuideService : IPdfGuideService
             throw new FileNotFoundException("Le fichier guide n'existe pas.", pdfPath);
         }
 
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             using var document = PdfDocument.Open(pdfPath);
             var totalPages = document.NumberOfPages;
@@ -154,7 +202,27 @@ public sealed class PdfGuideService : IPdfGuideService
             for (var p = start; p <= end; p++)
             {
                 sb.AppendLine($"--- PAGE {p} ---");
-                sb.AppendLine(document.GetPage(p).Text);
+                var page = document.GetPage(p);
+                var pageText = page.Text?.Trim() ?? string.Empty;
+
+                // Si la page est scannée ou sans couche texte suffisante (< 30 caractères) et que l'OCR est disponible
+                if (pageText.Length < 30 && _ocrService != null && _ocrService.IsSupported)
+                {
+                    try
+                    {
+                        var ocrText = await _ocrService.ExtractTextFromPdfPageAsync(pdfPath, p, ct).ConfigureAwait(false);
+                        if (!string.IsNullOrWhiteSpace(ocrText))
+                        {
+                            pageText = ocrText;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "OCR fallback sur la page {Page} impossible.", p);
+                    }
+                }
+
+                sb.AppendLine(pageText);
             }
 
             var fullText = sb.ToString();

@@ -14,7 +14,13 @@ public partial class SettingsViewModel
 {
     // ─────────────── Onglet 2 · Fournisseurs IA & Routage ───────────────
 
-    [ObservableProperty] public partial string GlobalProvider { get; set; } = "aistudio";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStandardMode))]
+    public partial bool EnableExpertMode { get; set; } = false;
+
+    public bool IsStandardMode => !EnableExpertMode;
+
+    [ObservableProperty] public partial string GlobalProvider { get; set; } = "cloud";
     [ObservableProperty] public partial ProviderOption? SelectedGlobalProvider { get; set; }
 
     public IReadOnlyList<ProviderOption> ProviderOptions => ProviderCatalog.Providers;

@@ -27,6 +27,10 @@ public class LlmRouter
         {
             model = modelOverride;
         }
+        else if (providerStr.Equals("cloud", StringComparison.OrdinalIgnoreCase))
+        {
+            model = purpose;
+        }
         else if (cfg.DefaultModels.TryGetValue(providerStr, out var defaultModel) && !string.IsNullOrWhiteSpace(defaultModel))
         {
             model = defaultModel;
@@ -45,6 +49,7 @@ public class LlmRouter
     {
         return provider.ToLowerInvariant() switch
         {
+            "cloud" or "profstudio" => ProviderAdapterKind.OpenAiCompatible,
             "aistudio" or "gemini" => ProviderAdapterKind.Gemini,
             "vertex" or "vertexai" => ProviderAdapterKind.Vertex,
             "proxy" or "ollama" or "openai" => ProviderAdapterKind.OpenAiCompatible,
@@ -55,6 +60,9 @@ public class LlmRouter
 
     private static string GetFallbackModel(ProviderAdapterKind kind, string providerStr = "")
     {
+        if (providerStr.Equals("cloud", StringComparison.OrdinalIgnoreCase))
+            return "profstudio-standard";
+
         if (providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase))
             return "gpt-4o-mini";
 
@@ -92,7 +100,9 @@ public class LlmRouter
             ProviderAdapterKind.OpenAiCompatible => (
                 BuildProxyUrl(cfg.ProxyBaseUrl, "/chat/completions", providerStr),
                 AuthStrategyKind.BearerToken,
-                providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase) ? "openai_api_key" : "proxy_api_key"
+                providerStr.Equals("cloud", StringComparison.OrdinalIgnoreCase)
+                    ? "supabase_access_token"
+                    : (providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase) ? "openai_api_key" : "proxy_api_key")
             ),
 
             ProviderAdapterKind.Vercel => (
@@ -109,13 +119,16 @@ public class LlmRouter
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
-            baseUrl = providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase)
-                ? "https://api.openai.com/v1"
-                : "http://localhost:11434/v1";
+            if (providerStr.Equals("cloud", StringComparison.OrdinalIgnoreCase))
+                return "https://bbodlidtaosxeyeovixe.supabase.co/functions/v1/chat";
+            else if (providerStr.Equals("openai", StringComparison.OrdinalIgnoreCase))
+                baseUrl = "https://api.openai.com/v1";
+            else
+                baseUrl = "http://localhost:11434/v1";
         }
 
         var trimmed = baseUrl.TrimEnd('/');
-        if (trimmed.EndsWith(path, StringComparison.OrdinalIgnoreCase))
+        if (trimmed.EndsWith("/chat", StringComparison.OrdinalIgnoreCase) || trimmed.EndsWith(path, StringComparison.OrdinalIgnoreCase))
             return trimmed;
 
         return $"{trimmed}{path}";

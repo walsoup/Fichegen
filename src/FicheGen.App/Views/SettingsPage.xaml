@@ -6,9 +6,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:viewmodels="using:FicheGen.App.ViewModels"
+    xmlns:converters="using:FicheGen.App.Converters"
     mc:Ignorable="d">
 
     <Page.Resources>
+        <!-- ═══════ Convertisseurs ═══════ -->
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" IsInverted="False"/>
+        <converters:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" IsInverted="True"/>
+
         <!-- ═══════ Styles réutilisables ═══════ -->
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
@@ -70,7 +75,7 @@
                     Background="{ThemeResource LayerFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1">
-                <TextBlock Text="v1.0" FontSize="12" FontWeight="SemiBold"
+                <TextBlock Text="v1.4" FontSize="12" FontWeight="SemiBold"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </Border>
         </Grid>
@@ -112,6 +117,48 @@
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelGeneral" Spacing="12" Visibility="Visible">
 
+                    <TextBlock Text="Compte &amp; Accès Enseignant" Style="{StaticResource SectionHeaderStyle}"/>
+
+                    <!-- Carte Compte Déconnecté -->
+                    <controls:SettingsCard Header="Mon compte enseignant PROFstudio"
+                                           Description="Connectez-vous avec votre compte enseignant pour activer les modèles IA Cloud et synchroniser vos fiches."
+                                           Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
+                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE77B;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/></controls:SettingsCard.HeaderIcon>
+                        <Button Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
+                                Style="{ThemeResource AccentButtonStyle}"/>
+                    </controls:SettingsCard>
+
+                    <!-- Carte Compte Connecté -->
+                    <controls:SettingsCard Header="{x:Bind ViewModel.AccountDisplayName, Mode=OneWay}"
+                                           Description="{x:Bind ViewModel.AccountDescription, Mode=OneWay}"
+                                           Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE77B;" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                        </controls:SettingsCard.HeaderIcon>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <!-- Badge statut -->
+                            <Border Background="#1A107C10" BorderBrush="#33107C10" BorderThickness="1" CornerRadius="12" Padding="8,4" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#107C10"/>
+                                    <TextBlock Text="{x:Bind ViewModel.AccountStatusBadge, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#107C10"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Quota badge -->
+                            <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="8,4" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="&#xE945;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.AccountQuotaText, Mode=OneWay}" FontSize="11.5"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Button Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
+                            <Button ToolTipService.ToolTip="Se déconnecter" Command="{x:Bind ViewModel.SignOutAccountCommand}" Background="Transparent" BorderBrush="Transparent" Padding="8,6">
+                                <FontIcon Glyph="&#xE749;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </Button>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
                     <TextBlock Text="Profil de l'enseignant·e" Style="{StaticResource SectionHeaderStyle}"/>
 
                     <controls:SettingsCard Header="Nom / Identité" Description="Affiché dans l'en-tête de l'application et sur vos fiches.">
@@ -131,8 +178,7 @@
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE771;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
                                   ItemsSource="{x:Bind ViewModel.ThemeOptions, Mode=OneWay}"
-                                  SelectedValuePath="Key"
-                                  SelectedValue="{x:Bind ViewModel.Theme, Mode=TwoWay}">
+                                  SelectedItem="{x:Bind ViewModel.SelectedThemeOption, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:ThemeOption">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -166,8 +212,7 @@
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE774;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
                                   ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneWay}"
-                                  SelectedValuePath="Code"
-                                  SelectedValue="{x:Bind ViewModel.Language, Mode=TwoWay}">
+                                  SelectedItem="{x:Bind ViewModel.SelectedLanguageOption, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:LanguageOption">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -234,7 +279,7 @@
                     <TextBlock Text="À propos de l'application" Style="{StaticResource SectionHeaderStyle}"/>
 
                     <controls:SettingsCard Header="À propos de PROFstudio"
-                                           Description="Version 1.0 — Conçu pour les enseignants. Génération pédagogique locale et sécurisée.">
+                                           Description="Version 1.4 — Conçu pour les enseignants. Génération pédagogique locale et sécurisée.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE946;"/></controls:SettingsCard.HeaderIcon>
                         <Button Content="Afficher les informations…" Command="{x:Bind ViewModel.ShowAboutCommand}"
                                 ToolTipService.ToolTip="Informations sur l'application et mentions légales"/>
@@ -245,6 +290,49 @@
                 <!-- ONGLET 2 · FOURNISSEURS IA &amp; ROUTAGE         -->
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelAi" Spacing="12" Visibility="Collapsed">
+
+                    <!-- Mode de configuration IA -->
+                    <controls:SettingsCard Header="Mode de configuration IA"
+                                           Description="Basculer entre le mode zéro-configuration inclus et la gestion avancée des modèles et clés.">
+                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE71D;"/></controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch IsOn="{x:Bind ViewModel.EnableExpertMode, Mode=TwoWay}"
+                                      OnContent="Mode Expert (Avancé)" OffContent="Mode Clé en main (Recommandé)"/>
+                    </controls:SettingsCard>
+
+                    <!-- ───── Vue Standard (Zéro configuration) ───── -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.EnableExpertMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
+                        <!-- Déconnecté -->
+                        <controls:SettingsCard Header="Service Cloud PROFstudio"
+                                               Description="Génération pédagogique haute performance incluse. Connectez-vous avec votre compte enseignant pour activer le cloud."
+                                               Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
+                            <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xEB44;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/></controls:SettingsCard.HeaderIcon>
+                            <Button Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
+                                    Style="{ThemeResource AccentButtonStyle}"/>
+                        </controls:SettingsCard>
+
+                        <!-- Connecté -->
+                        <controls:SettingsCard Header="Service Cloud PROFstudio (Actif)"
+                                               Description="{x:Bind ViewModel.AccountDescription, Mode=OneWay}"
+                                               Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xEB44;" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/></controls:SettingsCard.HeaderIcon>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Background="#1A107C10" BorderBrush="#33107C10" BorderThickness="1" CornerRadius="12" Padding="8,4" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#107C10"/>
+                                        <TextBlock Text="{x:Bind ViewModel.AccountQuotaText, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#107C10"/>
+                                    </StackPanel>
+                                </Border>
+                                <Button Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
+                            </StackPanel>
+                        </controls:SettingsCard>
+
+                        <InfoBar Severity="Success" IsOpen="True" IsClosable="False"
+                                 Title="Prêt pour vos cours"
+                                 Message="Vos documents sont rédigés et mis en page instantanément via le cloud PROFstudio. Activez le 'Mode Expert' ci-dessus pour configurer manuellement vos propres clés ou modèles."/>
+                    </StackPanel>
+
+                    <!-- ───── Vue Expert (Paramétrage avancé) ───── -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.EnableExpertMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
 
                     <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
                              Title="Routage intelligent par tâche"
@@ -535,7 +623,7 @@
                     <!-- ───── Matrice de routage 7 tâches (Avancé) ───── -->
                     <controls:SettingsExpander Header="Matrice de routage détaillée (Mode avancé)"
                                                Description="Personnalisez le modèle utilisé pour chaque tâche spécifique (rédaction, quiz, assistant)."
-                                               IsExpanded="False">
+                                               IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
                             <Grid ColumnSpacing="12" Margin="4,0,4,0">
@@ -629,14 +717,15 @@
                                     <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AssistantTemperatureLabel, Mode=OneWay}"
                                                FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 </Grid>
-                                <Slider Minimum="0" Maximum="2" StepFrequency="0.05" TickFrequency="0.5" TickPlacement="Outside"
-                                        Value="{x:Bind ViewModel.AssistantTemperature, Mode=TwoWay}"/>
+                                 <Slider Minimum="0" Maximum="2" StepFrequency="0.05" TickFrequency="0.5" TickPlacement="Outside"
+                                         Value="{x:Bind ViewModel.AssistantTemperature, Mode=TwoWay}"/>
                             </StackPanel>
                         </StackPanel>
                     </controls:SettingsExpander>
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- ══════════════════════════════════════════════ -->
+                <!-- ═════════════════════════════════���════════════ -->
                 <!-- ONGLET 3 · DOSSIERS &amp; EMPLACEMENTS           -->
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelFolders" Spacing="12" Visibility="Collapsed">

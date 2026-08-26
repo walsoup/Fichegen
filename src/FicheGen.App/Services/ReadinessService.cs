@@ -104,7 +104,7 @@ public sealed class ReadinessService : IReadinessService
             }
 
             // Vérification des identifiants dans le coffre
-            if (_activeProviderKey == "proxy")
+            if (_activeProviderKey == "proxy" || _activeProviderKey == "cloud" || _activeProviderKey == "profstudio")
             {
                 SetState(ReadinessState.Ready);
                 return;

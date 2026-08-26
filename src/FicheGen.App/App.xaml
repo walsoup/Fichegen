@@ -59,9 +59,10 @@
             <!-- PROFstudio DESIGN SYSTEM · COMPONENT STYLES & TOKENS                      -->
             <!-- ========================================================================= -->
 
-            <!-- ========================================================================= -->
-            <!-- PROFstudio DESIGN SYSTEM · COMPONENT STYLES & TOKENS                      -->
-            <!-- ========================================================================= -->
+            <!-- Global Converters -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" IsInverted="False"/>
+            <converters:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" IsInverted="True"/>
+            <converters:StringFormatConverter x:Key="StringFormatConverter"/>
 
             <!-- Boutons subtils -->
             <Style x:Key="SubtleButtonStyle" TargetType="Button">

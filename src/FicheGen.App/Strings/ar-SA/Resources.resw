@@ -440,4 +440,9 @@
   <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve"><value>فتح صفحة الحصول على المفتاح</value></data>
   <data name="FRD_LocalKeyNote" xml:space="preserve"><value>مع الخادم المحلي، تظل بياناتك بالكامل في مؤسستك التعليمية.</value></data>
   <data name="FRD_KeyOptionalNote.Text" xml:space="preserve"><value>في عجلة من أمرك؟ يمكنك المتابعة بدون مفتاح وسيذكرك التطبيق عند الحاجة.</value></data>
+  <data name="FRD_CloudName.Text" xml:space="preserve"><value>خدمة PROFstudio السحابية</value></data>
+  <data name="FRD_CloudBadge.Text" xml:space="preserve"><value>شامل · جاهز للاستخدام</value></data>
+  <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>جاهز فوراً: لا يتطلب أي مفتاح API أو إعدادات معقدة.</value></data>
+  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>حساب المعلم</value></data>
+  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>حسابي كمعلم</value></data>
 </root>
