@@ -14,7 +14,7 @@
 [![Language](https://img.shields.io/badge/C%23-12-239120?logo=c-sharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20Layered%20MVVM-success)](#-architecture-technique)
 [![Tests](https://img.shields.io/badge/Unit%20Tests-109%2F109%20Passing%20(100%25)-brightgreen?logo=xunit)](#-tests--qualit%C3%A9)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Non--Commercial%20%2F%20All%20Rights%20Reserved-red.svg)](LICENSE)
 
 [Téléchargements](#-installation--téléchargement) • [Fonctionnalités](#-fonctionnalités-clés) • [Styles Pédagogiques](#-moteur-de-styles-et-personnalisation) • [Fournisseurs IA](#-routage-ia--fournisseurs-supportés) • [Architecture](#-architecture-technique) • [Compilation](#-guide-de-compilation-et-développement)
 
@@ -263,8 +263,16 @@ Les fichiers générés seront placés dans le dossier `artifacts/dist/`.
 
 ---
 
-## 📄 Licence & Crédits
+## 📄 Licence & Propriété
 
-Distribué sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus d'informations.
+Copyright © 2026 walsoup / PROFstudio. **Tous droits réservés.**
+
+Ce logiciel est fourni gratuitement pour un **usage individuel, personnel et pédagogique non commercial** par les enseignants et éducateurs.
+
+⛔ **Restrictions strictes :**
+* **Interdiction de vente et de commercialisation** : Il est formellement interdit de vendre, revendre, louer, sous-licencier, monétiser ou intégrer ce logiciel ou son code source dans une offre payante.
+* **Aucun usage commercial** sans autorisation expresse et écrite de l'auteur.
+
+Voir le fichier [LICENSE](LICENSE) pour les termes détaillés.
 
 Conçu avec passion pour faciliter le quotidien des professeurs et valoriser la liberté pédagogique.
