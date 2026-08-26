@@ -153,6 +153,11 @@ public sealed partial class MainWindow : Window
             };
         }
 
+        L10n.LanguageChanged += (s, lang) =>
+        {
+            DispatcherQueue.TryEnqueue(RefreshLocalizedStrings);
+        };
+
         RefreshAiChip();
         RefreshTeacherBadge();
 

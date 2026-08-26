@@ -67,13 +67,13 @@
                 <!-- Étape 1 : Classe et Matière -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="QP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="LevelCombo" x:Uid="QP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
                                       SelectedValuePath="Content"
                                       SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
@@ -88,7 +88,7 @@
                                 <ComboBoxItem Content="4e"/>
                                 <ComboBoxItem Content="3e"/>
                             </ComboBox>
-                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" Header="Matière" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="QP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
                                       ItemTemplate="{StaticResource SubjectItemTemplate}"
@@ -103,8 +103,8 @@
                 <!-- Étape 2 : Sujet du quiz -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="2. Sujet du quiz" Style="{StaticResource CardHeaderStyle}"/>
-                        <AutoSuggestBox x:Name="TopicBox"
+                        <TextBlock x:Uid="QP_Step2_Header" Text="2. Sujet du quiz" Style="{StaticResource CardHeaderStyle}"/>
+                        <AutoSuggestBox x:Name="TopicBox" x:Uid="QP_TopicBox"
                                         PlaceholderText="ex : Les tables de multiplication, Le cycle de l'eau…"
                                         Text="{Binding Topic, Mode=TwoWay}"
                                         TextChanged="TopicBox_TextChanged"
@@ -117,19 +117,19 @@
                 <!-- Étape 3 : Format et Options -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="3. Format et Options" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="QP_Step3_Header" Text="3. Format et Options" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <NumberBox x:Name="QuestionCountBox" Header="Questions (3-30)"
+                            <NumberBox x:Name="QuestionCountBox" x:Uid="QP_QuestionCountBox" Header="Questions (3-30)"
                                        Minimum="3" Maximum="30" SmallChange="1" LargeChange="5"
                                        SpinButtonPlacementMode="Inline"
                                        Value="{Binding QuestionCount, Mode=TwoWay}"
                                        ValueChanged="QuizNumberBox_ValueChanged"
                                        AutomationProperties.Name="Nombre de questions"/>
-                            <NumberBox x:Name="QuizDurationBox" Grid.Column="1" Header="Durée (minutes)"
+                            <NumberBox x:Name="QuizDurationBox" Grid.Column="1" x:Uid="QP_QuizDurationBox" Header="Durée (minutes)"
                                        Minimum="5" Maximum="60" SmallChange="5" LargeChange="10"
                                        SpinButtonPlacementMode="Inline"
                                        Value="{Binding DurationMinutes, Mode=TwoWay}"
@@ -137,7 +137,7 @@
                                        AutomationProperties.Name="Durée du quiz"/>
                         </Grid>
 
-                        <TextBlock Text="Types de questions :" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock x:Uid="QP_QuestionTypesHeader" Text="Types de questions :" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <Grid ColumnSpacing="8" RowSpacing="6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -147,15 +147,15 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <CheckBox Grid.Row="0" Grid.Column="0" Content="QCM"
+                            <CheckBox Grid.Row="0" Grid.Column="0" x:Uid="QP_QcmCheck" Content="QCM"
                                       IsChecked="{Binding IncludeMultipleChoice, Mode=TwoWay}"
                                       Checked="QuizField_ValueChanged" Unchecked="QuizField_ValueChanged"
                                       AutomationProperties.Name="Inclure QCM"/>
-                            <CheckBox Grid.Row="0" Grid.Column="1" Content="Vrai / Faux"
+                            <CheckBox Grid.Row="0" Grid.Column="1" x:Uid="QP_TfCheck" Content="Vrai / Faux"
                                       IsChecked="{Binding IncludeTrueFalse, Mode=TwoWay}"
                                       Checked="QuizField_ValueChanged" Unchecked="QuizField_ValueChanged"
                                       AutomationProperties.Name="Inclure Vrai/Faux"/>
-                            <CheckBox Grid.Row="1" Grid.Column="0" Content="Réponse courte"
+                            <CheckBox Grid.Row="1" Grid.Column="0" x:Uid="QP_ShortCheck" Content="Réponse courte"
                                       IsChecked="{Binding IncludeShortAnswer, Mode=TwoWay}"
                                       Checked="QuizField_ValueChanged" Unchecked="QuizField_ValueChanged"
                                       AutomationProperties.Name="Inclure Réponse courte"/>

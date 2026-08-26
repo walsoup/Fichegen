@@ -25,7 +25,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.0.1" />
-    <PackageReference Include="Verify.Xunit" Version="28.13.0" />
   </ItemGroup>
+
+  <Target Name="PostBuildSign" AfterTargets="Build">
+    <Exec Command="powershell -Command &quot;Get-ChildItem -Path '$(TargetDir)*.dll' | ForEach-Object { &amp; 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' sign /fd SHA256 /sha1 A30DD5F83B0828C6CFEC50D2AA2697BF46C44227 `$_.FullName 2>`$null }&quot;" ContinueOnError="true" />
+  </Target>
 
 </Project>

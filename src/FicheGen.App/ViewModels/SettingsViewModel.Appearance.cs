@@ -40,6 +40,15 @@ public partial class SettingsViewModel
         if (value is not null && Language != value.Code)
         {
             Language = value.Code;
+            L10n.SetLanguage(value.Code);
+
+            try
+            {
+                var settings = _settingsStore.GetSettings<FicheGen.Core.Storage.AppSettings>();
+                settings.Ui.Language = value.Code;
+                _ = _settingsStore.SaveSettingsAsync(settings);
+            }
+            catch { }
         }
     }
 

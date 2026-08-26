@@ -449,4 +449,70 @@ public sealed partial class MainWindow
             Log.Debug(ex, "Lecture du profil enseignant impossible.");
         }
     }
+
+    public void RefreshLocalizedStrings()
+    {
+        try
+        {
+            var isRtl = L10n.CurrentLanguage.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+            if (Content is FrameworkElement root)
+            {
+                root.FlowDirection = isRtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+            }
+
+            if (NavFicheItem != null) NavFicheItem.Content = L10n.Get("Section_Fiche", "Fiche pédagogique");
+            if (NavEvaluationItem != null) NavEvaluationItem.Content = L10n.Get("Section_Evaluation", "Évaluations & Contrôles");
+            if (NavQuizItem != null) NavQuizItem.Content = L10n.Get("Section_Quiz", "Quiz rapides");
+            if (NavHistoryItem != null) NavHistoryItem.Content = L10n.Get("Section_History", "Mes documents");
+            if (NavHelpItem != null) NavHelpItem.Content = L10n.Get("Nav_Help", "Aide & Raccourcis");
+            if (GlobalSearchBox != null) GlobalSearchBox.PlaceholderText = L10n.Get("Shell_SearchPlaceholder", "Rechercher un document…");
+
+            if (AssistantToggleLabel != null) AssistantToggleLabel.Text = L10n.Get("Shell_AssistantToggle_Label", "Assistant");
+            if (ThemeSystemItem != null) ThemeSystemItem.Text = L10n.Get("Theme_System", "Par défaut du système");
+            if (ThemeLightItem != null) ThemeLightItem.Text = L10n.Get("Theme_Light", "Clair");
+            if (ThemeDarkItem != null) ThemeDarkItem.Text = L10n.Get("Theme_Dark", "Sombre");
+            if (ThemeOledItem != null) ThemeOledItem.Text = L10n.Get("Theme_Oled", "Noir absolu (OLED)");
+
+            if (ProfileSettingsLabel != null) ProfileSettingsLabel.Text = L10n.Get("Shell_ProfileSettingsLabel", "Paramètres de l'application");
+            if (ProfileShortcutsLabel != null) ProfileShortcutsLabel.Text = L10n.Get("Shell_ProfileShortcutsLabel", "Raccourcis clavier (F1)");
+            if (ProfileAboutLabel != null) ProfileAboutLabel.Text = L10n.Get("Shell_ProfileAboutLabel", "À propos de PROFstudio");
+
+            RefreshTeacherBadge();
+
+            StatusSectionText.Text = _shellState.LastNavigationTag switch
+            {
+                "FichePage" => Services.L10n.Get("Section_Fiche", "Fiche pédagogique"),
+                "EvaluationPage" => Services.L10n.Get("Section_Evaluation", "Évaluations & Contrôles"),
+                "QuizPage" => Services.L10n.Get("Section_Quiz", "Quiz rapides"),
+                "HistoryPage" => Services.L10n.Get("Section_History", "Mes documents"),
+                "SettingsPage" => Services.L10n.Get("Section_Settings", "Paramètres"),
+                _ => Services.L10n.Get("Section_Fiche", "Fiche pédagogique")
+            };
+
+            // Recharge la vue courante pour appliquer la langue
+            if (ContentFrame.CurrentSourcePageType != null)
+            {
+                var tag = _shellState.LastNavigationTag;
+                var pageType = ContentFrame.CurrentSourcePageType;
+                ContentFrame.Navigate(pageType, null, new Microsoft.UI.Xaml.Media.Animation.SuppressNavigationTransitionInfo());
+
+                if (ContentFrame.Content is Page page)
+                {
+                    page.DataContext = tag switch
+                    {
+                        "FichePage" => App.Services.GetRequiredService<FicheFormViewModel>(),
+                        "EvaluationPage" => App.Services.GetRequiredService<EvaluationViewModel>(),
+                        "QuizPage" => App.Services.GetRequiredService<QuizViewModel>(),
+                        "HistoryPage" => App.Services.GetRequiredService<HistoryViewModel>(),
+                        "SettingsPage" => App.Services.GetRequiredService<SettingsViewModel>(),
+                        _ => App.Services.GetRequiredService<FicheFormViewModel>()
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Erreur lors du rafraîchissement des chaînes localisées.");
+        }
+    }
 }

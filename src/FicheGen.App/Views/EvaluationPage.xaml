@@ -77,13 +77,13 @@
                 <!-- Étape 1 : Classe et Matière -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="EP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="LevelCombo" x:Uid="EP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
                                       SelectedValuePath="Content"
                                       SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
@@ -98,7 +98,7 @@
                                 <ComboBoxItem Content="4e"/>
                                 <ComboBoxItem Content="3e"/>
                             </ComboBox>
-                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" Header="Matière" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="EP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
                                       ItemTemplate="{StaticResource SubjectItemTemplate}"
@@ -113,8 +113,8 @@
                 <!-- Étape 2 : Notions ciblées -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="2. Notions à évaluer" Style="{StaticResource CardHeaderStyle}"/>
-                        <TextBlock Text="Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :"
+                        <TextBlock x:Uid="EP_Step2_Header" Text="2. Notions à évaluer" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="EP_Step2_Sub" Text="Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :"
                                    Style="{StaticResource CaptionSecondaryStyle}"/>
 
                         <ItemsRepeater x:Name="SuggestedLessonsRepeater">
@@ -128,14 +128,14 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="NewTagBox"
+                            <TextBox x:Name="NewTagBox" x:Uid="EP_NewTagBox"
                                      PlaceholderText="Autre notion… (ex: Calcul d'angles)"
                                      KeyDown="NewTagBox_KeyDown"
                                      TextChanged="NewTagBox_TextChanged"
                                      AutomationProperties.Name="Ajouter une notion"/>
-                            <Button x:Name="AddTagButton" Grid.Column="1" Content="Ajouter"
-                                    IsEnabled="False" Click="AddTag_Click"
-                                    AutomationProperties.Name="Ajouter la notion"/>
+                            <Button x:Name="AddTagButton" Grid.Column="1" x:Uid="EP_AddTagButton" Content="Ajouter"
+                                     IsEnabled="False" Click="AddTag_Click"
+                                     AutomationProperties.Name="Ajouter la notion"/>
                         </Grid>
 
                         <ScrollViewer ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
@@ -152,13 +152,13 @@
                 <!-- Étape 3 : Format & Barème -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="3. Format et Barème" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="EP_Step3_Header" Text="3. Format et Barème" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="EvalTypeCombo" Header="Type" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="EvalTypeCombo" x:Uid="EP_EvalTypeCombo" Header="Type" HorizontalAlignment="Stretch"
                                       SelectedValuePath="Tag"
                                       SelectedValue="{Binding EvaluationType, Mode=TwoWay}"
                                       AutomationProperties.Name="Type d'évaluation">
@@ -166,7 +166,7 @@
                                 <ComboBoxItem Tag="diagnostique" Content="🧭 Diagnostique"/>
                                 <ComboBoxItem Tag="sommative" Content="🎓 Sommative (examen)"/>
                             </ComboBox>
-                            <NumberBox x:Name="TotalPointsBox" Grid.Column="1" Header="Total points"
+                            <NumberBox x:Name="TotalPointsBox" Grid.Column="1" x:Uid="EP_TotalPointsBox" Header="Total points"
                                        Minimum="5" Maximum="100" SmallChange="5" LargeChange="10"
                                        Value="{Binding TotalPoints, Mode=TwoWay}"
                                        ValueChanged="TotalPointsBox_ValueChanged"

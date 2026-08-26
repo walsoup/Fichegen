@@ -67,13 +67,13 @@
                 <!-- Étape 1 : Classe et Matière -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="FP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="LevelCombo" x:Uid="FP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
                                       SelectedValuePath="Content"
                                       SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
@@ -88,7 +88,7 @@
                                 <ComboBoxItem Content="4e"/>
                                 <ComboBoxItem Content="3e"/>
                             </ComboBox>
-                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" Header="Matière" HorizontalAlignment="Stretch"
+                            <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="FP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
                                       ItemTemplate="{StaticResource SubjectItemTemplate}"
@@ -103,8 +103,8 @@
                 <!-- Étape 2 : Sujet de la séance -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="2. Sujet de la séance" Style="{StaticResource CardHeaderStyle}"/>
-                        <AutoSuggestBox x:Name="TopicBox"
+                        <TextBlock x:Uid="FP_Step2_Header" Text="2. Sujet de la séance" Style="{StaticResource CardHeaderStyle}"/>
+                        <AutoSuggestBox x:Name="TopicBox" x:Uid="FP_TopicBox"
                                         PlaceholderText="ex : Les fractions décimales, La Révolution française…"
                                         Text="{Binding Topic, Mode=TwoWay}"
                                         TextChanged="TopicBox_TextChanged"
@@ -117,8 +117,8 @@
                 <!-- Étape 3 : Durée & Consignes -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="3. Cadre &amp; Durée" Style="{StaticResource CardHeaderStyle}"/>
-                        <NumberBox x:Name="DurationBox" Header="Durée de la séance (minutes)"
+                        <TextBlock x:Uid="FP_Step3_Header" Text="3. Cadre &amp; Durée" Style="{StaticResource CardHeaderStyle}"/>
+                        <NumberBox x:Name="DurationBox" x:Uid="FP_DurationBox" Header="Durée de la séance (minutes)"
                                    Minimum="15" Maximum="180" SmallChange="5" LargeChange="15"
                                    Value="{Binding DurationMinutes, Mode=TwoWay}"
                                    ValueChanged="DurationBox_ValueChanged"
@@ -130,7 +130,7 @@
                             <Button Style="{StaticResource ChoiceChipStyle}" Content="55 min" Click="OnDurationQuickPickClicked" Tag="55" AutomationProperties.Name="55 minutes"/>
                             <Button Style="{StaticResource ChoiceChipStyle}" Content="60 min" Click="OnDurationQuickPickClicked" Tag="60" AutomationProperties.Name="60 minutes"/>
                         </StackPanel>
-                        <TextBox x:Name="InstructionsBox" Header="Consignes additionnelles (optionnel)"
+                        <TextBox x:Name="InstructionsBox" x:Uid="FP_InstructionsBox" Header="Consignes additionnelles (optionnel)"
                                  PlaceholderText="Précisez un contexte, des besoins DYS, un travail en groupe…"
                                  AcceptsReturn="True" TextWrapping="Wrap" Height="68"
                                  Text="{Binding AdditionalInstructions, Mode=TwoWay}"
@@ -142,7 +142,7 @@
                 <!-- Étape 4 : Manuel PDF optionnel -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="4. Appui documentaire PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Uid="FP_Step4_Header" Text="4. Appui documentaire PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
                         <controls:PdfDropZone x:Name="PdfDropZoneControl"
                                               GuideFilePath="{Binding GuideFilePath, Mode=TwoWay}"/>
                     </StackPanel>

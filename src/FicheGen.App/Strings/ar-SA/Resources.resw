@@ -60,13 +60,13 @@
   <data name="Status_Theme" xml:space="preserve"><value>🎨 المظهر: {0}</value></data>
   <data name="Theme_Light" xml:space="preserve"><value>فاتح</value></data>
   <data name="Theme_Dark" xml:space="preserve"><value>داكن</value></data>
-  <data name="Theme_Oled" xml:space="preserve"><value>داكن OLED</value></data>
-  <data name="Theme_System" xml:space="preserve"><value>تلقائي (النظام)</value></data>
-  <data name="Section_Fiche" xml:space="preserve"><value>القسم: جذاذة بيداغوجية</value></data>
-  <data name="Section_Evaluation" xml:space="preserve"><value>القسم: تقويم</value></data>
-  <data name="Section_Quiz" xml:space="preserve"><value>القسم: اختبار سريع</value></data>
-  <data name="Section_History" xml:space="preserve"><value>القسم: السجل</value></data>
-  <data name="Section_Settings" xml:space="preserve"><value>القسم: الإعدادات</value></data>
+  <data name="Theme_Oled" xml:space="preserve"><value>أسود داكن (OLED)</value></data>
+  <data name="Theme_System" xml:space="preserve"><value>افتراضي النظام</value></data>
+  <data name="Section_Fiche" xml:space="preserve"><value>جذاذة تربوية</value></data>
+  <data name="Section_Evaluation" xml:space="preserve"><value>تقويمات وفروض</value></data>
+  <data name="Section_Quiz" xml:space="preserve"><value>اختبارات قصيرة</value></data>
+  <data name="Section_History" xml:space="preserve"><value>مستنداتي</value></data>
+  <data name="Section_Settings" xml:space="preserve"><value>الإعدادات</value></data>
   <data name="Hint_OpenCreationPage_Title" xml:space="preserve"><value>التوليد</value></data>
   <data name="Hint_OpenCreationPage_Message" xml:space="preserve"><value>افتح صفحة إنشاء أولاً (جذاذة، تقويم أو اختبار).</value></data>
   <data name="Hint_Cancel_Title" xml:space="preserve"><value>الإلغاء</value></data>
@@ -445,4 +445,41 @@
   <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>جاهز فوراً: لا يتطلب أي مفتاح API أو إعدادات معقدة.</value></data>
   <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>حساب المعلم</value></data>
   <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>حسابي كمعلم</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>المساعدة والاختصارات</value></data>
+  <data name="Shell_AssistantToggle_Label" xml:space="preserve"><value>المساعد</value></data>
+  <data name="FP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
+  <data name="FP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
+  <data name="FP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
+  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
+  <data name="FP_Step2_Header.Text" xml:space="preserve"><value>2. موضوع الدرس</value></data>
+  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve"><value>مثال: الكسور العشرية، الثورة الفرنسية...</value></data>
+  <data name="FP_Step3_Header.Text" xml:space="preserve"><value>3. الإطار والمدة</value></data>
+  <data name="FP_DurationBox.Header" xml:space="preserve"><value>مدة الحصة (بالدقائق)</value></data>
+  <data name="FP_InstructionsBox.Header" xml:space="preserve"><value>تعليمات إضافية (اختياري)</value></data>
+  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve"><value>حدد سياقاً أو احتياجات خاصة أو عملاً جماعياً...</value></data>
+  <data name="FP_Step4_Header.Text" xml:space="preserve"><value>4. المرجع التوجيهي PDF (اختياري)</value></data>
+  <data name="EP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
+  <data name="EP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
+  <data name="EP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
+  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
+  <data name="EP_Step2_Header.Text" xml:space="preserve"><value>2. المفاهيم المراد تقييمها</value></data>
+  <data name="EP_Step2_Sub.Text" xml:space="preserve"><value>اختر مفهوماً أو أكثر أو أضف موضوعك الخاص:</value></data>
+  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve"><value>مفهوم آخر... (مثال: حساب الزوايا)</value></data>
+  <data name="EP_AddTagButton.Content" xml:space="preserve"><value>إضافة</value></data>
+  <data name="EP_Step3_Header.Text" xml:space="preserve"><value>3. الشكل وسلّم التنقيط</value></data>
+  <data name="EP_EvalTypeCombo.Header" xml:space="preserve"><value>النوع</value></data>
+  <data name="EP_TotalPointsBox.Header" xml:space="preserve"><value>مجموع النقاط</value></data>
+  <data name="QP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
+  <data name="QP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
+  <data name="QP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
+  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
+  <data name="QP_Step2_Header.Text" xml:space="preserve"><value>2. موضوع الاختبار</value></data>
+  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve"><value>مثال: جداول الضرب، دورة الماء...</value></data>
+  <data name="QP_Step3_Header.Text" xml:space="preserve"><value>3. التنسيق والخيارات</value></data>
+  <data name="QP_QuestionCountBox.Header" xml:space="preserve"><value>الأسئلة (3-30)</value></data>
+  <data name="QP_QuizDurationBox.Header" xml:space="preserve"><value>المدة (دقائق)</value></data>
+  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve"><value>أنواع الأسئلة:</value></data>
+  <data name="QP_QcmCheck.Content" xml:space="preserve"><value>اختيار من متعدد</value></data>
+  <data name="QP_TfCheck.Content" xml:space="preserve"><value>صح / خطأ</value></data>
+  <data name="QP_ShortCheck.Content" xml:space="preserve"><value>إجابة قصيرة</value></data>
 </root>

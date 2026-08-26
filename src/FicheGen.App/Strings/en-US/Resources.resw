@@ -60,13 +60,13 @@
   <data name="Status_Theme" xml:space="preserve"><value>🎨 Theme: {0}</value></data>
   <data name="Theme_Light" xml:space="preserve"><value>Light</value></data>
   <data name="Theme_Dark" xml:space="preserve"><value>Dark</value></data>
-  <data name="Theme_Oled" xml:space="preserve"><value>OLED Dark</value></data>
-  <data name="Theme_System" xml:space="preserve"><value>System</value></data>
-  <data name="Section_Fiche" xml:space="preserve"><value>Section: Lesson Plan</value></data>
-  <data name="Section_Evaluation" xml:space="preserve"><value>Section: Evaluation</value></data>
-  <data name="Section_Quiz" xml:space="preserve"><value>Section: Quiz</value></data>
-  <data name="Section_History" xml:space="preserve"><value>Section: History</value></data>
-  <data name="Section_Settings" xml:space="preserve"><value>Section: Settings</value></data>
+  <data name="Theme_Oled" xml:space="preserve"><value>Absolute Black (OLED)</value></data>
+  <data name="Theme_System" xml:space="preserve"><value>System Default</value></data>
+  <data name="Section_Fiche" xml:space="preserve"><value>Lesson Plan</value></data>
+  <data name="Section_Evaluation" xml:space="preserve"><value>Evaluations &amp; Tests</value></data>
+  <data name="Section_Quiz" xml:space="preserve"><value>Quick Quizzes</value></data>
+  <data name="Section_History" xml:space="preserve"><value>My Documents</value></data>
+  <data name="Section_Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Hint_OpenCreationPage_Title" xml:space="preserve"><value>Generation</value></data>
   <data name="Hint_OpenCreationPage_Message" xml:space="preserve"><value>Open a creation page first (Lesson Plan, Evaluation, or Quiz).</value></data>
   <data name="Hint_Cancel_Title" xml:space="preserve"><value>Cancelled</value></data>
@@ -445,4 +445,41 @@
   <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>Ready immediately: no API key or manual setup required.</value></data>
   <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>My Teacher Account</value></data>
   <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>My Teacher Account</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>Help &amp; Shortcuts</value></data>
+  <data name="Shell_AssistantToggle_Label" xml:space="preserve"><value>Assistant</value></data>
+  <data name="FP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
+  <data name="FP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
+  <data name="FP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
+  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
+  <data name="FP_Step2_Header.Text" xml:space="preserve"><value>2. Lesson Topic</value></data>
+  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve"><value>e.g., Fractions, French Revolution…</value></data>
+  <data name="FP_Step3_Header.Text" xml:space="preserve"><value>3. Frame &amp; Duration</value></data>
+  <data name="FP_DurationBox.Header" xml:space="preserve"><value>Lesson duration (minutes)</value></data>
+  <data name="FP_InstructionsBox.Header" xml:space="preserve"><value>Additional instructions (optional)</value></data>
+  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve"><value>Specify context, special needs, group work…</value></data>
+  <data name="FP_Step4_Header.Text" xml:space="preserve"><value>4. PDF Reference Guide (optional)</value></data>
+  <data name="EP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
+  <data name="EP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
+  <data name="EP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
+  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
+  <data name="EP_Step2_Header.Text" xml:space="preserve"><value>2. Concepts to Evaluate</value></data>
+  <data name="EP_Step2_Sub.Text" xml:space="preserve"><value>Select one or more concepts or add your own topic:</value></data>
+  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve"><value>Another concept… (e.g., Angle calculation)</value></data>
+  <data name="EP_AddTagButton.Content" xml:space="preserve"><value>Add</value></data>
+  <data name="EP_Step3_Header.Text" xml:space="preserve"><value>3. Format &amp; Rubric</value></data>
+  <data name="EP_EvalTypeCombo.Header" xml:space="preserve"><value>Type</value></data>
+  <data name="EP_TotalPointsBox.Header" xml:space="preserve"><value>Total points</value></data>
+  <data name="QP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
+  <data name="QP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
+  <data name="QP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
+  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
+  <data name="QP_Step2_Header.Text" xml:space="preserve"><value>2. Quiz Topic</value></data>
+  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve"><value>e.g., Multiplication tables, Water cycle…</value></data>
+  <data name="QP_Step3_Header.Text" xml:space="preserve"><value>3. Format &amp; Options</value></data>
+  <data name="QP_QuestionCountBox.Header" xml:space="preserve"><value>Questions (3-30)</value></data>
+  <data name="QP_QuizDurationBox.Header" xml:space="preserve"><value>Duration (minutes)</value></data>
+  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve"><value>Question types:</value></data>
+  <data name="QP_QcmCheck.Content" xml:space="preserve"><value>Multiple Choice</value></data>
+  <data name="QP_TfCheck.Content" xml:space="preserve"><value>True / False</value></data>
+  <data name="QP_ShortCheck.Content" xml:space="preserve"><value>Short Answer</value></data>
 </root>

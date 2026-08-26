@@ -74,7 +74,7 @@
                               x:Uid="Shell_AssistantToggle">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="💬" FontSize="13"/>
-                        <TextBlock Text="Assistant" FontSize="12.5" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AssistantToggleLabel" Text="Assistant" FontSize="12.5" VerticalAlignment="Center"/>
                     </StackPanel>
                 </ToggleButton>
 
@@ -142,36 +142,36 @@
                                                      x:Uid="Shell_ProfileAccountLabel"/>
                                       </StackPanel>
                                  </Button>
+                                  <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                          Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
+                                          Click="OnProfileSettingsClicked"
+                                          x:Uid="Shell_ProfileSettingsButton">
+                                     <StackPanel Orientation="Horizontal" Spacing="10">
+                                         <FontIcon Glyph="&#xE713;" FontSize="13"/>
+                                         <TextBlock x:Name="ProfileSettingsLabel" Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"
+                                                    x:Uid="Shell_ProfileSettingsLabel"/>
+                                     </StackPanel>
+                                 </Button>
                                  <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                          Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
-                                         Click="OnProfileSettingsClicked"
-                                         x:Uid="Shell_ProfileSettingsButton">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xE713;" FontSize="13"/>
-                                        <TextBlock Text="Paramètres de l'application" FontSize="12.5" VerticalAlignment="Center"
-                                                   x:Uid="Shell_ProfileSettingsLabel"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
-                                        Click="OnProfileShortcutsClicked"
-                                        x:Uid="Shell_ProfileShortcutsButton">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xE765;" FontSize="13"/>
-                                        <TextBlock Text="Raccourcis clavier (F1)" FontSize="12.5" VerticalAlignment="Center"
-                                                   x:Uid="Shell_ProfileShortcutsLabel"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
-                                        Click="OnAboutClicked"
-                                        x:Uid="Shell_ProfileAboutButton">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xE897;" FontSize="13"/>
-                                        <TextBlock Text="À propos de PROFstudio" FontSize="12.5" VerticalAlignment="Center"
-                                                   x:Uid="Shell_ProfileAboutLabel"/>
-                                    </StackPanel>
-                                </Button>
+                                         Click="OnProfileShortcutsClicked"
+                                         x:Uid="Shell_ProfileShortcutsButton">
+                                     <StackPanel Orientation="Horizontal" Spacing="10">
+                                         <FontIcon Glyph="&#xE765;" FontSize="13"/>
+                                         <TextBlock x:Name="ProfileShortcutsLabel" Text="Raccourcis clavier (F1)" FontSize="12.5" VerticalAlignment="Center"
+                                                    x:Uid="Shell_ProfileShortcutsLabel"/>
+                                     </StackPanel>
+                                 </Button>
+                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                         Background="Transparent" BorderBrush="Transparent" CornerRadius="6"
+                                         Click="OnAboutClicked"
+                                         x:Uid="Shell_ProfileAboutButton">
+                                     <StackPanel Orientation="Horizontal" Spacing="10">
+                                         <FontIcon Glyph="&#xE897;" FontSize="13"/>
+                                         <TextBlock x:Name="ProfileAboutLabel" Text="À propos de PROFstudio" FontSize="12.5" VerticalAlignment="Center"
+                                                    x:Uid="Shell_ProfileAboutLabel"/>
+                                     </StackPanel>
+                                 </Button>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
@@ -201,25 +201,25 @@
             </NavigationView.AutoSuggestBox>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Fiche pédagogique" Tag="FichePage"
+                <NavigationViewItem x:Name="NavFicheItem" Content="Fiche pédagogique" Tag="FichePage"
                                     x:Uid="Nav_FicheItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8A5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Évaluations &amp; Contrôles" Tag="EvaluationPage"
+                <NavigationViewItem x:Name="NavEvaluationItem" Content="Évaluations &amp; Contrôles" Tag="EvaluationPage"
                                     x:Uid="Nav_EvaluationItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE70F;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Quiz rapides" Tag="QuizPage"
+                <NavigationViewItem x:Name="NavQuizItem" Content="Quiz rapides" Tag="QuizPage"
                                     x:Uid="Nav_QuizItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Mes documents" Tag="HistoryPage"
+                <NavigationViewItem x:Name="NavHistoryItem" Content="Mes documents" Tag="HistoryPage"
                                     x:Uid="Nav_HistoryItem">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;"/>
@@ -228,7 +228,7 @@
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="Aide &amp; Raccourcis" Tag="Help" SelectsOnInvoked="False"
+                <NavigationViewItem x:Name="NavHelpItem" Content="Aide &amp; Raccourcis" Tag="Help" SelectsOnInvoked="False"
                                     ToolTipService.ToolTip="Aide et raccourcis clavier (F1)"
                                     AutomationProperties.Name="Aide et raccourcis clavier">
                     <NavigationViewItem.Icon>
