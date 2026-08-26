@@ -78,7 +78,10 @@ if ($robocopyCode -ge 8) {
     Write-Fail "La copie des fichiers a echoue (robocopy code $robocopyCode)."
     exit 1
 }
-Write-Ok "Fichiers installes."
+try {
+    Get-ChildItem $Destination -Recurse | Unblock-File -ErrorAction SilentlyContinue
+} catch { }
+Write-Ok "Fichiers installes et debloques."
 
 # ── Raccourcis ───────────────────────────────────────────────────────────────
 $wsh = New-Object -ComObject WScript.Shell
