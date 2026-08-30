@@ -36,33 +36,13 @@
 
         <!-- ═══════════ Ligne 0 : Barre de commandes unifiée (§6.2) ═══════════ -->
         <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
             <!-- Titre de la page -->
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
-                <TextBlock x:Uid="EP_Title" Text="Nouvelle évaluation" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"/>
-                <TextBlock x:Uid="EP_Subtitle" Text="Créez un contrôle avec exercices progressifs et barème de correction."
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="PageTitle" x:Uid="EP_Title" Text="Nouvelle évaluation" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"
+                           AutomationProperties.HeadingLevel="Level1"/>
+                <TextBlock x:Name="PageSubtitle" x:Uid="EP_Subtitle" Text="Créez un contrôle avec exercices progressifs et barème de correction."
                            Style="{StaticResource CaptionSecondaryStyle}"/>
             </StackPanel>
-
-            <!-- Les commandes du document (zoom, exports, impression, élève/corrigé)
-                 vivent désormais uniquement dans la barre d'outils de l'aperçu (PreviewHost). -->
-
-            <!-- Bouton Assistant à droite -->
-            <Button Grid.Column="2" x:Name="AssistantToggleButton" Margin="8,0,0,0"
-                    Style="{ThemeResource SubtleButtonStyle}"
-                    Click="OnToggleAssistantClicked"
-                    VerticalAlignment="Center"
-                    x:Uid="EP_AssistantToggle">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Uid="EP_AssistantLabel" Text="Assistant" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
         </Grid>
 
         <!-- ═══════════ Ligne 1 : Workspace 3 colonnes partagé ═══════════ -->
@@ -77,27 +57,17 @@
                 <!-- Étape 1 : Classe et Matière -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="EP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step1Header" x:Uid="EP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="LevelCombo" x:Uid="EP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
-                                      SelectedValuePath="Content"
-                                      SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
+                                      ItemsSource="{Binding ClassLevels}"
+                                      SelectedItem="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
-                                      AutomationProperties.Name="Niveau scolaire">
-                                <ComboBoxItem Content="CP"/>
-                                <ComboBoxItem Content="CE1"/>
-                                <ComboBoxItem Content="CE2"/>
-                                <ComboBoxItem Content="CM1"/>
-                                <ComboBoxItem Content="CM2"/>
-                                <ComboBoxItem Content="6e"/>
-                                <ComboBoxItem Content="5e"/>
-                                <ComboBoxItem Content="4e"/>
-                                <ComboBoxItem Content="3e"/>
-                            </ComboBox>
+                                      AutomationProperties.Name="Niveau scolaire"/>
                             <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="EP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
@@ -113,8 +83,8 @@
                 <!-- Étape 2 : Notions ciblées -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="EP_Step2_Header" Text="2. Notions à évaluer" Style="{StaticResource CardHeaderStyle}"/>
-                        <TextBlock x:Uid="EP_Step2_Sub" Text="Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :"
+                        <TextBlock x:Name="Step2Header" x:Uid="EP_Step2_Header" Text="2. Notions à évaluer" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step2Sub" x:Uid="EP_Step2_Sub" Text="Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :"
                                    Style="{StaticResource CaptionSecondaryStyle}"/>
 
                         <ItemsRepeater x:Name="SuggestedLessonsRepeater">
@@ -152,7 +122,7 @@
                 <!-- Étape 3 : Format & Barème -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="EP_Step3_Header" Text="3. Format et Barème" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step3Header" x:Uid="EP_Step3_Header" Text="3. Format et Barème" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -162,9 +132,9 @@
                                       SelectedValuePath="Tag"
                                       SelectedValue="{Binding EvaluationType, Mode=TwoWay}"
                                       AutomationProperties.Name="Type d'évaluation">
-                                <ComboBoxItem Tag="formative" Content="🌱 Formative (bilan)"/>
-                                <ComboBoxItem Tag="diagnostique" Content="🧭 Diagnostique"/>
-                                <ComboBoxItem Tag="sommative" Content="🎓 Sommative (examen)"/>
+                                <ComboBoxItem x:Uid="EP_Type_Formative" Tag="formative" Content="🌱 Formative (bilan)"/>
+                                <ComboBoxItem x:Uid="EP_Type_Diagnostic" Tag="diagnostique" Content="🧭 Diagnostique"/>
+                                <ComboBoxItem x:Uid="EP_Type_Summative" Tag="sommative" Content="🎓 Sommative (examen)"/>
                             </ComboBox>
                             <NumberBox x:Name="TotalPointsBox" Grid.Column="1" x:Uid="EP_TotalPointsBox" Header="Total points"
                                        Minimum="5" Maximum="100" SmallChange="5" LargeChange="10"
@@ -178,7 +148,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Niveau de difficulté" Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="DifficultyHeader" x:Uid="EP_DifficultyHeader" Text="Niveau de difficulté" Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="DifficultyLabel" Grid.Column="1" Text="🌳 Intermédiaire"
                                        Style="{ThemeResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
@@ -188,14 +158,47 @@
                                 SnapsTo="StepValues"
                                 Value="{Binding DifficultyLevel, Mode=TwoWay}"
                                 ValueChanged="DifficultySlider_ValueChanged"
-                                AutomationProperties.Name="Niveau de difficulté"/>
+                                AutomationProperties.Name="Difficulté de 1 à 5"/>
+
+                        <!-- Longueur du document (Slider n6) -->
+                        <StackPanel Spacing="4" Margin="0,4,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Longueur / Densité de l'évaluation" FontSize="12.5" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Text="{Binding DocumentLengthLabel}" FontSize="12"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            </Grid>
+                            <Slider Minimum="0" Maximum="5" StepFrequency="1" TickFrequency="1"
+                                    SnapsTo="StepValues"
+                                    Value="{Binding DocumentLengthIndex, Mode=TwoWay}"
+                                    AutomationProperties.Name="Longueur du document"/>
+                            <Grid Margin="2,-4,2,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Bref" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Left"/>
+                                <TextBlock Grid.Column="1" Text="Raccourci" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="Défaut" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="Long" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="Détaillé" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="5" Text="Exhaustif" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Étape 4 : Manuel PDF optionnel -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="4. Guide ou manuel PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step4Header" x:Uid="EP_Step4_Header" Text="4. Guide ou manuel PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
                         <controls:PdfDropZone x:Name="PdfDropZoneControl"
                                               GuideFilePath="{Binding GuideFilePath, Mode=TwoWay}"/>
                     </StackPanel>

@@ -2,7 +2,9 @@ using System;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using WinRT.Interop;
 
@@ -35,6 +37,7 @@ public sealed partial class FirstRunDialog : ContentDialog
     {
         InitializeComponent();
         UpdateStepUi();
+        RefreshCloudAccountStatus();
     }
 
     // ───────────────────────── Navigation de l'assistant ─────────────────────────
@@ -45,7 +48,8 @@ public sealed partial class FirstRunDialog : ContentDialog
         Step2Panel.Visibility = _currentStep == 2 ? Visibility.Visible : Visibility.Collapsed;
         Step3Panel.Visibility = _currentStep == 3 ? Visibility.Visible : Visibility.Collapsed;
 
-        StepIndicatorText.Text = string.Format(FicheGen.App.Services.L10n.Get("FRD_StepFormat"), _currentStep, 3);
+        var stepText = string.Format(FicheGen.App.Services.L10n.Get("FRD_StepFormat"), _currentStep, 3);
+        StepIndicatorText.Text = stepText;
         StepProgress.Value = _currentStep;
 
         SecondaryButtonText = _currentStep > 1 ? "◄ Précédent" : string.Empty;
@@ -55,6 +59,29 @@ public sealed partial class FirstRunDialog : ContentDialog
             2 => "Continuer",
             _ => "Terminer"
         };
+
+        // Accessibilité (F25) : annonce du changement d'étape et focus
+        if (FrameworkElementAutomationPeer.FromElement(StepIndicatorText) is { } peer)
+        {
+            peer.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            switch (_currentStep)
+            {
+                case 1:
+                    Step1Panel.Focus(FocusState.Programmatic);
+                    break;
+                case 2:
+                    GuidesFolderTextBox.Focus(FocusState.Programmatic);
+                    break;
+                case 3:
+                    ProviderRadioButtons.Focus(FocusState.Programmatic);
+                    RefreshCloudAccountStatus();
+                    break;
+            }
+        });
     }
 
     private void OnPrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
@@ -132,9 +159,41 @@ public sealed partial class FirstRunDialog : ContentDialog
 
     // ───────────────────────── Choix de l'assistant IA ─────────────────────────
 
+    private void RefreshCloudAccountStatus()
+    {
+        if (CloudAccountStatusText == null || ConnectAccountButton == null) return;
+
+        var credStore = App.Services.GetService<FicheGen.Core.Abstractions.ICredentialStore>();
+        var token = credStore?.Get("supabase_access_token");
+        var hasToken = !string.IsNullOrWhiteSpace(token);
+
+        if (hasToken)
+        {
+            CloudAccountStatusText.Text = "✓ Connecté à votre compte enseignant PROFstudio. La génération en ligne est prête.";
+            ConnectAccountButton.Content = "Gérer mon compte enseignant…";
+            ConnectAccountButton.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
+        }
+        else
+        {
+            CloudAccountStatusText.Text = "Le service en ligne nécessite une connexion à votre compte enseignant pour générer des fiches.";
+            ConnectAccountButton.Content = "Se connecter / Créer un compte…";
+            ConnectAccountButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
+        }
+    }
+
+    private async void ConnectAccountButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new AccountDialog
+        {
+            XamlRoot = this.XamlRoot
+        };
+        await dlg.ShowAsync();
+        RefreshCloudAccountStatus();
+    }
+
     private void ProviderRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ProviderRadioButtons == null || ApiKeySection == null || GetKeyHyperlink == null || KeyOptionalNote == null)
+        if (ProviderRadioButtons == null || ApiKeySection == null || GetKeyHyperlink == null || KeyOptionalNote == null || CloudAccountSection == null)
         {
             return;
         }
@@ -142,12 +201,15 @@ public sealed partial class FirstRunDialog : ContentDialog
         switch (ProviderRadioButtons.SelectedIndex)
         {
             case 0: // Service Cloud PROFstudio (Recommandé)
+                CloudAccountSection.Visibility = Visibility.Visible;
                 ApiKeySection.Visibility = Visibility.Collapsed;
-                KeyOptionalNote.Text = "Prêt immédiatement : aucun réglage ni clé d'API requise. Vous pouvez vous connecter à votre compte enseignant à tout moment.";
+                KeyOptionalNote.Text = "Connectez-vous pour utiliser le service en ligne, ou sélectionnez Google AI Studio / Ollama.";
                 KeyOptionalNote.Visibility = Visibility.Visible;
+                RefreshCloudAccountStatus();
                 break;
 
             case 1: // Google AI Studio
+                CloudAccountSection.Visibility = Visibility.Collapsed;
                 ApiKeySection.Visibility = Visibility.Visible;
                 KeyOptionalNote.Visibility = Visibility.Visible;
                 GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLink.Content");
@@ -155,6 +217,7 @@ public sealed partial class FirstRunDialog : ContentDialog
                 break;
 
             case 2: // OpenAI
+                CloudAccountSection.Visibility = Visibility.Collapsed;
                 ApiKeySection.Visibility = Visibility.Visible;
                 KeyOptionalNote.Visibility = Visibility.Visible;
                 GetKeyHyperlink.Content = FicheGen.App.Services.L10n.Get("FRD_GetKeyLinkOpenAi");
@@ -162,6 +225,7 @@ public sealed partial class FirstRunDialog : ContentDialog
                 break;
 
             case 3: // Proxy local / Ollama — aucune clé requise pour l'essentiel
+                CloudAccountSection.Visibility = Visibility.Collapsed;
                 ApiKeySection.Visibility = Visibility.Collapsed;
                 KeyOptionalNote.Text = FicheGen.App.Services.L10n.Get("FRD_LocalKeyNote");
                 KeyOptionalNote.Visibility = Visibility.Visible;

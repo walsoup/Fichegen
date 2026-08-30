@@ -11,7 +11,7 @@ namespace FicheGen.App.Views;
 /// Espace de génération des quiz. Le squelette 3 colonnes (formulaire / aperçu /
 /// assistant) est mutualisé dans <see cref="Controls.CreationWorkspace"/>.
 /// </summary>
-public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
+public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage, ILocalizablePage
 {
     private bool _hasSubmitAttempted;
 
@@ -82,8 +82,43 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshLocalizedStrings();
+        if (DataContext is QuizViewModel vm)
+        {
+            if (LevelCombo.SelectedItem == null && !string.IsNullOrWhiteSpace(vm.ClassLevel))
+                LevelCombo.SelectedItem = vm.ClassLevel;
+            if (string.IsNullOrWhiteSpace(SubjectCombo.Text) && !string.IsNullOrWhiteSpace(vm.Subject))
+            {
+                SubjectCombo.SelectedItem = SubjectOptions.FirstOrDefault(s => s.Name == vm.Subject);
+                SubjectCombo.Text = vm.Subject;
+            }
+            if (string.IsNullOrWhiteSpace(TopicBox.Text) && !string.IsNullOrWhiteSpace(vm.Topic))
+                TopicBox.Text = vm.Topic;
+        }
         Workspace.RunFormEntranceAnimation();
         ValidateForm();
+    }
+
+    public void RefreshLocalizedStrings()
+    {
+        PageTitle.Text = Services.L10n.Get("QP_Title.Text", "Nouveau quiz");
+        PageSubtitle.Text = Services.L10n.Get("QP_Subtitle.Text", "Générez un questionnaire imprimable avec son corrigé détaillé.");
+        Step1Header.Text = Services.L10n.Get("QP_Step1_Header.Text", "1. Classe et Matière");
+        LevelCombo.Header = Services.L10n.Get("QP_LevelCombo.Header", "Niveau");
+        SubjectCombo.Header = Services.L10n.Get("QP_SubjectCombo.Header", "Matière");
+        SubjectCombo.PlaceholderText = Services.L10n.Get("QP_SubjectCombo.PlaceholderText", "Sélectionner ou saisir");
+        Step2Header.Text = Services.L10n.Get("QP_Step2_Header.Text", "2. Sujet du quiz");
+        TopicBox.PlaceholderText = Services.L10n.Get("QP_TopicBox.PlaceholderText", "ex : Les tables de multiplication, Le cycle de l'eau…");
+        Step3Header.Text = Services.L10n.Get("QP_Step3_Header.Text", "3. Format et Options");
+        QuestionCountBox.Header = Services.L10n.Get("QP_QuestionCountBox.Header", "Questions (3-30)");
+        QuizDurationBox.Header = Services.L10n.Get("QP_QuizDurationBox.Header", "Durée (minutes)");
+        QuestionTypesHeader.Text = Services.L10n.Get("QP_QuestionTypesHeader.Text", "Types de questions :");
+        QcmCheckBox.Content = Services.L10n.Get("QP_QcmCheck.Content", "QCM");
+        TfCheckBox.Content = Services.L10n.Get("QP_TfCheck.Content", "Vrai / Faux");
+        ShortCheckBox.Content = Services.L10n.Get("QP_ShortCheck.Content", "R��ponse courte");
+        AnswerKeyCheckbox.Content = Services.L10n.Get("QP_AnswerKeyCheck.Content", "Inclure le corrigé pour l'enseignant");
+        DyslexiaFontCheckbox.Content = Services.L10n.Get("QP_DyslexiaFontCheck.Content", "Adapter la mise en page (Police DYS)");
+        Step4Header.Text = Services.L10n.Get("QP_Step4_Header.Text", "4. Guide ou manuel PDF (optionnel)");
     }
 
     // ───────────────────────── Événements Champs Formulaire ─────────────────────────
@@ -147,15 +182,20 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
         var missing = new System.Collections.Generic.List<string>();
         if (LevelCombo == null || SubjectCombo == null || TopicBox == null) return missing;
 
-        var level = LevelCombo.SelectedValue as string ?? LevelCombo.SelectedItem as string ?? (DataContext as QuizViewModel)?.ClassLevel;
+        var level = LevelCombo.SelectedItem as string
+            ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
+            ?? LevelCombo.SelectedValue as string
+            ?? (DataContext as QuizViewModel)?.ClassLevel;
         if (string.IsNullOrWhiteSpace(level)) missing.Add(Services.L10n.Get("Validation_MissingLevel"));
 
         var subject = SubjectCombo.Text;
-        if (string.IsNullOrWhiteSpace(subject)) subject = (DataContext as QuizViewModel)?.Subject;
+        if (string.IsNullOrWhiteSpace(subject))
+            subject = (SubjectCombo.SelectedItem as SubjectOption)?.Name ?? (DataContext as QuizViewModel)?.Subject;
         if (string.IsNullOrWhiteSpace(subject)) missing.Add(Services.L10n.Get("Validation_MissingSubject"));
 
         var topic = TopicBox.Text;
-        if (string.IsNullOrWhiteSpace(topic)) topic = (DataContext as QuizViewModel)?.Topic;
+        if (string.IsNullOrWhiteSpace(topic))
+            topic = (DataContext as QuizViewModel)?.Topic;
         if (string.IsNullOrWhiteSpace(topic)) missing.Add(Services.L10n.Get("Validation_MissingTopic"));
 
         return missing;
@@ -179,18 +219,16 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
         target?.Focus(FocusState.Keyboard);
     }
 
-    /// <summary>Met à jour l'état du bouton Générer. L'InfoBar n'apparaît
-    /// qu'après une tentative d'envoi — jamais en pleine saisie.</summary>
+    /// <summary>Met à jour l'état du formulaire. Le bouton Générer reste actif pour
+    /// expliquer les champs manquants lors d'un clic (F13).</summary>
     private void ValidateForm()
     {
         if (LevelCombo == null || SubjectCombo == null || TopicBox == null || Workspace.FormInfoBar == null) return;
 
         var missing = GetMissingFields();
-
-        // Pendant une génération le bouton affiche « Arrêter » : il doit rester actif.
         bool generating = DataContext is QuizViewModel gvm && gvm.IsGenerating;
         if (Workspace.GenerateCta != null)
-            Workspace.GenerateCta.IsEnabled = generating || missing.Count == 0;
+            Workspace.GenerateCta.IsEnabled = true;
 
         if (_hasSubmitAttempted)
         {
@@ -201,6 +239,14 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
 
     public bool TryStartGeneration()
     {
+        if (DataContext is QuizViewModel vm)
+        {
+            if (!string.IsNullOrWhiteSpace(TopicBox.Text)) vm.Topic = TopicBox.Text;
+            if (!string.IsNullOrWhiteSpace(SubjectCombo.Text)) vm.Subject = SubjectCombo.Text;
+            var lvl = LevelCombo.SelectedItem as string ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            if (!string.IsNullOrWhiteSpace(lvl)) vm.ClassLevel = lvl;
+        }
+
         var missing = GetMissingFields();
         if (missing.Count > 0)
         {
@@ -210,10 +256,10 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
             return false;
         }
 
-        if (DataContext is QuizViewModel vm && vm.GenerateQuizCommand.CanExecute(null))
+        if (DataContext is QuizViewModel qvm && qvm.GenerateQuizCommand.CanExecute(null))
         {
             Workspace.FormInfoBar.IsOpen = false;
-            vm.GenerateQuizCommand.Execute(null);
+            qvm.GenerateQuizCommand.Execute(null);
             return true;
         }
         return false;
@@ -233,11 +279,6 @@ public sealed partial class QuizPage : Page, IAssistantHostPage, ICreationPage
         {
             vm.CancelGenerationCommand.Execute(null);
         }
-    }
-
-    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
-    {
-        Workspace.SetAssistantVisible(!Workspace.IsAssistantVisible);
     }
 
     // ───────────────────────── Assistant adaptatif (délégué au workspace) ─────────────────────────

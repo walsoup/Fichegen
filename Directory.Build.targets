@@ -1,0 +1,5 @@
+<Project>
+  <Target Name="PostBuildSign" AfterTargets="Build;CopyFilesToOutputDirectory" Condition="'$(OS)' == 'Windows_NT'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts\sign-binaries.ps1&quot; -TargetDir &quot;$(TargetDir.TrimEnd('\'))&quot;" ContinueOnError="true" />
+  </Target>
+</Project>

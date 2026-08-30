@@ -50,9 +50,7 @@ public static class StreamingChannelPipeline
 
             while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
             {
-                // Flush strictly on the interval: yielding the residual batch
-                // after every drain would collapse batching to one UI update
-                // per SSE event and reintroduce render churn.
+                // Flush on the interval or whenever reader has items
                 while (reader.TryRead(out var item))
                 {
                     batchBuilder.Append(item);
@@ -63,6 +61,13 @@ public static class StreamingChannelPipeline
                         batchBuilder.Clear();
                         lastFlush = now;
                     }
+                }
+
+                if (batchBuilder.Length > 0 && DateTime.UtcNow - lastFlush >= flushInterval)
+                {
+                    yield return batchBuilder.ToString();
+                    batchBuilder.Clear();
+                    lastFlush = DateTime.UtcNow;
                 }
             }
 

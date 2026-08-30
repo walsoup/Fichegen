@@ -95,6 +95,36 @@ public class HtmlRendererTests
     }
 
     [Fact]
+    public void RenderToFragment_StudentVersion_SubHeadingInsideCorrectionDoesNotLeakContent()
+    {
+        // Regression: a sub-heading (h3) inside a correction section (h2) must NOT reset
+        // skippingCorrectionSection — only a sibling or higher-level heading should.
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Test"),
+            Blocks: new List<Block>
+            {
+                new HeadingBlock(2, "Exercice 1"),
+                new ParagraphBlock("Énoncé de l'exercice."),
+                new HeadingBlock(2, "Corrigé"),
+                new HeadingBlock(3, "Étape 1 : Calculs"),       // child heading — must stay hidden
+                new ParagraphBlock("Réponse secrète : 42."),    // must stay hidden
+                new HeadingBlock(2, "Exercice 2"),              // same level — ends correction
+                new ParagraphBlock("Second exercice visible."),
+            }
+        );
+
+        var studentHtml = HtmlRenderer.RenderToFragment(doc, isStudentVersion: true);
+
+        studentHtml.Should().Contain("Exercice 1");
+        studentHtml.Should().Contain("Énoncé de l&#39;exercice.");  // ' encoded as &#39; by EncodeText
+        studentHtml.Should().NotContain("Corrigé");
+        studentHtml.Should().NotContain("Étape 1 : Calculs");
+        studentHtml.Should().NotContain("Réponse secrète : 42.");
+        studentHtml.Should().Contain("Exercice 2");
+        studentHtml.Should().Contain("Second exercice visible.");
+    }
+
+    [Fact]
     public void RenderToFullHtml_IncludesCspMetaTag()
     {
         var doc = new GeneratedDocument(
@@ -295,5 +325,18 @@ public class HtmlRendererTests
         fragment.Should().Contain("&lt;script&gt;alert(1)&lt;/script&gt;");
         fragment.Should().NotContain("<img src=x");
         fragment.Should().Contain("&lt;img src=x");
+    }
+
+    [Fact]
+    public void RenderToFullHtml_ArabicDocument_DeclaresArabicLangAndRtlDirection()
+    {
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("درس في مادة الرياضيات", ClassLevel: "الخامس ابتدائي", Subject: "الرياضيات"),
+            Blocks: new List<Block> { new ParagraphBlock("نص تجريبي للدرس") }
+        );
+
+        var fullHtml = HtmlRenderer.RenderToFullHtml(doc);
+
+        fullHtml.Should().Contain("<html lang=\"ar\" dir=\"rtl\">");
     }
 }

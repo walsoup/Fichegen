@@ -12,6 +12,7 @@ using FicheGen.App.Services;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Services;
 using FicheGen.Core.Storage;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 
@@ -26,14 +27,24 @@ public sealed record ThemeOption(string Key, string Label, string Icon);
 public sealed record LanguageOption(string Code, string Label, string Icon);
 public sealed record HeaderLayoutOption(string Key, string Label, string Description);
 
-public sealed class AccentOption
+public sealed class AccentOption : IEquatable<AccentOption>
 {
     private Brush? _brush;
 
     public string Name { get; }
     public string Hex { get; }
     public Color Color { get; }
-    public Brush? Brush => _brush ??= BrushHelper.TryCreateBrush(Color);
+    public Brush? Brush
+    {
+        get
+        {
+            if (_brush is null)
+            {
+                _brush = BrushHelper.TryCreateBrush(Color);
+            }
+            return _brush;
+        }
+    }
 
     public AccentOption(string name, string hex)
     {
@@ -42,9 +53,20 @@ public sealed class AccentOption
         Color = ParseHex(hex);
     }
 
+    public bool Equals(AccentOption? other)
+    {
+        if (other is null) return false;
+        return string.Equals(Hex, other.Hex, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override bool Equals(object? obj) => obj is AccentOption other && Equals(other);
+    public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(Hex ?? string.Empty);
+    public override string ToString() => Name;
+
     public static Color ParseHex(string hex)
     {
         hex = hex.TrimStart('#');
+        if (hex.Length < 6) return Color.FromArgb(255, 37, 99, 235);
         return Color.FromArgb(255,
             Convert.ToByte(hex.Substring(0, 2), 16),
             Convert.ToByte(hex.Substring(2, 2), 16),
@@ -67,33 +89,61 @@ internal static class BrushHelper
     }
 }
 
-public sealed class StylePresetItem
+public sealed partial class StylePresetItem : ObservableObject
 {
-    private Brush? _primaryBrush;
-    private Brush? _secondaryBrush;
-    private Brush? _accentBrush;
+    public string Id { get; set; }
+    [ObservableProperty] public partial string Name { get; set; }
+    [ObservableProperty] public partial string Description { get; set; }
+    [ObservableProperty] public partial string Icon { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PrimaryBrush))]
+    public partial string PrimaryHex { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SecondaryBrush))]
+    public partial string SecondaryHex { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccentBrush))]
+    public partial string AccentHex { get; set; }
+    [ObservableProperty] public partial string FontFamily { get; set; }
+    [ObservableProperty] public partial double CornerRadius { get; set; }
+    [ObservableProperty] public partial string HeaderLayout { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleOpacity))]
+    public partial bool IsVisible { get; set; } = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomVisibility))]
+    [NotifyPropertyChangedFor(nameof(BuiltInVisibility))]
+    public partial bool IsCustom { get; set; } = false;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DefaultBadgeVisibility))]
+    [NotifyPropertyChangedFor(nameof(NotDefaultVisibility))]
+    public partial bool IsDefault { get; set; } = false;
 
-    public string Id { get; }
-    public string Name { get; }
-    public string Description { get; }
-    public string Icon { get; }
-    public string PrimaryHex { get; }
-    public string SecondaryHex { get; }
-    public string AccentHex { get; }
-    public string FontFamily { get; }
-    public double CornerRadius { get; }
-    public string HeaderLayout { get; }
-    public Brush? PrimaryBrush => _primaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(PrimaryHex));
-    public Brush? SecondaryBrush => _secondaryBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(SecondaryHex));
-    public Brush? AccentBrush => _accentBrush ??= BrushHelper.TryCreateBrush(AccentOption.ParseHex(AccentHex));
+    [ObservableProperty] public partial double MarginTop { get; set; } = 20;
+    [ObservableProperty] public partial double MarginBottom { get; set; } = 20;
+    [ObservableProperty] public partial double MarginLeft { get; set; } = 20;
+    [ObservableProperty] public partial double MarginRight { get; set; } = 20;
+
+    public Brush? PrimaryBrush => BrushHelper.TryCreateBrush(AccentOption.ParseHex(PrimaryHex));
+    public Brush? SecondaryBrush => BrushHelper.TryCreateBrush(AccentOption.ParseHex(SecondaryHex));
+    public Brush? AccentBrush => BrushHelper.TryCreateBrush(AccentOption.ParseHex(AccentHex));
+    public double VisibleOpacity => IsVisible ? 1.0 : 0.45;
+    public Visibility CustomVisibility => IsCustom ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility BuiltInVisibility => IsCustom ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility DefaultBadgeVisibility => IsDefault ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility NotDefaultVisibility => IsDefault ? Visibility.Collapsed : Visibility.Visible;
 
     public StylePresetItem(string id, string name, string description, string icon,
         string primaryHex, string secondaryHex, string accentHex, string fontFamily, double cornerRadius,
-        string headerLayout = FicheGen.Core.Documents.StylePreset.HeaderRule)
+        string headerLayout = FicheGen.Core.Documents.StylePreset.HeaderRule,
+        bool isCustom = false, bool isVisible = true, bool isDefault = false,
+        double marginTop = 20, double marginBottom = 20, double marginLeft = 20, double marginRight = 20)
     {
         Id = id; Name = name; Description = description; Icon = icon;
         PrimaryHex = primaryHex; SecondaryHex = secondaryHex; AccentHex = accentHex;
         FontFamily = fontFamily; CornerRadius = cornerRadius; HeaderLayout = headerLayout;
+        IsCustom = isCustom; IsVisible = isVisible; IsDefault = isDefault;
+        MarginTop = marginTop; MarginBottom = marginBottom; MarginLeft = marginLeft; MarginRight = marginRight;
     }
 }
 
@@ -130,13 +180,20 @@ public partial class ModelRoutingItem : ObservableObject
 
     private void RefreshModels(string? providerKey)
     {
-        var models = new List<string>(ProviderCatalog.ModelsFor(providerKey ?? "aistudio"));
-        if (providerKey == "proxy" && !string.IsNullOrWhiteSpace(_customProxyModel) && !models.Contains(_customProxyModel))
+        var key = providerKey ?? "cloud";
+        var models = new List<string>(ProviderCatalog.ModelsFor(key));
+        if (key == "proxy" && !string.IsNullOrWhiteSpace(_customProxyModel) && !models.Contains(_customProxyModel))
             models.Insert(0, _customProxyModel);
 
         AvailableModels = new ObservableCollection<string>(models);
-        if (!models.Contains(Model) && models.Count > 0)
+        if (key.Equals("cloud", StringComparison.OrdinalIgnoreCase))
+        {
+            Model = string.Empty;
+        }
+        else if (string.IsNullOrWhiteSpace(Model) && models.Count > 0)
+        {
             Model = models[0];
+        }
     }
 }
 
@@ -147,7 +204,7 @@ public partial class ProviderConnectionState : ObservableObject
     public string ProviderKey { get; }
     public ConnectionHealth Health { get; private set; } = ConnectionHealth.Unknown;
 
-    [ObservableProperty] public partial string StatusText { get; set; } = "Jamais testé";
+    [ObservableProperty] public partial string StatusText { get; set; } = L10n.Get("Settings_NeverTested", "Jamais testé");
     [ObservableProperty] public partial Brush? StatusBrush { get; set; }
     [ObservableProperty] public partial bool IsTesting { get; set; }
 
@@ -157,8 +214,8 @@ public partial class ProviderConnectionState : ObservableObject
         StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118));
     }
 
-    public void SetPending() { IsTesting = true; StatusText = "Test en cours…"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118)); }
-    public void SetOk(int latencyMs) { IsTesting = false; Health = ConnectionHealth.Ok; StatusText = $"✔ Connecté · {latencyMs} ms"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 16, 124, 16)); }
+    public void SetPending() { IsTesting = true; StatusText = L10n.Get("Settings_TestingInProgress", "Test en cours…"); StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118)); }
+    public void SetOk(int latencyMs) { IsTesting = false; Health = ConnectionHealth.Ok; StatusText = L10n.Format("Settings_ConnectedLatency", latencyMs); StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 16, 124, 16)); }
     public void SetWarning(string message) { IsTesting = false; Health = ConnectionHealth.Warning; StatusText = $"⚠ {message}"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 202, 80, 16)); }
     public void SetError(string message) { IsTesting = false; Health = ConnectionHealth.Error; StatusText = $"✖ {message}"; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 196, 43, 28)); }
     public void SetNeutral(string message) { IsTesting = false; Health = ConnectionHealth.Unknown; StatusText = message; StatusBrush = BrushHelper.TryCreateBrush(Color.FromArgb(255, 110, 110, 118)); }
@@ -189,6 +246,12 @@ public partial class KeyboardShortcutItem : ObservableObject
     {
         Action = action; DefaultKeys = keys; Keys = keys;
     }
+
+    [RelayCommand]
+    public void Reset()
+    {
+        Keys = DefaultKeys;
+    }
 }
 
 internal static class ProviderCatalog
@@ -196,37 +259,54 @@ internal static class ProviderCatalog
     public static readonly IReadOnlyList<ProviderOption> Providers = new List<ProviderOption>
     {
         new("cloud", "Service Cloud PROFstudio (Recommandé)", "⚡"),
-        new("aistudio", "Google AI Studio", "💠"),
+        new("doubleword", "DoubleWord", "🚀"),
+        new("deepseek", "DeepSeek", "🐋"),
+        new("groq", "Groq", "⚡"),
         new("openai", "OpenAI", "🤖"),
         new("anthropic", "Anthropic Claude", "✒️"),
+        new("aistudio", "Google AI (Gemini)", "💠"),
+        new("mistral", "Mistral AI", "🌪️"),
+        new("openrouter", "OpenRouter", "🌐"),
+        new("together", "Together AI", "🤝"),
+        new("cerebras", "Cerebras", "🧠"),
+        new("fireworks", "Fireworks AI", "🎆"),
+        new("xai", "xAI (Grok)", "✖️"),
         new("proxy", "Proxy local / Ollama", "🦙"),
         new("vertex", "Vertex AI (GCP)", "☁️"),
         new("vercel", "Vercel AI Gateway", "▲"),
     };
 
-    private static readonly Dictionary<string, string[]> Models = new()
-    {
-        ["cloud"] = new[] { "profstudio-standard", "profstudio-fast" },
-        ["aistudio"] = new[] { "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash" },
-        ["openai"] = new[] { "gpt-4o", "gpt-4o-mini", "gpt-4.1", "o4-mini" },
-        ["anthropic"] = new[] { "claude-sonnet-4", "claude-3-5-sonnet", "claude-3-5-haiku" },
-        ["proxy"] = new[] { "qwen2.5:7b", "llama3.1:8b", "mistral-nemo", "phi-4-mini" },
-        ["vertex"] = new[] { "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro" },
-        ["vercel"] = new[] { "openai/gpt-4o", "anthropic/claude-sonnet-4", "google/gemini-3.6-flash", "meta/llama-3.1-70b" },
-    };
+    private static readonly Dictionary<string, string[]> DynamicModels = new(StringComparer.OrdinalIgnoreCase);
 
     public static ProviderOption Find(string? key)
-        => Providers.FirstOrDefault(p => p.Key == key) ?? Providers[0];
+        => Providers.FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)) ?? Providers[0];
 
     public static IReadOnlyList<string> ModelsFor(string key)
-        => Models.TryGetValue(key, out var m) ? m : Models["aistudio"];
+    {
+        if (key.Equals("cloud", StringComparison.OrdinalIgnoreCase))
+            return new[] { "(Géré par PROFstudio Cloud)" };
+
+        if (DynamicModels.TryGetValue(key, out var models) && models.Length > 0)
+            return models;
+
+        return Array.Empty<string>();
+    }
 
     public static void UpdateProxyModels(IEnumerable<string> models)
     {
         var list = models.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).Distinct().ToArray();
         if (list.Length > 0)
         {
-            Models["proxy"] = list;
+            DynamicModels["proxy"] = list;
+        }
+    }
+
+    public static void UpdateModelsForProvider(string providerKey, IEnumerable<string> models)
+    {
+        var list = models.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).Distinct().ToArray();
+        if (list.Length > 0)
+        {
+            DynamicModels[providerKey] = list;
         }
     }
 }
@@ -261,6 +341,23 @@ public partial class SettingsViewModel : ObservableObject
     private sealed record StyleBuilderDto(string Primary, string Secondary, string Accent, string Font,
         double Radius, double MarginTop, double MarginBottom, double MarginLeft, double MarginRight,
         string? Header = null);
+    private sealed record CustomPresetDto(
+        string Id,
+        string Name,
+        string Description,
+        string Icon,
+        string PrimaryHex,
+        string SecondaryHex,
+        string AccentHex,
+        string FontFamily,
+        double CornerRadius,
+        string HeaderLayout,
+        bool IsVisible = true,
+        bool IsCustom = true,
+        double MarginTop = 20,
+        double MarginBottom = 20,
+        double MarginLeft = 20,
+        double MarginRight = 20);
     private sealed record PromptDto(string Name, string Content);
     private sealed record ShortcutDto(string Action, string Keys);
 
@@ -287,7 +384,7 @@ public partial class SettingsViewModel : ObservableObject
 
         _isLoadingSettings = true;
         SelectedAccent = AccentOptions[0];
-        SelectedGlobalProvider = ProviderCatalog.Find("aistudio");
+        SelectedGlobalProvider = ProviderCatalog.Find("cloud");
         SelectedPromptTemplate = PromptTemplates[0];
 
         BuildRoutingMatrixDefaults();
@@ -300,13 +397,13 @@ public partial class SettingsViewModel : ObservableObject
     private void BuildRoutingMatrixDefaults()
     {
         RoutingMatrix.Clear();
-        RoutingMatrix.Add(new ModelRoutingItem("fiche", "Fiche pédagogique", "Génération complète de la fiche (contenu + mise en page)", "📄", "aistudio", "gemini-3.6-flash"));
-        RoutingMatrix.Add(new ModelRoutingItem("evaluation", "Évaluation", "Création de contrôles et d'évaluations notées", "📝", "aistudio", "gemini-3.6-flash"));
-        RoutingMatrix.Add(new ModelRoutingItem("quiz", "Quiz interactif", "Questions à choix multiples et corrections", "❓", "aistudio", "gemini-3.5-flash-lite"));
-        RoutingMatrix.Add(new ModelRoutingItem("toc", "Table des matières", "Extraction de la ToC des guides PDF", "📑", "aistudio", "gemini-3.5-flash-lite"));
-        RoutingMatrix.Add(new ModelRoutingItem("offset", "Calques & décalages", "Post-traitement Offset des blocs générés", "🧩", "proxy", "qwen2.5:7b"));
-        RoutingMatrix.Add(new ModelRoutingItem("syntax", "Coloration syntaxique", "Analyse Syntax des exercices de code", "🖍️", "proxy", "qwen2.5:7b"));
-        RoutingMatrix.Add(new ModelRoutingItem("chat", "Assistant conversationnel", "Discussion pédagogique en temps réel", "💬", "aistudio", "gemini-3.6-flash"));
+        RoutingMatrix.Add(new ModelRoutingItem("fiche", "Fiche pédagogique", "Génération complète de la fiche (contenu + mise en page)", "📄", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("evaluation", "Évaluation", "Création de contrôles et d'évaluations notées", "📝", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("quiz", "Quiz interactif", "Questions à choix multiples et corrections", "❓", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("toc", "Table des matières", "Extraction de la ToC des guides PDF", "📑", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("offset", "Calques & décalages", "Post-traitement Offset des blocs générés", "🧩", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("syntax", "Coloration syntaxique", "Analyse Syntax des exercices de code", "🖍️", "cloud", ""));
+        RoutingMatrix.Add(new ModelRoutingItem("chat", "Assistant conversationnel", "Discussion pédagogique en temps réel", "💬", "cloud", ""));
     }
 
     private void LoadSettings()
@@ -397,6 +494,16 @@ public partial class SettingsViewModel : ObservableObject
                 foreach (var item in RoutingMatrix) item.ApplyCustomProxyModel(customModel);
             }
 
+            if (s.Ai.Models.TryGetValue("styles.custom.json", out var customPresetsJson) && !string.IsNullOrWhiteSpace(customPresetsJson))
+            {
+                LoadCustomPresetsFromJson(customPresetsJson);
+            }
+
+            if (s.Ai.Models.TryGetValue("styles.order.json", out var orderJson) && !string.IsNullOrWhiteSpace(orderJson))
+            {
+                ApplyPresetsOrderFromJson(orderJson);
+            }
+
             if (s.Ai.Models.TryGetValue("style.builder.json", out var builderJson))
             {
                 var b = JsonSerializer.Deserialize<StyleBuilderDto>(builderJson);
@@ -449,7 +556,6 @@ public partial class SettingsViewModel : ObservableObject
         }
         finally
         {
-            _builderDirty = false;
             _isLoadingPresetIntoBuilder = false;
             RefreshDefaultStyleLabel(s.Defaults.StylePresetId);
         }
@@ -474,18 +580,43 @@ public partial class SettingsViewModel : ObservableObject
             s.Defaults.StylePresetId = SelectedStylePresetId;
             s.Features.EnableExpertMode = EnableExpertMode;
 
-            s.Ai.GlobalProvider = SelectedGlobalProvider?.Key ?? "aistudio";
+            s.Ai.GlobalProvider = SelectedGlobalProvider?.Key ?? "cloud";
             s.Ai.ProxyBaseUrl = ProxyBaseUrl;
             s.Ai.Vertex.Project = VertexProject;
             s.Ai.Vertex.Region = VertexRegion;
 
-            s.Ai.Models["generation"] = RoutingOf("fiche")?.Model ?? "gemini-2.5-pro";
-            s.Ai.Models["assistant"] = RoutingOf("chat")?.Model ?? "gemini-2.5-pro";
+            s.Ai.GeminiApiKey = GeminiApiKey;
+            s.Ai.OpenAiApiKey = OpenAiApiKey;
+            s.Ai.AnthropicApiKey = AnthropicApiKey;
+            s.Ai.ProxyApiKey = ProxyApiKey;
+            s.Ai.VercelApiKey = VercelApiKey;
+
+            s.Ai.Models["generation"] = RoutingOf("fiche")?.Model ?? string.Empty;
+            s.Ai.Models["assistant"] = RoutingOf("chat")?.Model ?? string.Empty;
             s.Ai.Models["intent"] = IntentModel;
+
+            s.Ai.RoutingOverrides.Clear();
+            foreach (var r in RoutingMatrix)
+            {
+                s.Ai.RoutingOverrides[r.TaskKey] = new ProviderOverride
+                {
+                    Provider = r.SelectedProvider?.Key ?? "cloud",
+                    Model = string.IsNullOrWhiteSpace(r.Model) ? null : r.Model
+                };
+            }
+            if (s.Ai.RoutingOverrides.TryGetValue("fiche", out var ficheOverride))
+                s.Ai.RoutingOverrides["generation"] = ficheOverride;
+            if (s.Ai.RoutingOverrides.TryGetValue("eval", out var evalOverride))
+                s.Ai.RoutingOverrides["evaluation"] = evalOverride;
+            if (s.Ai.RoutingOverrides.TryGetValue("chat", out var chatOverride))
+                s.Ai.RoutingOverrides["assistant"] = chatOverride;
+
+            s.Ai.Temperatures.Generation = GenerationTemperature;
+            s.Ai.Temperatures.Intent = IntentTemperature;
 
             s.Ai.Models["routing.json"] = JsonSerializer.Serialize(
                 RoutingMatrix.ToDictionary(r => r.TaskKey,
-                    r => new RoutingDto(r.SelectedProvider?.Key ?? "aistudio", r.Model)));
+                    r => new RoutingDto(r.SelectedProvider?.Key ?? "cloud", r.Model)));
             s.Ai.Models["temp:generation"] = GenerationTemperature.ToString(CultureInfo.InvariantCulture);
             s.Ai.Models["temp:intent"] = IntentTemperature.ToString(CultureInfo.InvariantCulture);
             s.Ai.Models["temp:assistant"] = AssistantTemperature.ToString(CultureInfo.InvariantCulture);
@@ -498,11 +629,8 @@ public partial class SettingsViewModel : ObservableObject
                 BuilderFontFamily, BuilderCornerRadius,
                 BuilderMarginTop, BuilderMarginBottom, BuilderMarginLeft, BuilderMarginRight,
                 BuilderHeaderLayout));
-
-            if (_builderDirty)
-            {
-                RegisterCustomPreset();
-            }
+            s.Ai.Models["styles.custom.json"] = GetCustomPresetsJson();
+            s.Ai.Models["styles.order.json"] = GetPresetsOrderJson();
             s.Defaults.StylePresetId = SelectedStylePresetId;
             s.Ai.Models["prompts.json"] = JsonSerializer.Serialize(
                 PromptTemplates.Select(p => new PromptDto(p.Name, p.Content)));
@@ -521,7 +649,7 @@ public partial class SettingsViewModel : ObservableObject
             await _settingsStore.SaveSettingsAsync(s);
 
             LastSavedText = $"Dernier enregistrement : {DateTime.Now:HH:mm:ss}";
-            StatusMessage = "✅ Paramètres enregistrés — secrets chiffrés dans le Coffre d'identification Windows.";
+            StatusMessage = "✅ Paramètres enregistrés";
         }
         catch (Exception ex)
         {
@@ -568,7 +696,7 @@ public partial class SettingsViewModel : ObservableObject
         DefaultSubject = "Mathématiques";
         SelectedAccent = AccentOptions[0];
 
-        SelectedGlobalProvider = ProviderCatalog.Find("aistudio");
+        SelectedGlobalProvider = ProviderCatalog.Find("cloud");
         GenerationTemperature = 0.7;
         IntentTemperature = 0.2;
         AssistantTemperature = 0.8;
@@ -584,7 +712,6 @@ public partial class SettingsViewModel : ObservableObject
         SelectedPreset = StylePresets[0];
         BuilderMarginTop = 18; BuilderMarginBottom = 18; BuilderMarginLeft = 20; BuilderMarginRight = 20;
         BuilderHeaderLayout = FicheGen.Core.Documents.StylePreset.HeaderRule;
-        _builderDirty = false;
         RefreshDefaultStyleLabel(StylePresets[0].Id);
 
         foreach (var prompt in PromptTemplates) prompt.Content = prompt.DefaultContent;

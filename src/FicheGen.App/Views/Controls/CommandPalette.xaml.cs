@@ -22,6 +22,7 @@ public sealed partial class CommandPalette : UserControl
     private IReadOnlyList<CommandAction> _all = Array.Empty<CommandAction>();
     private List<CommandAction> _visible = new();
     private bool _suppressQueryFilter;
+    private Control? _invokingElement;
 
     /// <summary>Levée après exécution d'une action (utile pour rendre le focus au shell).</summary>
     public event EventHandler<CommandAction>? ActionInvoked;
@@ -37,6 +38,7 @@ public sealed partial class CommandPalette : UserControl
 
     public void Open(IReadOnlyList<CommandAction> actions)
     {
+        _invokingElement = FocusManager.GetFocusedElement(XamlRoot) as Control;
         _all = actions;
         _suppressQueryFilter = true;
         QueryBox.Text = string.Empty;
@@ -67,6 +69,8 @@ public sealed partial class CommandPalette : UserControl
     public void Close()
     {
         Overlay.Visibility = Visibility.Collapsed;
+        _invokingElement?.Focus(FocusState.Programmatic);
+        _invokingElement = null;
     }
 
     // ───────────────────────── Filtrage & exécution ─────────────────────────

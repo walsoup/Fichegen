@@ -161,8 +161,9 @@ public sealed partial class MainWindow
         SetAssistantVisible(AssistantToggleButton.IsChecked == true);
     }
 
-    private void SetAssistantVisible(bool visible)
+    public void SetAssistantVisible(bool visible)
     {
+        AssistantToggleButton.IsChecked = visible;
         ToggleAssistantVisibility(visible);
         _shellState.IsAssistantVisible = visible;
         SaveShellState();
@@ -313,8 +314,8 @@ public sealed partial class MainWindow
         }
         else
         {
-            RootGrid.Background = null;
-            ContentFrame.Background = (Brush)Application.Current.Resources["ApplicationPageBackgroundThemeBrush"];
+            RootGrid.ClearValue(Grid.BackgroundProperty);
+            ContentFrame.ClearValue(Frame.BackgroundProperty);
 
             RootGrid.Resources.Remove("ApplicationPageBackgroundThemeBrush");
             RootGrid.Resources.Remove("SolidBackgroundFillColorBaseBrush");
@@ -421,11 +422,11 @@ public sealed partial class MainWindow
                     : (!string.IsNullOrWhiteSpace(user.Nom) ? $"{user.Civilite} {user.Prenom} {user.Nom}".Trim() : user.Email);
                 school = !string.IsNullOrWhiteSpace(user.SchoolName)
                     ? user.SchoolName
-                    : "Compte Enseignant Actif";
+                    : Services.L10n.Get("Shell_TeacherBadge_Active", "Compte Enseignant Actif");
 
                 if (ProfileAccountLabel != null)
                 {
-                    ProfileAccountLabel.Text = $"Mon compte ({user.Email})";
+                    ProfileAccountLabel.Text = Services.L10n.Format("Shell_TeacherBadge_MyAccount", user.Email);
                 }
             }
             else
@@ -435,7 +436,7 @@ public sealed partial class MainWindow
 
                 if (ProfileAccountLabel != null)
                 {
-                    ProfileAccountLabel.Text = "Connexion / Créer un compte";
+                    ProfileAccountLabel.Text = Services.L10n.Get("Shell_TeacherBadge_SignIn", "Connexion / Créer un compte");
                 }
             }
 
@@ -473,6 +474,7 @@ public sealed partial class MainWindow
             if (ThemeDarkItem != null) ThemeDarkItem.Text = L10n.Get("Theme_Dark", "Sombre");
             if (ThemeOledItem != null) ThemeOledItem.Text = L10n.Get("Theme_Oled", "Noir absolu (OLED)");
 
+            if (ProfileAccountLabel != null) ProfileAccountLabel.Text = L10n.Get("Shell_ProfileAccountLabel", "Mon compte enseignant");
             if (ProfileSettingsLabel != null) ProfileSettingsLabel.Text = L10n.Get("Shell_ProfileSettingsLabel", "Paramètres de l'application");
             if (ProfileShortcutsLabel != null) ProfileShortcutsLabel.Text = L10n.Get("Shell_ProfileShortcutsLabel", "Raccourcis clavier (F1)");
             if (ProfileAboutLabel != null) ProfileAboutLabel.Text = L10n.Get("Shell_ProfileAboutLabel", "À propos de PROFstudio");
@@ -489,8 +491,12 @@ public sealed partial class MainWindow
                 _ => Services.L10n.Get("Section_Fiche", "Fiche pédagogique")
             };
 
-            // Recharge la vue courante pour appliquer la langue
-            if (ContentFrame.CurrentSourcePageType != null)
+            // Rafraîchit ou recharge la vue courante pour appliquer la langue
+            if (ContentFrame.Content is ILocalizablePage localizablePage)
+            {
+                localizablePage.RefreshLocalizedStrings();
+            }
+            else if (ContentFrame.CurrentSourcePageType != null)
             {
                 var tag = _shellState.LastNavigationTag;
                 var pageType = ContentFrame.CurrentSourcePageType;

@@ -116,6 +116,10 @@ public sealed class PdfGuideService : IPdfGuideService
                             return ocrResult;
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         Log.Debug(ex, "Échec de l'extraction ToC par OCR pour le PDF scanné {File}.", Path.GetFileName(pdfPath));
@@ -215,6 +219,10 @@ public sealed class PdfGuideService : IPdfGuideService
                         {
                             pageText = ocrText;
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {

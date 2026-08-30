@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Installation per-utilisateur de PROFstudio (sans droits administrateur).
 .DESCRIPTION

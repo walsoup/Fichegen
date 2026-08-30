@@ -74,7 +74,7 @@ public partial class SettingsViewModel
     public ObservableCollection<ModelRoutingItem> RoutingMatrix { get; } = new();
 
     // Modèle d'intention
-    [ObservableProperty] public partial string IntentModel { get; set; } = "gemini-3.6-flash";
+    [ObservableProperty] public partial string IntentModel { get; set; } = string.Empty;
 
     // Températures
     [ObservableProperty]
@@ -124,47 +124,48 @@ public partial class SettingsViewModel
     {
         var qualificatif = value switch
         {
-            <= 0.30 => "Précis et fiable",
-            <= 0.80 => "Équilibré",
-            <= 1.30 => "Créatif",
-            _ => "Très créatif",
+            <= 0.30 => L10n.Get("Settings_Temp_Precise", "Précis et fiable"),
+            <= 0.80 => L10n.Get("Settings_Temp_Balanced", "Équilibré"),
+            <= 1.30 => L10n.Get("Settings_Temp_Creative", "Créatif"),
+            _ => L10n.Get("Settings_Temp_VeryCreative", "Très créatif"),
         };
         return $"{value.ToString("0.00", CultureInfo.CurrentCulture)} · {qualificatif}";
     }
 
     public void ClearApiKey(string providerKey)
     {
+        var clearedMsg = L10n.Get("Settings_KeyCleared", "Clé effacée — pensez à enregistrer (Ctrl+S).");
         switch (providerKey)
         {
             case "aistudio":
                 GeminiApiKey = string.Empty;
                 _clearedCredentials.Add("gemini_api_key");
-                GeminiState.SetNeutral("Clé effacée — pensez à enregistrer (Ctrl+S).");
+                GeminiState.SetNeutral(clearedMsg);
                 break;
             case "openai":
                 OpenAiApiKey = string.Empty;
                 _clearedCredentials.Add("openai_api_key");
-                OpenAiState.SetNeutral("Clé effacée — pensez à enregistrer (Ctrl+S).");
+                OpenAiState.SetNeutral(clearedMsg);
                 break;
             case "anthropic":
                 AnthropicApiKey = string.Empty;
                 _clearedCredentials.Add("anthropic_api_key");
-                AnthropicState.SetNeutral("Clé effacée — pensez à enregistrer (Ctrl+S).");
+                AnthropicState.SetNeutral(clearedMsg);
                 break;
             case "proxy":
                 ProxyApiKey = string.Empty;
                 _clearedCredentials.Add("proxy_api_key");
-                ProxyState.SetNeutral("Clé effacée — pensez à enregistrer (Ctrl+S).");
+                ProxyState.SetNeutral(clearedMsg);
                 break;
             case "vercel":
                 VercelApiKey = string.Empty;
                 _clearedCredentials.Add("vercel_api_key");
-                VercelState.SetNeutral("Clé effacée — pensez à enregistrer (Ctrl+S).");
+                VercelState.SetNeutral(clearedMsg);
                 break;
         }
     }
 
-    // ─────────────── Tests de connexion ───────────────
+    // ─────────────── Tests de connexion ───────────��───
 
     [RelayCommand]
     public async Task TestConnectionAsync(string? providerName)
@@ -177,22 +178,22 @@ public partial class SettingsViewModel
         switch (providerName)
         {
             case "aistudio" when !IsGeminiKeyConfigured:
-                state.SetWarning("Clé d'API manquante — test impossible"); return;
+                state.SetWarning(L10n.Get("Settings_MissingApiKey", "Clé d'API manquante — test impossible")); return;
             case "openai" when !IsOpenAiKeyConfigured:
-                state.SetWarning("Clé d'API manquante — test impossible"); return;
+                state.SetWarning(L10n.Get("Settings_MissingApiKey", "Clé d'API manquante — test impossible")); return;
             case "anthropic" when !IsAnthropicKeyConfigured:
-                state.SetWarning("Clé d'API manquante — test impossible"); return;
+                state.SetWarning(L10n.Get("Settings_MissingApiKey", "Clé d'API manquante — test impossible")); return;
             case "vercel" when !IsVercelKeyConfigured:
-                state.SetWarning("Clé d'API manquante — test impossible"); return;
+                state.SetWarning(L10n.Get("Settings_MissingApiKey", "Clé d'API manquante — test impossible")); return;
             case "proxy" when string.IsNullOrWhiteSpace(ProxyBaseUrl):
-                state.SetWarning("Adresse du serveur requise"); return;
+                state.SetWarning(L10n.Get("Settings_MissingServerUrl", "Adresse du serveur requise")); return;
             case "vertex" when string.IsNullOrWhiteSpace(VertexProject):
-                state.SetWarning("Identifiant du projet Google Cloud requis"); return;
+                state.SetWarning(L10n.Get("Settings_MissingVertexProject", "Identifiant du projet Google Cloud requis")); return;
         }
 
         if (_connectionTester is null)
         {
-            state.SetNeutral("Testeur de connexion indisponible.");
+            state.SetNeutral(L10n.Get("Settings_TesterUnavailable", "Testeur de connexion indisponible."));
             return;
         }
 
@@ -211,6 +212,15 @@ public partial class SettingsViewModel
         {
             ProxyState.SetWarning("Veuillez saisir l'URL du proxy.");
             return;
+        }
+
+        if (Uri.TryCreate(ProxyBaseUrl, UriKind.Absolute, out var uri))
+        {
+            if (uri.Scheme == Uri.UriSchemeHttp && !uri.IsLoopback && !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            {
+                ProxyState.SetWarning("Pour des raisons de sécurité, les serveurs distants doivent utiliser HTTPS (HTTP réservé à localhost).");
+                return;
+            }
         }
 
         if (_proxyScanner is null)

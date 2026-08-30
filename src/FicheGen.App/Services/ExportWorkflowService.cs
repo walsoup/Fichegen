@@ -18,19 +18,22 @@ public sealed class ExportWorkflowService : IExportWorkflowService
     private readonly IDocxExporter _docxExporter;
     private readonly IRtfDocumentWriter _rtfWriter;
     private readonly ISettingsStore? _settingsStore;
+    private readonly FicheGen.Core.Services.StylePresetService? _stylePresetService;
 
     public ExportWorkflowService(
         PickerService pickerService,
         IDocumentPdfExporter pdfExporter,
         IDocxExporter docxExporter,
         IRtfDocumentWriter rtfWriter,
-        ISettingsStore? settingsStore = null)
+        ISettingsStore? settingsStore = null,
+        FicheGen.Core.Services.StylePresetService? stylePresetService = null)
     {
         _pickerService = pickerService;
         _pdfExporter = pdfExporter;
         _docxExporter = docxExporter;
         _rtfWriter = rtfWriter;
         _settingsStore = settingsStore;
+        _stylePresetService = stylePresetService;
     }
 
     public async Task<string?> ExportPdfAsync(
@@ -42,7 +45,7 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var targetPath = await ResolveDestinationPathAsync(
             suggestedFileName,
             ".pdf",
-            "Document PDF (*.pdf)",
+            L10n.Get("Result_DefaultPdfFilter", "Document PDF (*.pdf)"),
             cancellationToken);
 
         if (string.IsNullOrWhiteSpace(targetPath)) return null;
@@ -50,7 +53,8 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var dir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        await _pdfExporter.ExportPdfToFileAsync(document, targetPath, null, cancellationToken);
+        var preset = _stylePresetService?.GetPreset(document.Metadata.DocType == "dyslexie" ? "dyslexie" : "modern");
+        await _pdfExporter.ExportPdfToFileAsync(document, targetPath, preset, cancellationToken);
         return targetPath;
     }
 
@@ -62,7 +66,7 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var targetPath = await ResolveDestinationPathAsync(
             suggestedFileName,
             ".docx",
-            "Document Word (*.docx)",
+            L10n.Get("Result_DefaultDocxFilter", "Document Word (*.docx)"),
             cancellationToken);
 
         if (string.IsNullOrWhiteSpace(targetPath)) return null;
@@ -70,7 +74,8 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var dir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        await _docxExporter.ExportDocxToFileAsync(document, targetPath, null, cancellationToken);
+        var preset = _stylePresetService?.GetPreset(document.Metadata.DocType == "dyslexie" ? "dyslexie" : "modern");
+        await _docxExporter.ExportDocxToFileAsync(document, targetPath, preset, cancellationToken);
         return targetPath;
     }
 
@@ -82,7 +87,7 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var targetPath = await ResolveDestinationPathAsync(
             suggestedFileName,
             ".rtf",
-            "Document RTF (*.rtf)",
+            L10n.Get("Result_DefaultRtfFilter", "Document RTF (*.rtf)"),
             cancellationToken);
 
         if (string.IsNullOrWhiteSpace(targetPath)) return null;
@@ -90,7 +95,8 @@ public sealed class ExportWorkflowService : IExportWorkflowService
         var dir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        var bytes = _rtfWriter.ExportRtfBytes(document);
+        var preset = _stylePresetService?.GetPreset(document.Metadata.DocType == "dyslexie" ? "dyslexie" : "modern");
+        var bytes = _rtfWriter.ExportRtfBytes(document, preset);
         await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken);
         return targetPath;
     }
@@ -113,7 +119,23 @@ public sealed class ExportWorkflowService : IExportWorkflowService
                     Directory.CreateDirectory(exportsDir);
                 }
 
-                return Path.Combine(exportsDir, suggestedFileName);
+                var baseTarget = Path.Combine(exportsDir, suggestedFileName);
+                if (!File.Exists(baseTarget))
+                {
+                    return baseTarget;
+                }
+
+                var fileNameWithoutExt = Path.GetFileNameWithoutExtension(suggestedFileName);
+                var ext = Path.GetExtension(suggestedFileName);
+                int counter = 1;
+                string uniqueTarget;
+                do
+                {
+                    uniqueTarget = Path.Combine(exportsDir, $"{fileNameWithoutExt} ({counter}){ext}");
+                    counter++;
+                } while (File.Exists(uniqueTarget));
+
+                return uniqueTarget;
             }
         }
         catch (Exception ex)
@@ -130,29 +152,13 @@ public sealed class ExportWorkflowService : IExportWorkflowService
             };
 
             var file = await _pickerService.PickSaveFileAsync(suggestedFileName, choices);
-            if (file != null && !string.IsNullOrWhiteSpace(file.Path))
-            {
-                return file.Path;
-            }
+            // Si l'utilisateur a choisi un fichier, on retourne son chemin.
+            // Si l'utilisateur a annulé le sélecteur (file == null), on retourne null immédiatement sans exporter de fichier.
+            return file?.Path;
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Boîte de dialogue d'enregistrement indisponible, repli vers Documents.");
-        }
-
-        // 3. Repli automatique sécurisé vers Documents/PROFstudio/Exports si non configuré / annulé avec erreur
-        try
-        {
-            var defaultFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "PROFstudio",
-                "Exports");
-            Directory.CreateDirectory(defaultFolder);
-            return Path.Combine(defaultFolder, suggestedFileName);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Impossible de préparer le dossier d'export par défaut.");
+            Log.Warning(ex, "Boîte de dialogue d'enregistrement indisponible ou erreur d'accès.");
             return null;
         }
     }

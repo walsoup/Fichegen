@@ -16,32 +16,47 @@ public sealed class DialogService
     {
         if (_xamlRoot == null) return;
 
-        var dialog = new ContentDialog
+        try
         {
-            Title = title,
-            Content = content,
-            CloseButtonText = primaryButtonText,
-            XamlRoot = _xamlRoot
-        };
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = content,
+                CloseButtonText = primaryButtonText,
+                XamlRoot = _xamlRoot
+            };
 
-        await dialog.ShowAsync();
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Impossible d'afficher le dialogue d'information : {Title}", title);
+        }
     }
 
     public async Task<bool> ShowConfirmationAsync(string title, string content, string confirmButtonText = "Confirmer", string cancelButtonText = "Annuler")
     {
         if (_xamlRoot == null) return false;
 
-        var dialog = new ContentDialog
+        try
         {
-            Title = title,
-            Content = content,
-            PrimaryButtonText = confirmButtonText,
-            CloseButtonText = cancelButtonText,
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = _xamlRoot
-        };
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = content,
+                PrimaryButtonText = confirmButtonText,
+                CloseButtonText = cancelButtonText,
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = _xamlRoot
+            };
 
-        var result = await dialog.ShowAsync();
-        return result == ContentDialogResult.Primary;
+            var result = await dialog.ShowAsync();
+            return result == ContentDialogResult.Primary;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Impossible d'afficher le dialogue de confirmation : {Title}", title);
+            return false;
+        }
     }
 }

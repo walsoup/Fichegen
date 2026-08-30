@@ -7,6 +7,7 @@
     xmlns:viewmodels="using:FicheGen.App.ViewModels"
     xmlns:converters="using:FicheGen.App.Converters"
     mc:Ignorable="d"
+    x:Uid="AD_Dialog"
     Title="Compte Enseignant PROFstudio"
     CloseButtonText="Fermer"
     DefaultButton="None">
@@ -47,23 +48,23 @@
                             </Grid.RowDefinitions>
 
                             <StackPanel Spacing="2">
-                                <TextBlock Text="Établissement" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Uid="AD_School" Text="Établissement" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <TextBlock Text="{x:Bind ViewModel.UserSchool, Mode=OneWay}" FontWeight="SemiBold"/>
                             </StackPanel>
                             <Border Grid.Column="1" Padding="8,3" CornerRadius="6"
                                     Background="{ThemeResource StatusPositiveBgBrush}" VerticalAlignment="Center">
-                                <TextBlock Text="Actif" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold" FontSize="12"/>
+                                <TextBlock x:Uid="AD_Active" Text="Actif" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold" FontSize="12"/>
                             </Border>
 
                             <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="2" Margin="0,4,0,0">
-                                <TextBlock Text="Accès &amp; Quota Cloud" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Uid="AD_CloudAccess" Text="Accès &amp; Quota Cloud" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <TextBlock Text="{x:Bind ViewModel.QuotaInfo, Mode=OneWay}" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <Button Content="Se déconnecter" Command="{x:Bind ViewModel.SignOutCommand}"
+                <Button x:Uid="AD_SignOut" Content="Se déconnecter" Command="{x:Bind ViewModel.SignOutCommand}"
                         HorizontalAlignment="Right" Style="{ThemeResource DefaultButtonStyle}"/>
             </StackPanel>
 
@@ -76,12 +77,12 @@
                     <StackPanel Spacing="10">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon Glyph="&#xE715;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                            <TextBlock Text="Vérification de votre adresse e-mail" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                            <TextBlock x:Uid="AD_VerifyEmailTitle" Text="Vérification de votre adresse e-mail" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" TextWrapping="Wrap" FontSize="13"/>
-                        <TextBlock Text="Une fois que vous avez cliqué sur le lien reçu dans votre messagerie, cliquez ci-dessous pour vous connecter :"
+                        <TextBlock x:Uid="AD_VerifyEmailDesc" Text="Une fois que vous avez cliqué sur le lien reçu dans votre messagerie, cliquez ci-dessous pour vous connecter :"
                                    Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
-                        <Button Content="Passer à la connexion" Command="{x:Bind ViewModel.ToggleModeCommand}"
+                        <Button x:Uid="AD_GoToSignIn" Content="Passer à la connexion" Command="{x:Bind ViewModel.ToggleModeCommand}"
                                 Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Right"/>
                     </StackPanel>
                 </Border>
@@ -92,8 +93,8 @@
 
                 <!-- Mode Inscription Complète Enseignant -->
                 <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="Créer un compte enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                    <TextBlock Text="Renseignez vos informations professionnelles pour activer votre accès."
+                    <TextBlock x:Uid="AD_SignUpTitle" Text="Créer un compte enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                    <TextBlock x:Uid="AD_SignUpDesc" Text="Renseignez vos informations professionnelles pour activer votre accès."
                                Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
                     <!-- Civilité / Nom / Prénom -->
@@ -103,14 +104,10 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox Header="Civilité" ItemsSource="{x:Bind ViewModel.Civilites}" SelectedItem="{x:Bind ViewModel.Civilite, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
-                        <TextBox Grid.Column="1" Header="Nom" Text="{x:Bind ViewModel.Nom, Mode=TwoWay}" PlaceholderText="ex. Dupont"/>
-                        <TextBox Grid.Column="2" Header="Prénom" Text="{x:Bind ViewModel.Prenom, Mode=TwoWay}" PlaceholderText="ex. Marie"/>
+                        <ComboBox x:Uid="AD_Civility" Header="Civilité" ItemsSource="{x:Bind ViewModel.Civilites}" SelectedItem="{x:Bind ViewModel.Civilite, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                        <TextBox Grid.Column="1" x:Uid="AD_LastName" Header="Nom" Text="{x:Bind ViewModel.Nom, Mode=TwoWay}" PlaceholderText="ex. Dupont"/>
+                        <TextBox Grid.Column="2" x:Uid="AD_FirstName" Header="Prénom" Text="{x:Bind ViewModel.Prenom, Mode=TwoWay}" PlaceholderText="ex. Marie"/>
                     </Grid>
-
-                    <!-- Date de naissance -->
-                    <CalendarDatePicker Header="Date de naissance" Date="{x:Bind ViewModel.DateDeNaissance, Mode=TwoWay}"
-                                        HorizontalAlignment="Stretch" PlaceholderText="Sélectionnez votre date de naissance"/>
 
                     <!-- Établissement & Académie -->
                     <Grid ColumnSpacing="8">
@@ -118,40 +115,41 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Header="École / Établissement" Text="{x:Bind ViewModel.SchoolName, Mode=TwoWay}" PlaceholderText="ex. Collège Victor Hugo"/>
-                        <ComboBox Grid.Column="1" Header="Académie" ItemsSource="{x:Bind ViewModel.Academies}" SelectedItem="{x:Bind ViewModel.Academie, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                        <TextBox x:Uid="AD_SchoolHeader" Header="École / Établissement" Text="{x:Bind ViewModel.SchoolName, Mode=TwoWay}" PlaceholderText="ex. Collège Victor Hugo"/>
+                        <ComboBox Grid.Column="1" x:Uid="AD_Academy" Header="Académie" ItemsSource="{x:Bind ViewModel.Academies}" SelectedItem="{x:Bind ViewModel.Academie, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
                     </Grid>
 
                     <!-- Discipline / Niveau -->
-                    <TextBox Header="Discipline / Niveau enseigné" Text="{x:Bind ViewModel.Discipline, Mode=TwoWay}" PlaceholderText="ex. Professeur des écoles (CM1/CM2) ou Mathématiques"/>
+                    <TextBox x:Uid="AD_Discipline" Header="Discipline / Niveau enseigné" Text="{x:Bind ViewModel.Discipline, Mode=TwoWay}" PlaceholderText="ex. Professeur des écoles (CM1/CM2) ou Mathématiques"/>
 
                     <!-- E-mail & Mot de passe -->
-                    <TextBox Header="Adresse e-mail académique ou personnelle" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
+                    <TextBox x:Uid="AD_Email" Header="Adresse e-mail académique ou personnelle" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
 
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <PasswordBox Header="Mot de passe (min. 6 car.)" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
-                        <PasswordBox Grid.Column="1" Header="Confirmer le mot de passe" Password="{x:Bind ViewModel.ConfirmPassword, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                        <PasswordBox x:Uid="AD_Password" Header="Mot de passe (min. 6 car.)" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                        <PasswordBox Grid.Column="1" x:Uid="AD_ConfirmPassword" Header="Confirmer le mot de passe" Password="{x:Bind ViewModel.ConfirmPassword, Mode=TwoWay}" PlaceholderText="••••••••"/>
                     </Grid>
                 </StackPanel>
 
                 <!-- Mode Connexion Standard -->
                 <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
-                    <TextBlock Text="Connexion Enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                    <TextBlock Text="Connectez-vous pour accéder à vos modèles et quotas cloud."
+                    <TextBlock x:Uid="AD_SignInTitle" Text="Connexion Enseignant" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                    <TextBlock x:Uid="AD_SignInDesc" Text="Connectez-vous pour accéder à vos modèles et quotas cloud."
                                Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-                    <TextBox Header="Adresse e-mail" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
-                    <PasswordBox Header="Mot de passe" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
+                    <TextBox x:Uid="AD_SignInEmail" Header="Adresse e-mail" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" PlaceholderText="enseignant@ac-academie.fr"/>
+                    <PasswordBox x:Uid="AD_SignInPassword" Header="Mot de passe" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" PlaceholderText="••••••••"/>
                 </StackPanel>
 
                 <!-- Message d'état -->
                 <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                            FontSize="12" TextWrapping="Wrap"
+                           AutomationProperties.LiveSetting="Polite"
                            Visibility="{x:Bind ViewModel.EmailConfirmationSent, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"/>
 
                 <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="20" Height="20" HorizontalAlignment="Center"/>
@@ -163,23 +161,25 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Content="Créer un compte enseignant"
+                    <Button x:Uid="AD_BtnCreateAccount" Content="Créer un compte enseignant"
                             Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"
                             Command="{x:Bind ViewModel.ToggleModeCommand}"
                             Style="{ThemeResource SubtleButtonStyle}" HorizontalAlignment="Left"/>
 
-                    <Button Content="Déjà un compte ? Se connecter"
+                    <Button x:Uid="AD_BtnHaveAccount" Content="Déjà un compte ? Se connecter"
                             Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
                             Command="{x:Bind ViewModel.ToggleModeCommand}"
                             Style="{ThemeResource SubtleButtonStyle}" HorizontalAlignment="Left"/>
 
                     <Button Grid.Column="1"
+                            x:Uid="AD_BtnSignIn"
                             Content="Se connecter"
                             Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}"
                             Command="{x:Bind ViewModel.SignInCommand}"
                             Style="{ThemeResource AccentButtonStyle}"/>
 
                     <Button Grid.Column="1"
+                            x:Uid="AD_BtnSubmitSignUp"
                             Content="Créer mon compte"
                             Visibility="{x:Bind ViewModel.IsSignUpMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
                             Command="{x:Bind ViewModel.SignUpCommand}"

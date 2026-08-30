@@ -63,8 +63,9 @@
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" IsInverted="False"/>
             <converters:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" IsInverted="True"/>
             <converters:StringFormatConverter x:Key="StringFormatConverter"/>
+            <converters:StatusSeverityToInfoBarSeverityConverter x:Key="StatusSeverityToInfoBarSeverityConverter"/>
 
-            <!-- Boutons subtils -->
+            <!-- Boutons subtils (F11 : accessibilité et focus) -->
             <Style x:Key="SubtleButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -74,6 +75,7 @@
                 <Setter Property="CornerRadius" Value="4" />
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -110,6 +112,15 @@
                                             </VisualState.Setters>
                                         </VisualState>
                                     </VisualStateGroup>
+                                    <VisualStateGroup x:Name="FocusStates">
+                                        <VisualState x:Name="Focused">
+                                            <VisualState.Setters>
+                                                <Setter Target="ContentPresenter.BorderBrush" Value="{ThemeResource FocusStrokeColorOuterBrush}"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Unfocused"/>
+                                        <VisualState x:Name="PointerFocused"/>
+                                    </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
                             </ContentPresenter>
                         </ControlTemplate>
@@ -127,12 +138,13 @@
                 <Setter Property="Margin" Value="0,0,0,12"/>
             </Style>
 
-            <!-- Puce de sélection rapide (ChoiceChip) -->
+            <!-- Puce de sélection rapide (ChoiceChip) (F27 : cible tactile confortable) -->
             <Style x:Key="ChoiceChipStyle" TargetType="Button">
-                <Setter Property="Padding" Value="10,4"/>
-                <Setter Property="CornerRadius" Value="14"/>
-                <Setter Property="MinHeight" Value="26"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="CornerRadius" Value="16"/>
+                <Setter Property="MinHeight" Value="34"/>
                 <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="UseSystemFocusVisuals" Value="True"/>
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}"/>
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>

@@ -128,12 +128,6 @@
                                SelectedIndex="0"
                                SelectionChanged="OnModeSelectionChanged"
                                AutomationProperties.Name="Mode de l'assistant">
-                    <ctk:SegmentedItem x:Uid="AP_ModeAuto" Content="Auto" Tag="Auto">
-                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE99A;" FontSize="13"/></ctk:SegmentedItem.Icon>
-                    </ctk:SegmentedItem>
-                    <ctk:SegmentedItem x:Uid="AP_ModeGenerate" Content="Générer" Tag="Générer">
-                        <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE8A5;" FontSize="13"/></ctk:SegmentedItem.Icon>
-                    </ctk:SegmentedItem>
                     <ctk:SegmentedItem x:Uid="AP_ModeEdit" Content="Modifier" Tag="Modifier">
                         <ctk:SegmentedItem.Icon><FontIcon Glyph="&#xE70F;" FontSize="13"/></ctk:SegmentedItem.Icon>
                     </ctk:SegmentedItem>
@@ -156,21 +150,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,10">
                     <Border Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top"
                             Background="{ThemeResource AccentFillColorDefaultBrush}">
-                        <TextBlock Text="✨" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="✨" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   AutomationProperties.AccessibilityView="Raw"/>
                     </Border>
                     <Border MaxWidth="340" Padding="12" CornerRadius="14,14,14,4"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1">
-                        <TextBlock FontSize="13" TextWrapping="Wrap" LineHeight="20">
-                            <Run Text="Bonjour 👋 ! Je peux "/>
-                            <Run Text="générer" FontWeight="SemiBold"/>
-                            <Run Text=" une fiche, "/>
-                            <Run Text="modifier" FontWeight="SemiBold"/>
-                            <Run Text=" le document courant ou "/>
-                            <Run Text="répondre" FontWeight="SemiBold"/>
-                            <Run Text=" à vos questions pédagogiques."/>
-                        </TextBlock>
+                        <TextBlock x:Uid="AP_WelcomeText" Text="Bonjour 👋 ! Je peux générer une fiche, modifier le document courant ou répondre à vos questions pédagogiques." FontSize="13" TextWrapping="Wrap" LineHeight="20"/>
                     </Border>
                 </StackPanel>
 
@@ -262,8 +249,9 @@
                                                               ItemTemplate="{StaticResource DiffLineTemplate}"
                                                               Margin="6"/>
 
-                                                <!-- Barre d'actions -->
-                                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="10,8">
+                                                <!-- Barre d'actions quand non résolu (F23) -->
+                                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="10,8"
+                                                            Visibility="{Binding IsDiffResolved, Converter={StaticResource InverseBoolToVis}}">
                                                     <Button Style="{ThemeResource AccentButtonStyle}" Padding="12,6"
                                                             x:Uid="AP_ApplyButton" Click="OnApplyDiffClicked"
                                                             ToolTipService.ToolTip="Appliquer cette révision au document (annulation possible avec Ctrl+Z)"
@@ -293,6 +281,38 @@
                                                     <TextBlock x:Uid="AP_UndoableNote" Text="Annulable (Ctrl+Z)" FontSize="12"
                                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                                                VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                </StackPanel>
+
+                                                <!-- État résolu : Appliqué ou Ignoré (F23) -->
+                                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="10,8"
+                                                            Visibility="{Binding IsDiffResolved, Converter={StaticResource BoolToVis}}">
+                                                    <Border Visibility="{Binding IsApplied, Converter={StaticResource BoolToVis}}"
+                                                            Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                                            CornerRadius="4" Padding="8,4">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE8FB;" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                                            <TextBlock Text="Révision appliquée au document" FontSize="12"
+                                                                       Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontWeight="SemiBold"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Visibility="{Binding IsApplied, Converter={StaticResource InverseBoolToVis}}"
+                                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                            CornerRadius="4" Padding="8,4">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                            <TextBlock Text="Proposition ignorée" FontSize="12"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Button Style="{ThemeResource SubtleButtonStyle}" Padding="8,4"
+                                                            Click="OnCopyDiffClicked"
+                                                            ToolTipService.ToolTip="Copier le texte"
+                                                            AutomationProperties.Name="Copier le texte">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE8C8;" FontSize="12"/>
+                                                            <TextBlock Text="Copier" FontSize="12" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>

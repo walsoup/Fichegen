@@ -68,6 +68,19 @@ public class StylePresetService
             MarginMm = 18,
             CornerRadiusPx = 14,
             HeaderLayout = StylePreset.HeaderBand
+        },
+        ["dyslexie"] = new StylePreset
+        {
+            Id = "dyslexie",
+            Name = "Dyslexie",
+            PrimaryColor = "#0F172A",
+            SecondaryColor = "#1E3A8A",
+            AccentColor = "#0284C7",
+            FontFamily = "'OpenDyslexic', 'Comic Sans MS', 'Trebuchet MS', sans-serif",
+            MarginMm = 22,
+            CornerRadiusPx = 8,
+            HeaderLayout = StylePreset.HeaderRule,
+            CustomCss = "body { letter-spacing: 0.08em; line-height: 1.8; word-spacing: 0.15em; font-size: 1.05em; }"
         }
     };
 

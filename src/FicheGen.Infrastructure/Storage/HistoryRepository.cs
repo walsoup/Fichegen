@@ -120,6 +120,27 @@ public sealed class HistoryRepository : IHistoryRepository
                 }
             }
 
+            // Migration 2: raw_prompt and raw_response
+            using (var checkCmd2 = connection.CreateCommand())
+            {
+                checkCmd2.CommandText = "SELECT COUNT(*) FROM schema_migrations WHERE version = 2;";
+                var count2 = Convert.ToInt32(await checkCmd2.ExecuteScalarAsync(ct).ConfigureAwait(false));
+
+                if (count2 == 0)
+                {
+                    using var transaction = connection.BeginTransaction();
+                    using var m2Cmd = connection.CreateCommand();
+                    m2Cmd.Transaction = transaction;
+                    m2Cmd.CommandText = """
+                        ALTER TABLE history ADD COLUMN raw_prompt TEXT;
+                        ALTER TABLE history ADD COLUMN raw_response TEXT;
+                        INSERT INTO schema_migrations (version, applied_utc) VALUES (2, datetime('now'));
+                        """;
+                    await m2Cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+                    await transaction.CommitAsync(ct).ConfigureAwait(false);
+                }
+            }
+
             _initialized = true;
         }
         finally
@@ -137,8 +158,8 @@ public sealed class HistoryRepository : IHistoryRepository
 
         using var cmd = connection.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO history (id, type, title, class_level, subject, created_utc, is_favorite, plain_text, html, source_json, style_preset_id)
-            VALUES (@id, @type, @title, @class_level, @subject, @created_utc, @is_favorite, @plain_text, @html, @source_json, @style_preset_id)
+            INSERT INTO history (id, type, title, class_level, subject, created_utc, is_favorite, plain_text, html, source_json, style_preset_id, raw_prompt, raw_response)
+            VALUES (@id, @type, @title, @class_level, @subject, @created_utc, @is_favorite, @plain_text, @html, @source_json, @style_preset_id, @raw_prompt, @raw_response)
             ON CONFLICT(id) DO UPDATE SET
                 type = excluded.type,
                 title = excluded.title,
@@ -149,7 +170,9 @@ public sealed class HistoryRepository : IHistoryRepository
                 plain_text = excluded.plain_text,
                 html = excluded.html,
                 source_json = excluded.source_json,
-                style_preset_id = excluded.style_preset_id;
+                style_preset_id = excluded.style_preset_id,
+                raw_prompt = excluded.raw_prompt,
+                raw_response = excluded.raw_response;
             """;
 
         cmd.Parameters.AddWithValue("@id", item.Id);
@@ -163,6 +186,8 @@ public sealed class HistoryRepository : IHistoryRepository
         cmd.Parameters.AddWithValue("@html", item.Html);
         cmd.Parameters.AddWithValue("@source_json", (object?)item.SourceJson ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@style_preset_id", (object?)item.StylePresetId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@raw_prompt", (object?)item.RawPrompt ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@raw_response", (object?)item.RawResponse ?? DBNull.Value);
 
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
@@ -219,11 +244,11 @@ public sealed class HistoryRepository : IHistoryRepository
 
         var sql = hasQuery
             ? """
-              SELECT h.* FROM history h
+              SELECT h.id, h.type, h.title, h.class_level, h.subject, h.created_utc, h.is_favorite, h.plain_text, '' AS html, NULL AS source_json, h.style_preset_id, NULL AS raw_prompt, NULL AS raw_response FROM history h
               JOIN history_fts fts ON h.rowid = fts.rowid
               WHERE history_fts MATCH @query
               """
-            : "SELECT h.* FROM history h WHERE 1=1";
+            : "SELECT h.id, h.type, h.title, h.class_level, h.subject, h.created_utc, h.is_favorite, h.plain_text, '' AS html, NULL AS source_json, h.style_preset_id, NULL AS raw_prompt, NULL AS raw_response FROM history h WHERE 1=1";
 
         if (!string.IsNullOrEmpty(typeFilter))
         {
@@ -337,6 +362,8 @@ public sealed class HistoryRepository : IHistoryRepository
             Html = reader.GetString(reader.GetOrdinal("html")),
             SourceJson = reader.IsDBNull(reader.GetOrdinal("source_json")) ? null : reader.GetString(reader.GetOrdinal("source_json")),
             StylePresetId = reader.IsDBNull(reader.GetOrdinal("style_preset_id")) ? null : reader.GetString(reader.GetOrdinal("style_preset_id")),
+            RawPrompt = reader.IsDBNull(reader.GetOrdinal("raw_prompt")) ? null : reader.GetString(reader.GetOrdinal("raw_prompt")),
+            RawResponse = reader.IsDBNull(reader.GetOrdinal("raw_response")) ? null : reader.GetString(reader.GetOrdinal("raw_response")),
         };
     }
 }

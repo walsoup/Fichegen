@@ -16,7 +16,7 @@ namespace FicheGen.App.Views;
 /// La logique métier réside dans <see cref="SettingsViewModel"/> ; ce code-behind ne gère que
 /// l'interop WinRT (StartupTask, FileOpenPicker, WebView2, thème instantané).
 /// </summary>
-public sealed partial class SettingsPage : Page
+public sealed partial class SettingsPage : Page, ILocalizablePage
 {
     public SettingsViewModel ViewModel { get; }
 
@@ -36,12 +36,14 @@ public sealed partial class SettingsPage : Page
         Unloaded += OnUnloaded;
     }
 
-    // ─────────────────────────────────────────────
+    // ───────────��─────────────────────────────────
     //  Initialisation
     // ─────────────────────────────────────────────
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshLocalizedStrings();
+
         // Onglet initial
         SettingsTabs.SelectedItem = TabGeneral;
         SwitchPanels(TabGeneral);
@@ -75,6 +77,63 @@ public sealed partial class SettingsPage : Page
         // ouverture de l'onglet Styles (voir UpdateStylePreviewVisibility) :
         // initialisé au chargement de la page, hors écran, son HWND se peint
         // à une position périmée et recouvre l'onglet.
+    }
+
+    public void RefreshLocalizedStrings()
+    {
+        var L = Services.L10n.Get;
+
+        // En-tête & Onglets
+        PageTitle.Text = L("SP_Title.Text", "Paramètres");
+        PageSubtitle.Text = L("SP_Subtitle.Text", "Configurez PROFstudio : apparence, intelligence artificielle, styles de documents et confidentialité.");
+        TabGeneral.Text = L("SP_TabGeneral.Text", "Général");
+        TabAi.Text = L("SP_TabAi.Text", "IA & Routage");
+        TabFolders.Text = L("SP_TabFolders.Text", "Dossiers");
+        TabStyles.Text = L("SP_TabStyles.Text", "Styles");
+        TabPrivacy.Text = L("SP_TabPrivacy.Text", "Confidentialité");
+        TabPrompts.Text = L("SP_TabPrompts.Text", "Prompts & Raccourcis");
+
+        // Onglet Général
+        AccountHeader.Text = L("SP_AccountHeader.Text", "Compte & Accès Enseignant");
+        AccountCard.Header = L("SP_AccountCard.Header", "Mon compte enseignant PROFstudio");
+        AccountCard.Description = L("SP_AccountCard.Description", "Connectez-vous avec votre compte enseignant pour activer les modèles IA Cloud et synchroniser vos fiches.");
+        AccountConnectBtn.Content = L("SP_AccountConnectBtn.Content", "Connexion / Créer un compte…");
+        AccountProfileBtn.Content = L("SP_AccountProfileBtn.Content", "Mon profil & Quota…");
+
+        ProfileHeader.Text = L("SP_ProfileHeader.Text", "Profil de l'enseignant·e");
+        TeacherNameCard.Header = L("SP_TeacherName.Header", "Nom / Identité");
+        TeacherNameCard.Description = L("SP_TeacherName.Description", "Affiché dans l'en-tête de l'application et sur vos fiches.");
+        TeacherNameBox.PlaceholderText = L("SP_TeacherNameBox.PlaceholderText", "ex. M. Dupont / Mme Martin");
+        SchoolNameCard.Header = L("SP_SchoolName.Header", "École / Établissement");
+        SchoolNameCard.Description = L("SP_SchoolName.Description", "Nom de l'établissement imprimé sur les documents générés.");
+        SchoolNameBox.PlaceholderText = L("SP_SchoolNameBox.PlaceholderText", "ex. École Louise-Michel");
+
+        UiHeader.Text = L("SP_UiHeader.Text", "Personnalisation de l'interface");
+        AppThemeCard.Header = L("SP_AppTheme.Header", "Thème de l'application");
+        AppThemeCard.Description = L("SP_AppTheme.Description", "Appliqué immédiatement à toute l'interface PROFstudio.");
+        AccentColorCard.Header = L("SP_AccentColor.Header", "Couleur d'accentuation");
+        AccentColorCard.Description = L("SP_AccentColor.Description", "Teinte de marque PROFstudio — appliquée immédiatement à toute l'interface.");
+        LanguageCard.Header = L("SP_Language.Header", "Langue de l'interface");
+        LanguageCard.Description = L("SP_Language.Description", "Sélectionnez la langue de l'application (Français, English, العربية).");
+        StreamingCard.Header = L("SP_Streaming.Header", "Affichage du texte en direct (Streaming)");
+        StreamingCard.Description = L("SP_Streaming.Description", "Affiche le document au fur et à mesure de sa rédaction par l'IA.");
+
+        PedagogicalHeader.Text = L("SP_PedagogicalHeader.Text", "Préférences pédagogiques");
+        DefaultLevelCard.Header = L("SP_DefaultLevel.Header", "Niveau scolaire par défaut");
+        DefaultLevelCard.Description = L("SP_DefaultLevel.Description", "Présélectionné automatiquement à chaque nouvelle fiche.");
+        DefaultSubjectCard.Header = L("SP_DefaultSubject.Header", "Matière par défaut");
+        DefaultSubjectCard.Description = L("SP_DefaultSubject.Description", "Champ libre — choisissez dans la liste ou saisissez votre matière.");
+
+        StartupHeader.Text = L("SP_StartupHeader.Text", "Démarrage de Windows");
+        LaunchAtStartupCard.Header = L("SP_LaunchAtStartup.Header", "Lancer PROFstudio au démarrage de Windows");
+        AboutHeader.Text = L("SP_AboutHeader.Text", "À propos de l'application");
+        AboutCard.Header = L("SP_AboutCard.Header", "À propos de PROFstudio");
+        AboutCard.Description = L("SP_AboutCard.Description", "Version 1.4 — Conçu pour les enseignants. Génération pédagogique locale et sécurisée.");
+        AboutBtn.Content = L("SP_AboutBtn.Content", "Afficher les informations…");
+
+        SaveLabel.Text = L("SP_SaveLabel.Text", L("SP_SaveButton.Content", "Enregistrer les paramètres"));
+
+        ViewModel.RefreshLocalizedOptions();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -361,7 +420,7 @@ public sealed partial class SettingsPage : Page
             XamlRoot = XamlRoot,
             Title = "Réinitialiser tous les paramètres ?",
             Content = "Thème, routage IA, réglages de créativité, styles et modèles de prompts seront rétablis aux valeurs d'usine. " +
-                      "Vos clés d'API (Coffre Windows), vos dossiers et votre historique de fiches sont conservés.",
+                      "Vos clés d'API, vos dossiers et votre historique de fiches sont conservés.",
             PrimaryButtonText = "Réinitialiser",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -382,9 +441,126 @@ public sealed partial class SettingsPage : Page
         await dlg.ShowAsync();
     }
 
-    // ─────────────────────────────────────────────
-    //  Raccourci global Ctrl+S
-    // ──────────────────────────────────────��──────
+    public static double VisibleToOpacity(bool isVis) => isVis ? 1.0 : 0.4;
+    public static Visibility BoolToVisibility(bool val) => val ? Visibility.Visible : Visibility.Collapsed;
+
+    private StylePresetItem? _draggedPreset;
+
+    private void ThemeCard_DragStarting(UIElement sender, DragStartingEventArgs args)
+    {
+        var item = (sender as FrameworkElement)?.DataContext as StylePresetItem
+                ?? (sender as FrameworkElement)?.Tag as StylePresetItem;
+        if (item != null)
+        {
+            _draggedPreset = item;
+            args.Data.SetText(item.Id);
+            args.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        }
+    }
+
+    private void ThemeCard_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+            border.BorderThickness = new Thickness(2);
+        }
+    }
+
+    private void ThemeCard_DragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+            border.BorderThickness = new Thickness(1);
+        }
+    }
+
+    private void ThemeCard_Drop(object sender, DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+            border.BorderThickness = new Thickness(1);
+        }
+
+        var targetItem = (sender as FrameworkElement)?.DataContext as StylePresetItem
+                      ?? (sender as FrameworkElement)?.Tag as StylePresetItem;
+        if (_draggedPreset != null && targetItem != null && !ReferenceEquals(_draggedPreset, targetItem))
+        {
+            ViewModel.ReorderTheme(_draggedPreset, targetItem);
+        }
+        _draggedPreset = null;
+    }
+
+    private void ThemeCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject dep)
+        {
+            var cur = dep;
+            while (cur != null && !ReferenceEquals(cur, sender))
+            {
+                if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+                {
+                    return;
+                }
+                cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+            }
+        }
+
+        var item = (sender as FrameworkElement)?.DataContext as StylePresetItem
+                ?? (sender as FrameworkElement)?.Tag as StylePresetItem;
+        if (item != null)
+        {
+            ViewModel.SelectedPreset = item;
+        }
+    }
+
+    private void SetAsDefaultTheme_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem
+                ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.SetAsDefaultThemeCommand.Execute(item);
+    }
+
+    private void EmojiButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string emoji })
+        {
+            ViewModel.SelectBuilderIcon(emoji);
+        }
+    }
+
+    private void MoveThemeLeft_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.MoveThemeLeftCommand.Execute(item);
+    }
+
+    private void MoveThemeRight_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.MoveThemeRightCommand.Execute(item);
+    }
+
+    private void DuplicateTheme_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.DuplicateThemeCommand.Execute(item);
+    }
+
+    private void ToggleThemeVisibility_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.ToggleThemeVisibilityCommand.Execute(item);
+    }
+
+    private void DeleteTheme_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
+        if (item != null) ViewModel.DeleteThemeCommand.Execute(item);
+    }
 
     private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {

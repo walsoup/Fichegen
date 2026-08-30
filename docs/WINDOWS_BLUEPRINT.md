@@ -315,7 +315,7 @@ MainWindow
 
 Built from `SettingsCard`/`SettingsExpander` (CommunityToolkit) in five tabs (Pivot or stacked expanders):
 - **Général:** thème, langue (fr-FR default), niveau/matière par défaut, dossier de sortie, lancement au démarrage (StartupTask).
-- **IA:** provider global, credentials (`PasswordBox` with reveal + "🔒 Stocké dans le Coffre d'identification Windows"), **per-purpose routing grid** (rows: Fiche/Évaluation/Quiz/ToC/Offset/Syntaxe/Chat; columns: Provider override, Model override), température sliders, **Tester la connexion** (per provider, with latency + model list echo).
+- **IA:** provider global, credentials (`PasswordBox` with reveal + "🔒 Securisé sur votre appareil."), **per-purpose routing grid** (rows: Fiche/Évaluation/Quiz/ToC/Offset/Syntaxe/Chat; columns: Provider override, Model override), température sliders, **Tester la connexion** (per provider, with latency + model list echo).
 - **Dossiers:** dossier des guides (`FolderPicker` → `FutureAccessList`), cache ToC (open / clear with size), exports.
 - **Styles:** preset list, StyleBuilder (colors via `ColorPicker`, font combo, margin `NumberBox`, live mini-preview), **AI Style Generator** (pick sample PDF → generates CSS preset).
 - **Avancé:** multi-pass generation toggle, experimental flags, log level, **Exporter le pack de diagnostic** (zip: logs + settings scrubbed of secrets), RGPD consent state, telemetry toggle (default OFF).

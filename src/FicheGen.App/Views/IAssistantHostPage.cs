@@ -64,6 +64,13 @@ public static class AssistantHostHelper
             assistantVm.ApplyEditAtIndex(index);
         };
 
+        EventHandler<AssistantDiffEventArgs> rejectDiffHandler = (s, e) =>
+        {
+            if (e.Message == null) return;
+            var index = pane.Messages.IndexOf(e.Message);
+            assistantVm.RejectEditAtIndex(index);
+        };
+
         PropertyChangedEventHandler propHandler = (s, e) =>
         {
             if (e.PropertyName == nameof(AssistantViewModel.IsStreaming))
@@ -96,6 +103,7 @@ public static class AssistantHostHelper
                 var msg = m.IsUser ? AssistantMessage.CreateUser(m.Content) : AssistantMessage.CreateAssistant(m.Content);
                 msg.IsStreaming = m.IsStreaming;
                 msg.IsApplied = m.IsApplied;
+                msg.IsDiffResolved = m.IsDiffResolved;
                 msg.HasDiff = m.HasDiff;
                 if (m.DiffLines != null) msg.SetDiff(m.DiffLines);
 
@@ -111,6 +119,9 @@ public static class AssistantHostHelper
                             break;
                         case nameof(ChatMessageItem.IsApplied):
                             msg.IsApplied = m.IsApplied;
+                            break;
+                        case nameof(ChatMessageItem.IsDiffResolved):
+                            msg.IsDiffResolved = m.IsDiffResolved;
                             break;
                         case nameof(ChatMessageItem.HasDiff):
                             msg.HasDiff = m.HasDiff;
@@ -143,6 +154,7 @@ public static class AssistantHostHelper
             pane.StopRequested += stopHandler;
             pane.NewConversationRequested += newConvHandler;
             pane.ApplyDiffRequested += applyDiffHandler;
+            pane.RejectDiffRequested += rejectDiffHandler;
             assistantVm.PropertyChanged += propHandler;
             assistantVm.Messages.CollectionChanged += collHandler;
             SyncMessages();
@@ -156,6 +168,7 @@ public static class AssistantHostHelper
             pane.StopRequested -= stopHandler;
             pane.NewConversationRequested -= newConvHandler;
             pane.ApplyDiffRequested -= applyDiffHandler;
+            pane.RejectDiffRequested -= rejectDiffHandler;
             assistantVm.PropertyChanged -= propHandler;
             assistantVm.Messages.CollectionChanged -= collHandler;
             DetachItemHandlers();

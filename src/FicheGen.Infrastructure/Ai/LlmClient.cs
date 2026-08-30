@@ -150,11 +150,14 @@ public sealed class LlmClient : ILlmClient
 
     private static double GetTemperature(LlmRequest req, AiRequestConfig cfg)
     {
-        if (req.Temperature > 0)
-            return req.Temperature;
-
         if (cfg.Temperatures.TryGetValue(req.Purpose, out var temp))
             return temp;
+
+        if (cfg.Temperatures.TryGetValue("generation", out var genTemp))
+            return genTemp;
+
+        if (req.Temperature > 0)
+            return req.Temperature;
 
         return 0.7;
     }

@@ -10,7 +10,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace FicheGen.App.Views;
 
-public sealed partial class HistoryPage : Page
+public sealed partial class HistoryPage : Page, ILocalizablePage
 {
     public HistoryViewModel ViewModel { get; }
     private DispatcherQueueTimer? _undoTimer;
@@ -29,6 +29,18 @@ public sealed partial class HistoryPage : Page
         Loaded += OnLoaded;
     }
 
+    public void RefreshLocalizedStrings()
+    {
+        PageTitle.Text = Services.L10n.Get("HP_Title.Text", "Mes documents");
+        PageSubtitle.Text = Services.L10n.Get("HP_Subtitle.Text", "Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur.");
+        SearchBox.PlaceholderText = Services.L10n.Get("HP_SearchBox.PlaceholderText", "Rechercher par titre, matière, niveau ou mot-clé…");
+        FilterAll.Content = Services.L10n.Get("HP_FilterAll.Content", "Tout");
+        FilterFiches.Content = Services.L10n.Get("HP_FilterFiches.Content", "Fiches");
+        FilterEvals.Content = Services.L10n.Get("HP_FilterEvals.Content", "Évaluations");
+        FilterQuiz.Content = Services.L10n.Get("HP_FilterQuiz.Content", "Quiz");
+        FilterFavorites.Content = Services.L10n.Get("HP_FilterFavorites.Content", "Favoris");
+    }
+
     public void FocusSearchBox()
     {
         SearchBox.Focus(FocusState.Programmatic);
@@ -42,42 +54,44 @@ public sealed partial class HistoryPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshLocalizedStrings();
         FicheGen.App.Services.UiMotion.StaggeredFadeUp(
             new FrameworkElement[] { SearchBox, FilterRadioButtons, ResultsScrollViewer });
         await ViewModel.LoadHistoryAsync();
     }
 
-    private async void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
-        await ViewModel.LoadHistoryAsync();
+        ViewModel.SubmitSearch();
     }
 
-    private async void OnFilterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnFilterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FilterRadioButtons.SelectedItem is RadioButton item && item.Content is string filter)
+        if (FilterRadioButtons.SelectedItem is RadioButton item && item.Tag is string filterTag)
         {
-            ViewModel.SelectedTypeFilter = filter;
-            await ViewModel.LoadHistoryAsync();
+            ViewModel.SelectedTypeFilter = filterTag;
         }
     }
 
     private void OnItemClicked(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
+        if (e.OriginalSource is DependencyObject dep)
+        {
+            var cur = dep;
+            while (cur != null && !ReferenceEquals(cur, sender))
+            {
+                if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase || cur is MenuFlyoutItem || cur is MenuFlyoutPresenter)
+                {
+                    return;
+                }
+                cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+            }
+        }
+
         var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
                 ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
         if (item != null)
         {
-            // Prépare le vol de la carte vers l'aperçu (animation connectée Fluent).
-            try
-            {
-                if (sender is FrameworkElement card && FicheGen.App.Services.UiMotion.Enabled)
-                {
-                    Microsoft.UI.Xaml.Media.Animation.ConnectedAnimationService
-                        .GetForCurrentView().PrepareToAnimate("openDoc", card);
-                }
-            }
-            catch { /* Animation optionnelle : ne jamais bloquer l'ouverture. */ }
-
             ViewModel.OpenItem(item);
         }
     }
@@ -134,6 +148,48 @@ public sealed partial class HistoryPage : Page
         if (item != null)
         {
             ViewModel.OpenItem(item);
+        }
+    }
+
+    private async void OnRenameMenuItemClicked(object sender, RoutedEventArgs e)
+    {
+        if (_isDialogActive) return;
+
+        var item = (sender as FrameworkElement)?.DataContext as HistoryItemViewModel
+                ?? (sender as FrameworkElement)?.Tag as HistoryItemViewModel;
+        if (item != null && this.XamlRoot != null)
+        {
+            _isDialogActive = true;
+            try
+            {
+                var textBox = new TextBox
+                {
+                    Text = item.Title,
+                    SelectionStart = 0,
+                    SelectionLength = item.Title.Length,
+                    Margin = new Thickness(0, 8, 0, 0)
+                };
+
+                var dialog = new ContentDialog
+                {
+                    Title = Services.L10n.Get("HP_RenameTitle", "Renommer le document"),
+                    Content = textBox,
+                    PrimaryButtonText = Services.L10n.Get("HP_RenameConfirm", "Renommer"),
+                    CloseButtonText = Services.L10n.Get("Dialog_Cancel", "Annuler"),
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(textBox.Text))
+                {
+                    await ViewModel.RenameItemAsync(item, textBox.Text);
+                }
+            }
+            finally
+            {
+                _isDialogActive = false;
+            }
         }
     }
 
@@ -208,6 +264,11 @@ public sealed partial class HistoryPage : Page
             _lastDeletedItem = null;
         };
         _undoTimer.Start();
+    }
+
+    public void TriggerUndo()
+    {
+        OnUndoDeleteClicked(this, new RoutedEventArgs());
     }
 
     private async void OnUndoDeleteClicked(object sender, RoutedEventArgs e)

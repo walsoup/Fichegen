@@ -90,13 +90,21 @@ public sealed record GeneratedDocument(
 
         sb.AppendLine();
 
+        sb.Append(ToBodyPlainText());
+
+        return sb.ToString();
+    }
+
+    public string ToBodyPlainText()
+    {
+        var sb = new StringBuilder();
         foreach (var block in Blocks)
         {
             AppendBlockPlainText(block, sb);
             sb.AppendLine();
         }
 
-        return sb.ToString();
+        return sb.ToString().TrimEnd();
     }
 
     private static void AppendBlockPlainText(Block block, StringBuilder sb)
@@ -124,11 +132,12 @@ public sealed record GeneratedDocument(
             case TableBlock tbl:
                 if (tbl.Headers.Count > 0)
                 {
-                    sb.AppendLine(string.Join(" | ", tbl.Headers));
+                    sb.AppendLine("| " + string.Join(" | ", tbl.Headers) + " |");
+                    sb.AppendLine("| " + string.Join(" | ", tbl.Headers.Select(_ => "---")) + " |");
                 }
                 foreach (var row in tbl.Rows)
                 {
-                    sb.AppendLine(string.Join(" | ", row));
+                    sb.AppendLine("| " + string.Join(" | ", row) + " |");
                 }
                 break;
             case KeyValueGridBlock kv:

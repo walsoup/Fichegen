@@ -9,7 +9,8 @@ public sealed record GenerationResult(
     TimeSpan Elapsed,
     string? LessonContextUsed = null,
     bool IsFallback = false,
-    string? WarningMessage = null)
+    string? WarningMessage = null,
+    string? RawPrompt = null)
 {
 }
 

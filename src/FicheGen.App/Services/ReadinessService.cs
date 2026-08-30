@@ -16,8 +16,8 @@ public sealed class ReadinessService : IReadinessService
     private readonly ICredentialStore _credentialStore;
 
     private ReadinessState _state = ReadinessState.Unknown;
-    private string _activeProviderKey = "aistudio";
-    private string _activeModelName = "gemini-3.6-flash";
+    private string _activeProviderKey = "cloud";
+    private string _activeModelName = "Cloud PROFstudio";
     private string? _lastErrorMessage;
 
     public event EventHandler? ReadinessChanged;
@@ -80,7 +80,7 @@ public sealed class ReadinessService : IReadinessService
         try
         {
             var settings = _settingsStore.GetSettings<AppSettings>();
-            _activeProviderKey = string.IsNullOrWhiteSpace(settings.Ai.GlobalProvider) ? "aistudio" : settings.Ai.GlobalProvider.ToLowerInvariant();
+            _activeProviderKey = string.IsNullOrWhiteSpace(settings.Ai.GlobalProvider) ? "cloud" : settings.Ai.GlobalProvider.ToLowerInvariant();
             
             if (settings.Ai.Models.TryGetValue(_activeProviderKey, out var model) && !string.IsNullOrWhiteSpace(model))
             {
@@ -88,7 +88,7 @@ public sealed class ReadinessService : IReadinessService
             }
             else
             {
-                _activeModelName = "gemini-3.6-flash";
+                _activeModelName = _activeProviderKey == "cloud" ? "Cloud PROFstudio" : "Par défaut";
             }
 
             // Vérification connexion Internet (UX-34)
@@ -104,7 +104,7 @@ public sealed class ReadinessService : IReadinessService
             }
 
             // Vérification des identifiants dans le coffre
-            if (_activeProviderKey == "proxy" || _activeProviderKey == "cloud" || _activeProviderKey == "profstudio")
+            if (_activeProviderKey == "proxy")
             {
                 SetState(ReadinessState.Ready);
                 return;
@@ -177,11 +177,18 @@ public sealed class ReadinessService : IReadinessService
     {
         return provider switch
         {
-            "aistudio" => _credentialStore.Get("aistudio_api_key") ?? _credentialStore.Get("gemini_api_key"),
+            "cloud" or "profstudio" => _credentialStore.Get("supabase_access_token"),
+            "aistudio" or "gemini" => _credentialStore.Get("gemini_api_key") ?? _credentialStore.Get("aistudio_api_key"),
             "openai" => _credentialStore.Get("openai_api_key"),
-            "vertex" => _credentialStore.Get("vertex_api_key"),
+            "anthropic" => _credentialStore.Get("anthropic_api_key"),
+            "deepseek" => _credentialStore.Get("deepseek_api_key"),
+            "groq" => _credentialStore.Get("groq_api_key"),
+            "mistral" => _credentialStore.Get("mistral_api_key"),
+            "openrouter" => _credentialStore.Get("openrouter_api_key"),
+            "vertex" => _credentialStore.Get("vertex_service_account") ?? _credentialStore.Get("vertex_api_key"),
             "vercel" => _credentialStore.Get("vercel_api_key"),
-            _ => null
+            "proxy" => "local",
+            _ => _credentialStore.Get($"{provider}_api_key")
         };
     }
 

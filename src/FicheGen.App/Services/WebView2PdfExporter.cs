@@ -43,8 +43,7 @@ public sealed class WebView2PdfExporter : IDocumentPdfExporter
         await ExportLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var tcs = new TaskCompletionSource<bool>();
-            using var reg = ct.Register(() => tcs.TrySetCanceled());
+            var opTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             var enqueued = queue.TryEnqueue(async () =>
             {
@@ -63,6 +62,14 @@ public sealed class WebView2PdfExporter : IDocumentPdfExporter
 
                     webView = new Microsoft.UI.Xaml.Controls.WebView2();
                     await webView.EnsureCoreWebView2Async(env);
+
+                    var s = webView.CoreWebView2.Settings;
+                    s.AreBrowserAcceleratorKeysEnabled = false;
+                    s.AreDevToolsEnabled = false;
+                    s.AreDefaultContextMenusEnabled = false;
+                    s.IsGeneralAutofillEnabled = false;
+                    s.IsPasswordAutosaveEnabled = false;
+                    s.IsStatusBarEnabled = false;
 
                     var navTcs = new TaskCompletionSource<bool>();
                     void OnNavCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -107,16 +114,20 @@ public sealed class WebView2PdfExporter : IDocumentPdfExporter
                         var dir = Path.GetDirectoryName(outputPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.Copy(tempPdfPath, outputPath, overwrite: true);
-                        tcs.TrySetResult(true);
+                        opTcs.TrySetResult(true);
                     }
                     else
                     {
-                        tcs.TrySetException(new InvalidOperationException("PrintToPdfAsync failed to generate PDF."));
+                        opTcs.TrySetException(new InvalidOperationException("PrintToPdfAsync failed to generate PDF."));
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    opTcs.TrySetCanceled();
                 }
                 catch (Exception ex)
                 {
-                    tcs.TrySetException(ex);
+                    opTcs.TrySetException(ex);
                 }
                 finally
                 {
@@ -130,10 +141,10 @@ public sealed class WebView2PdfExporter : IDocumentPdfExporter
 
             if (!enqueued)
             {
-                tcs.TrySetException(new InvalidOperationException("Impossible de planifier l'exportation PDF sur le thread UI."));
+                opTcs.TrySetException(new InvalidOperationException("Impossible de planifier l'exportation PDF sur le thread UI."));
             }
 
-            await tcs.Task.ConfigureAwait(false);
+            await opTcs.Task.WaitAsync(ct).ConfigureAwait(false);
         }
         finally
         {

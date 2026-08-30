@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Script de génération et d'empaquetage complet des installeurs PROFstudio pour Windows.
 .DESCRIPTION
@@ -15,7 +15,7 @@ param (
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "1.2.0.0"
+    [string]$Version = "1.4.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,7 +25,7 @@ $appProj = "$repoRoot\src\FicheGen.App\FicheGen.App.csproj"
 $publishDir = "$repoRoot\artifacts\publish\$RuntimeIdentifier"
 $distDir = "$repoRoot\artifacts\dist"
 $assetsDir = "$repoRoot\src\FicheGen.App\Assets"
-$shortVersion = "1.2.0"
+$shortVersion = "1.4.0"
 
 function Write-Step([string]$msg) {
     Write-Host ""
@@ -110,7 +110,13 @@ if (Test-Path $stageDir) {
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 
 Copy-Item -Path "$publishDir\*" -Destination $stageDir -Recurse -Force
-Copy-Item -Path "$repoRoot\src\FicheGen.App\Package.appxmanifest" -Destination "$stageDir\AppxManifest.xml" -Force
+
+# Transform AppxManifest.xml to match current build platform architecture and version
+$manifestContent = [System.IO.File]::ReadAllText("$repoRoot\src\FicheGen.App\Package.appxmanifest.xml", [System.Text.Encoding]::UTF8)
+$manifestContent = $manifestContent -replace 'ProcessorArchitecture="[^"]*"', "ProcessorArchitecture=`"$Platform`""
+$manifestContent = $manifestContent -replace 'Version="[^"]*"', "Version=`"$Version`""
+[System.IO.File]::WriteAllText("$stageDir\AppxManifest.xml", $manifestContent, [System.Text.Encoding]::UTF8)
+
 if (-not (Test-Path "$stageDir\Assets")) {
     New-Item -ItemType Directory -Path "$stageDir\Assets" -Force | Out-Null
 }

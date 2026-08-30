@@ -13,4 +13,6 @@ public sealed record HistoryItem
     public required string Html { get; init; }
     public string? SourceJson { get; init; }
     public string? StylePresetId { get; init; } = "modern";
+    public string? RawPrompt { get; init; }
+    public string? RawResponse { get; init; }
 }

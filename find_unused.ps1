@@ -1,4 +1,4 @@
-$files = Get-ChildItem -Path src, tests -Recurse -Include *.cs,*.xaml | Where-Object { $_.FullName -notmatch "obj|bin" }
+﻿$files = Get-ChildItem -Path src, tests -Recurse -Include *.cs,*.xaml | Where-Object { $_.FullName -notmatch "obj|bin" }
 $allContent = @{}
 foreach ($f in $files) {
     $allContent[$f.FullName] = Get-Content $f.FullName -Raw

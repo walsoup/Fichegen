@@ -14,6 +14,7 @@ using FicheGen.Core.Abstractions;
 using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 
 namespace FicheGen.App.ViewModels;
 
@@ -112,6 +113,9 @@ public partial class ResultViewModel : ObservableObject
     private readonly IPreviewPreferencesStore? _preferencesStore;
     private readonly IExportWorkflowService? _exportWorkflow;
     private readonly IDiagnosticZipExporter? _diagnosticZipExporter;
+    private readonly FicheGen.Core.Abstractions.IHistoryRepository? _historyRepository;
+
+    public string? CurrentHistoryId { get; set; }
 
     // Piles annuler / rétablir (profondeur bornée à 10 instantanés).
     private readonly List<DocumentSnapshot> _undoStack = new();
@@ -126,8 +130,11 @@ public partial class ResultViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasDocument))]
     [NotifyPropertyChangedFor(nameof(DocumentStatsText))]
     [NotifyPropertyChangedFor(nameof(DocumentTitle))]
+    [NotifyPropertyChangedFor(nameof(DocumentKindText))]
+    [NotifyCanExecuteChangedFor(nameof(RequestEditCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExportDocxCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportRtfCommand))]
     [NotifyCanExecuteChangedFor(nameof(PrintCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyPlainTextCommand))]
     [NotifyCanExecuteChangedFor(nameof(ToggleFindBarCommand))]
@@ -135,10 +142,16 @@ public partial class ResultViewModel : ObservableObject
     public partial GeneratedDocument? CurrentDocument { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PreviewHtml))]
-    public partial string CurrentHtml { get; set; }
+    public partial string CurrentHtml { get; set; } = string.Empty;
 
     public string PreviewHtml => CurrentHtml;
+
+    public string DocumentKindText => CurrentDocument is null ? string.Empty : CurrentDocument.Metadata.DocType switch
+    {
+        "evaluation" => L10n.Get("DocumentKind_Evaluation", "Évaluation"),
+        "quiz" => L10n.Get("DocumentKind_Quiz", "Quiz"),
+        _ => L10n.Get("DocumentKind_Fiche", "Fiche pédagogique")
+    };
 
     [ObservableProperty]
     public partial string ActivePresetId { get; set; }
@@ -150,10 +163,22 @@ public partial class ResultViewModel : ObservableObject
     public partial double ZoomFactor { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportDocxCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportRtfCommand))]
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportDocxCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportRtfCommand))]
+    public partial bool IsExporting { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
     public partial string StatusMessage { get; set; }
+
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
 
     [ObservableProperty]
     public partial StatusSeverity CurrentStatusSeverity { get; set; }
@@ -164,7 +189,7 @@ public partial class ResultViewModel : ObservableObject
     public partial bool IsStudentView { get; set; }
 
     // Le bouton annonce l'ACTION (ce qu'un clic fera), pas l'état courant.
-    public string StudentViewButtonLabel => IsStudentView ? "Corrigé Enseignant" : "Version Élève";
+    public string StudentViewButtonLabel => IsStudentView ? L10n.Get("Result_TeacherAction", "Corrigé Enseignant") : L10n.Get("Result_StudentAction", "Version Élève");
     public string StudentViewButtonIcon => IsStudentView ? "\uE7BE" : "\uE77B";
 
     [ObservableProperty]
@@ -244,6 +269,62 @@ public partial class ResultViewModel : ObservableObject
     [ObservableProperty]
     public partial int GenerationPhaseStep { get; set; } = 1;
 
+    private string? _activeOperationId;
+    private CancellationTokenSource? _activeGenerationCts;
+    public string? ActiveGenerator { get; private set; }
+
+    public string BeginOperation(string generatorName = "fiche")
+    {
+        _activeGenerationCts?.Cancel();
+        _activeGenerationCts?.Dispose();
+        _activeGenerationCts = new CancellationTokenSource();
+
+        var id = Guid.NewGuid().ToString("N");
+        _activeOperationId = id;
+        ActiveGenerator = generatorName;
+        IsBusy = true;
+        // UX-Safety: On préserve CurrentHtml et CurrentDocument afin que l'enseignant
+        // ne perde pas son travail visuel si l'opération est annulée ou échoue.
+        ResetStreaming();
+        return id;
+    }
+
+    public CancellationToken GetActiveCancellationToken() => _activeGenerationCts?.Token ?? CancellationToken.None;
+
+    public void CancelActiveOperation()
+    {
+        _activeGenerationCts?.Cancel();
+        IsBusy = false;
+        SetStatus("Génération interrompue. Le document précédent reste affiché.", StatusSeverity.Warning);
+    }
+
+    public void EndOperation(string? operationId)
+    {
+        if (operationId == null || _activeOperationId == operationId)
+        {
+            _activeOperationId = null;
+            ActiveGenerator = null;
+            IsBusy = false;
+        }
+    }
+
+    public void ReportOperationFailure(string operationId, Exception ex)
+    {
+        if (!IsActiveOperation(operationId)) return;
+        IsBusy = false;
+        var friendlyMsg = ErrorMessageTranslator.ToUserFriendlyMessage(ex);
+        SetStatus($"Échec de la génération : {friendlyMsg}", StatusSeverity.Error);
+    }
+
+    public void ReportOperationCancelled(string operationId)
+    {
+        if (!IsActiveOperation(operationId)) return;
+        IsBusy = false;
+        SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+    }
+
+    public bool IsActiveOperation(string? operationId) => operationId == null || _activeOperationId == operationId;
+
     public void ResetStreaming()
     {
         StreamedContent = string.Empty;
@@ -252,26 +333,70 @@ public partial class ResultViewModel : ObservableObject
         GenerationPhaseText = "Analyse du sujet et préparation pédagogique…";
     }
 
-    public void SetGenerationPhase(int step, string text)
+    public void SetGenerationPhase(int step, string text, string? operationId = null)
     {
+        if (!IsActiveOperation(operationId)) return;
         GenerationPhaseStep = step;
         GenerationPhaseText = text;
         SetStatus(text, StatusSeverity.Info);
     }
 
-    public void AppendStreamedChunk(string chunk)
+    public void AppendStreamedChunk(string chunk, string? operationId = null)
     {
+        if (!IsActiveOperation(operationId)) return;
         if (string.IsNullOrEmpty(chunk)) return;
         StreamedContent += chunk;
         StreamedWordCount += chunk.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
         GenerationPhaseStep = 3;
-        GenerationPhaseText = $"Rédaction par l'IA ({StreamedWordCount} mots générés)…";
+        GenerationPhaseText = $"Rédaction en direct ({StreamedWordCount} mots générés)…";
         SetStatus($"Rédaction en direct : {StreamedWordCount} mots générés…", StatusSeverity.Info);
+
+        // Rendu visuel progressif en direct pendant le streaming (n9)
+        if (StreamedWordCount > 15 && StreamedWordCount % 12 == 0)
+        {
+            try
+            {
+                if (JsonCleaner.TryDeserializeDocument(StreamedContent, out var doc) && doc != null)
+                {
+                    CurrentHtml = HtmlRenderer.RenderToHtml(doc, _stylePresetService.GetPreset(ActivePresetId), isStudentVersion: IsStudentView);
+                }
+                else
+                {
+                    var fallbackDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(StreamedContent, "Document en cours de rédaction…", includeWarningCallout: false);
+                    CurrentHtml = HtmlRenderer.RenderToHtml(fallbackDoc, _stylePresetService.GetPreset(ActivePresetId), isStudentVersion: IsStudentView);
+                }
+            }
+            catch { }
+        }
     }
 
     // ------------------------------------------------------------------
-    // Édition manuelle du document
+    // Édition directe et manuelle du document (n1)
     // ------------------------------------------------------------------
+
+    [ObservableProperty]
+    public partial bool IsDirectEditMode { get; set; }
+
+    [RelayCommand]
+    public void ToggleDirectEdit()
+    {
+        IsDirectEditMode = !IsDirectEditMode;
+    }
+
+    [RelayCommand]
+    public void FinishDirectEdit()
+    {
+        IsDirectEditMode = false;
+    }
+
+    public void ApplyDirectHtmlEdits(string editedHtml)
+    {
+        if (string.IsNullOrWhiteSpace(editedHtml)) return;
+        PushSnapshot("Édition directe sur l'aperçu");
+        CurrentHtml = editedHtml;
+        ComputeDocumentStats();
+        SetStatus("✓ Modifications enregistrées directement sur le document.", StatusSeverity.Success);
+    }
 
     /// <summary>Déclenché quand l'utilisateur demande à ouvrir l'éditeur de document.</summary>
     public event EventHandler? EditRequested;
@@ -296,10 +421,49 @@ public partial class ResultViewModel : ObservableObject
             Subtitle = subtitle
         };
 
-        var parsedDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(bodyMarkdown, meta.Title);
-        CurrentDocument = new GeneratedDocument(meta, parsedDoc.Blocks, bodyMarkdown);
+        var parsedDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(bodyMarkdown, meta.Title, includeWarningCallout: false);
+        var newDoc = new GeneratedDocument(meta, parsedDoc.Blocks, bodyMarkdown);
+        newDoc = newDoc with { SourceJson = System.Text.Json.JsonSerializer.Serialize(newDoc) };
+        CurrentDocument = newDoc;
 
         RefreshRendering();
+        ComputeDocumentStats();
+
+        // Persist to history if document is linked to an existing history item
+        if (!string.IsNullOrEmpty(CurrentHistoryId) && _historyRepository != null)
+        {
+            var historyId = CurrentHistoryId;
+            var html = CurrentHtml;
+            var json = newDoc.SourceJson;
+            var plainText = newDoc.ToPlainText();
+            var docTitle = newDoc.Metadata.Title;
+            var presetId = ActivePresetId;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var existing = await _historyRepository.GetByIdAsync(historyId);
+                    if (existing != null)
+                    {
+                        var updated = existing with
+                        {
+                            Title = docTitle,
+                            PlainText = plainText,
+                            Html = html,
+                            SourceJson = json,
+                            StylePresetId = presetId
+                        };
+                        await _historyRepository.SaveAsync(updated);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Mise à jour de l'historique suite à modification manuelle impossible.");
+                }
+            });
+        }
+
         SetStatus("Modifications enregistrées avec succès.", StatusSeverity.Success);
         return true;
     }
@@ -392,12 +556,14 @@ public partial class ResultViewModel : ObservableObject
         StylePresetService? stylePresetService = null,
         IPreviewPreferencesStore? previewPreferencesStore = null,
         IExportWorkflowService? exportWorkflow = null,
-        IDiagnosticZipExporter? diagnosticZipExporter = null)
+        IDiagnosticZipExporter? diagnosticZipExporter = null,
+        FicheGen.Core.Abstractions.IHistoryRepository? historyRepository = null)
     {
         _stylePresetService = stylePresetService ?? new StylePresetService();
         _preferencesStore = previewPreferencesStore;
         _exportWorkflow = exportWorkflow;
         _diagnosticZipExporter = diagnosticZipExporter;
+        _historyRepository = historyRepository;
 
         CurrentHtml = string.Empty;
         ActivePresetId = "modern";
@@ -430,14 +596,24 @@ public partial class ResultViewModel : ObservableObject
     // ------------------------------------------------------------------
 
     /// <summary>Charge un document généré, réinitialise l'historique et calcule les statistiques.</summary>
-    public void LoadDocument(GeneratedDocument document, string html, string? presetId = null)
+    public void LoadDocument(GeneratedDocument document, string html, string? presetId = null, string? operationId = null, string? historyId = null)
     {
+        if (!IsActiveOperation(operationId)) return;
+        CurrentHistoryId = historyId;
         CurrentDocument = document;
         IsStudentView = false;
         ShowExportSuccessBanner = false;
         LastExportedFilePath = null;
-        CurrentHtml = html;
         if (!string.IsNullOrEmpty(presetId)) ActivePresetId = presetId;
+
+        if (!string.IsNullOrEmpty(html))
+        {
+            CurrentHtml = html;
+        }
+        else
+        {
+            RefreshRendering();
+        }
 
         // Un nouveau document invalide l'historique de modifications.
         _undoStack.Clear();
@@ -487,8 +663,12 @@ public partial class ResultViewModel : ObservableObject
         if (CurrentDocument is null || editedDocument is null) return false;
 
         PushSnapshot(snapshotLabel);
-        CurrentDocument = editedDocument;
+        CurrentDocument = string.IsNullOrEmpty(editedDocument.SourceJson)
+            ? editedDocument with { SourceJson = System.Text.Json.JsonSerializer.Serialize(editedDocument) }
+            : editedDocument;
         RefreshRendering();
+        ComputeDocumentStats();
+        SetStatus($"Document mis à jour : « {CurrentDocument.Metadata.Title} ».", StatusSeverity.Success);
         return true;
     }
 
@@ -634,20 +814,22 @@ public partial class ResultViewModel : ObservableObject
     // ------------------------------------------------------------------
 
     /// <summary>Ctrl+Maj+E — Exporte le document au format PDF.</summary>
-    [RelayCommand(CanExecute = nameof(HasDocument))]
+    [RelayCommand(CanExecute = nameof(CanExport))]
     public async Task ExportPdfAsync() => await RunExportAsync(ExportKind.Pdf);
 
     /// <summary>Ctrl+Maj+W — Exporte le document au format Word (.docx).</summary>
-    [RelayCommand(CanExecute = nameof(HasDocument))]
+    [RelayCommand(CanExecute = nameof(CanExport))]
     public async Task ExportDocxAsync() => await RunExportAsync(ExportKind.Docx);
 
     /// <summary>Exporte le document au format RTF.</summary>
-    [RelayCommand(CanExecute = nameof(HasDocument))]
+    [RelayCommand(CanExecute = nameof(CanExport))]
     public async Task ExportRtfAsync() => await RunExportAsync(ExportKind.Rtf);
+
+    public bool CanExport => HasDocument && !IsBusy && !IsExporting;
 
     private async Task RunExportAsync(ExportKind kind)
     {
-        if (CurrentDocument is null) return;
+        if (CurrentDocument is null || IsExporting) return;
 
         var suggestedFileName = BuildSuggestedFileName(kind);
 
@@ -658,7 +840,7 @@ public partial class ResultViewModel : ObservableObject
             return;
         }
 
-        IsBusy = true;
+        IsExporting = true;
         SetStatus(kind switch
         {
             ExportKind.Pdf => "Export PDF en cours…",
@@ -667,18 +849,18 @@ public partial class ResultViewModel : ObservableObject
         }, StatusSeverity.Info);
         try
         {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var path = kind switch
             {
-                ExportKind.Pdf => await _exportWorkflow.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, CancellationToken.None),
-                ExportKind.Docx => await _exportWorkflow.ExportDocxAsync(CurrentDocument, suggestedFileName, CancellationToken.None),
-                _ => await _exportWorkflow.ExportRtfAsync(CurrentDocument, suggestedFileName, CancellationToken.None)
+                ExportKind.Pdf => await _exportWorkflow.ExportPdfAsync(CurrentDocument, CurrentHtml, suggestedFileName, cts.Token),
+                ExportKind.Docx => await _exportWorkflow.ExportDocxAsync(CurrentDocument, suggestedFileName, cts.Token),
+                _ => await _exportWorkflow.ExportRtfAsync(CurrentDocument, suggestedFileName, cts.Token)
             };
 
-            if (path is not null)
+            if (!string.IsNullOrWhiteSpace(path))
             {
                 LastExportedFilePath = path;
                 var fileName = Path.GetFileName(path);
-                var dirName = Path.GetDirectoryName(path) ?? string.Empty;
                 ExportSuccessMessage = kind switch
                 {
                     ExportKind.Pdf => $"PDF enregistré : {fileName}",
@@ -686,7 +868,7 @@ public partial class ResultViewModel : ObservableObject
                     _ => $"RTF enregistré : {fileName}"
                 };
                 ShowExportSuccessBanner = true;
-                SetStatus($"Document exporté avec succès : {path}", StatusSeverity.Success);
+                SetStatus($"Document exporté avec succès : {fileName}", StatusSeverity.Success);
 
                 (App.CurrentMainWindow as MainWindow)?.ShowExportNotification(
                     kind switch { ExportKind.Pdf => "PDF", ExportKind.Docx => "Word", _ => "RTF" },
@@ -695,8 +877,12 @@ public partial class ResultViewModel : ObservableObject
             }
             else
             {
-                SetStatus("Export annulé.", StatusSeverity.Warning);
+                SetStatus("Export annulé (aucun fichier enregistré).", StatusSeverity.Info);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            SetStatus("Export annulé.", StatusSeverity.Warning);
         }
         catch (Exception ex)
         {
@@ -704,7 +890,7 @@ public partial class ResultViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            IsExporting = false;
         }
     }
 

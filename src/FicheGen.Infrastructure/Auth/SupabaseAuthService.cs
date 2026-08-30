@@ -30,6 +30,7 @@ public sealed class SupabaseAuthService : IAuthService
     private string? _cachedAccessToken;
     private string? _cachedRefreshToken;
     private DateTimeOffset _tokenExpiresAt;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public bool IsAuthenticated => _currentUser is not null;
     public UserProfile? CurrentUser => _currentUser;
@@ -252,10 +253,32 @@ public sealed class SupabaseAuthService : IAuthService
 
         if (string.IsNullOrEmpty(_cachedAccessToken)) return null;
 
-        if (DateTimeOffset.UtcNow >= _tokenExpiresAt && !string.IsNullOrEmpty(_cachedRefreshToken))
+        // Proactive refresh if token is within 60s of expiring or expired
+        if (DateTimeOffset.UtcNow.AddSeconds(60) >= _tokenExpiresAt && !string.IsNullOrEmpty(_cachedRefreshToken))
         {
-            var refreshed = await RefreshTokenAsync(_cachedRefreshToken, ct).ConfigureAwait(false);
-            if (refreshed) return _cachedAccessToken;
+            await _refreshLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                if (DateTimeOffset.UtcNow.AddSeconds(60) >= _tokenExpiresAt && !string.IsNullOrEmpty(_cachedRefreshToken))
+                {
+                    var refreshed = await RefreshTokenAsync(_cachedRefreshToken, ct).ConfigureAwait(false);
+                    if (refreshed) return _cachedAccessToken;
+
+                    // If refresh failed (e.g. invalid/revoked refresh token), clear stale session and fail-closed
+                    await SignOutAsync(ct).ConfigureAwait(false);
+                    return null;
+                }
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+        else if (DateTimeOffset.UtcNow >= _tokenExpiresAt)
+        {
+            // Token is already expired and no refresh token available
+            await SignOutAsync(ct).ConfigureAwait(false);
+            return null;
         }
 
         return _cachedAccessToken;
@@ -320,7 +343,7 @@ public sealed class SupabaseAuthService : IAuthService
             {
                 _cachedAccessToken = token;
                 _cachedRefreshToken = refresh;
-                _tokenExpiresAt = DateTimeOffset.UtcNow.AddHours(2);
+                _tokenExpiresAt = ExtractJwtExpiry(token);
 
                 _currentUser = new UserProfile(
                     Id: userId ?? Guid.NewGuid().ToString(),
@@ -342,6 +365,32 @@ public sealed class SupabaseAuthService : IAuthService
         }
 
         return Task.CompletedTask;
+    }
+
+    private static DateTimeOffset ExtractJwtExpiry(string jwtToken)
+    {
+        try
+        {
+            var parts = jwtToken.Split('.');
+            if (parts.Length >= 2)
+            {
+                var payload = parts[1];
+                payload = payload.Replace('-', '+').Replace('_', '/');
+                switch (payload.Length % 4)
+                {
+                    case 2: payload += "=="; break;
+                    case 3: payload += "="; break;
+                }
+                var jsonBytes = Convert.FromBase64String(payload);
+                var jsonNode = JsonNode.Parse(jsonBytes);
+                if (jsonNode?["exp"]?.GetValue<long>() is long exp && exp > 0)
+                {
+                    return DateTimeOffset.FromUnixTimeSeconds(exp);
+                }
+            }
+        }
+        catch { }
+        return DateTimeOffset.MinValue;
     }
 
     private async Task<bool> RefreshTokenAsync(string refreshToken, CancellationToken ct)

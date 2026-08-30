@@ -17,7 +17,7 @@ namespace FicheGen.App.Views;
 /// Le squelette 3 colonnes (formulaire / aperçu / assistant) est mutualisé dans
 /// <see cref="Controls.CreationWorkspace"/>.
 /// </summary>
-public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreationPage
+public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreationPage, ILocalizablePage
 {
     private readonly List<string> _selectedLessons = new();
     private bool _syncingLessons;
@@ -91,11 +91,42 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshLocalizedStrings();
+        if (DataContext is EvaluationViewModel vm)
+        {
+            if (LevelCombo.SelectedItem == null && !string.IsNullOrWhiteSpace(vm.ClassLevel))
+                LevelCombo.SelectedItem = vm.ClassLevel;
+            if (string.IsNullOrWhiteSpace(SubjectCombo.Text) && !string.IsNullOrWhiteSpace(vm.Subject))
+            {
+                SubjectCombo.SelectedItem = SubjectOptions.FirstOrDefault(s => s.Name == vm.Subject);
+                SubjectCombo.Text = vm.Subject;
+            }
+        }
         RefreshLessonSuggestions();
         InitializeChipsFromViewModel();
         UpdateDifficultyLabel();
         Workspace.RunFormEntranceAnimation();
         ValidateForm();
+    }
+
+    public void RefreshLocalizedStrings()
+    {
+        PageTitle.Text = Services.L10n.Get("EP_Title.Text", "Nouvelle évaluation");
+        PageSubtitle.Text = Services.L10n.Get("EP_Subtitle.Text", "Créez un contrôle avec exercices progressifs et barème de correction.");
+        Step1Header.Text = Services.L10n.Get("EP_Step1_Header.Text", "1. Classe et Matière");
+        LevelCombo.Header = Services.L10n.Get("EP_LevelCombo.Header", "Niveau");
+        SubjectCombo.Header = Services.L10n.Get("EP_SubjectCombo.Header", "Matière");
+        SubjectCombo.PlaceholderText = Services.L10n.Get("EP_SubjectCombo.PlaceholderText", "Sélectionner ou saisir");
+        Step2Header.Text = Services.L10n.Get("EP_Step2_Header.Text", "2. Notions à évaluer");
+        Step2Sub.Text = Services.L10n.Get("EP_Step2_Sub.Text", "Sélectionnez une ou plusieurs notions ou ajoutez votre propre sujet :");
+        NewTagBox.PlaceholderText = Services.L10n.Get("EP_NewTagBox.PlaceholderText", "Autre notion… (ex: Calcul d'angles)");
+        AddTagButton.Content = Services.L10n.Get("EP_AddTagButton.Content", "Ajouter");
+        Step3Header.Text = Services.L10n.Get("EP_Step3_Header.Text", "3. Format et Barème");
+        EvalTypeCombo.Header = Services.L10n.Get("EP_EvalTypeCombo.Header", "Type");
+        TotalPointsBox.Header = Services.L10n.Get("EP_TotalPointsBox.Header", "Total points");
+        DifficultyHeader.Text = Services.L10n.Get("EP_DifficultyHeader.Text", "Niveau de difficulté");
+        Step4Header.Text = Services.L10n.Get("EP_Step4_Header.Text", "4. Guide ou manuel PDF (optionnel)");
+        UpdateDifficultyLabel();
     }
 
     // ───────────────────────── Champs de base ─────────────────────────
@@ -286,12 +317,12 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
         var value = (int)Math.Round(double.IsNaN(DifficultySlider.Value) ? 3 : DifficultySlider.Value);
         DifficultyLabel.Text = value switch
         {
-            1 => "🌱 Découverte",
-            2 => "🌿 Facile",
-            3 => "🌳 Intermédiaire",
-            4 => "🔥 Exigeant",
-            5 => "🏆 Expert",
-            _ => "🌳 Intermédiaire"
+            1 => Services.L10n.Get("EP_Difficulty_Discovery", "🌱 Découverte"),
+            2 => Services.L10n.Get("EP_Difficulty_Easy", "🌿 Facile"),
+            3 => Services.L10n.Get("EP_Difficulty_Intermediate", "🌳 Intermédiaire"),
+            4 => Services.L10n.Get("EP_Difficulty_Demanding", "🔥 Exigeant"),
+            5 => Services.L10n.Get("EP_Difficulty_Expert", "🏆 Expert"),
+            _ => Services.L10n.Get("EP_Difficulty_Intermediate", "🌳 Intermédiaire")
         };
     }
 
@@ -308,11 +339,15 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
         var missing = new List<string>();
         if (LevelCombo == null || SubjectCombo == null) return missing;
 
-        var level = LevelCombo.SelectedValue as string ?? LevelCombo.SelectedItem as string ?? (DataContext as EvaluationViewModel)?.ClassLevel;
+        var level = LevelCombo.SelectedItem as string
+            ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
+            ?? LevelCombo.SelectedValue as string
+            ?? (DataContext as EvaluationViewModel)?.ClassLevel;
         if (string.IsNullOrWhiteSpace(level)) missing.Add(Services.L10n.Get("Validation_MissingLevel"));
 
         var subject = SubjectCombo.Text;
-        if (string.IsNullOrWhiteSpace(subject)) subject = (DataContext as EvaluationViewModel)?.Subject;
+        if (string.IsNullOrWhiteSpace(subject))
+            subject = (SubjectCombo.SelectedItem as SubjectOption)?.Name ?? (DataContext as EvaluationViewModel)?.Subject;
         if (string.IsNullOrWhiteSpace(subject)) missing.Add(Services.L10n.Get("Validation_MissingSubject"));
 
         var hasTopics = _selectedLessons.Count > 0 || !string.IsNullOrWhiteSpace((DataContext as EvaluationViewModel)?.Topics);
@@ -339,19 +374,17 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
         target?.Focus(FocusState.Keyboard);
     }
 
-    /// <summary>Met à jour l'état du bouton Générer. L'InfoBar n'apparaît
-    /// qu'après une tentative d'envoi — jamais en pleine saisie.</summary>
+    /// <summary>Met à jour l'état du formulaire. Le bouton Générer reste actif pour
+    /// expliquer les champs manquants lors d'un clic (F13).</summary>
     private void ValidateForm()
     {
         if (LevelCombo == null || SubjectCombo == null || Workspace.FormInfoBar == null)
             return;
 
         var missing = GetMissingFields();
-
-        // Pendant une génération le bouton affiche « Arrêter » : il doit rester actif.
         bool generating = DataContext is EvaluationViewModel gvm && gvm.IsGenerating;
         if (Workspace.GenerateCta != null)
-            Workspace.GenerateCta.IsEnabled = generating || missing.Count == 0;
+            Workspace.GenerateCta.IsEnabled = true;
 
         if (_hasSubmitAttempted)
         {
@@ -362,6 +395,14 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
 
     public bool TryStartGeneration()
     {
+        if (DataContext is EvaluationViewModel vm)
+        {
+            if (!string.IsNullOrWhiteSpace(SubjectCombo.Text)) vm.Subject = SubjectCombo.Text;
+            var lvl = LevelCombo.SelectedItem as string ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            if (!string.IsNullOrWhiteSpace(lvl)) vm.ClassLevel = lvl;
+            if (_selectedLessons.Count > 0) vm.Topics = string.Join(", ", _selectedLessons);
+        }
+
         var missing = GetMissingFields();
         if (missing.Count > 0)
         {
@@ -371,10 +412,10 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
             return false;
         }
 
-        if (DataContext is EvaluationViewModel vm && vm.GenerateEvaluationCommand.CanExecute(null))
+        if (DataContext is EvaluationViewModel evm && evm.GenerateEvaluationCommand.CanExecute(null))
         {
             Workspace.FormInfoBar.IsOpen = false;
-            vm.GenerateEvaluationCommand.Execute(null);
+            evm.GenerateEvaluationCommand.Execute(null);
             return true;
         }
         return false;
@@ -394,11 +435,6 @@ public sealed partial class EvaluationPage : Page, IAssistantHostPage, ICreation
         {
             vm.CancelGenerationCommand.Execute(null);
         }
-    }
-
-    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
-    {
-        Workspace.SetAssistantVisible(!Workspace.IsAssistantVisible);
     }
 
     // ───────────────────────── Assistant adaptatif (délégué au workspace) ─────────────────────────

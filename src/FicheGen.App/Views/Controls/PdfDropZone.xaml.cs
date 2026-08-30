@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using FicheGen.App.Services;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Toc;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,14 +109,21 @@ public sealed partial class PdfDropZone : UserControl
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
-        e.AcceptedOperation = DataPackageOperation.Copy;
-        DragOverPanel.Visibility = Visibility.Visible;
-        EmptyStatePanel.Visibility = Visibility.Collapsed;
-        LoadedStatePanel.Visibility = Visibility.Collapsed;
-        ErrorStatePanel.Visibility = Visibility.Collapsed;
+        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = DataPackageOperation.Copy;
+            DragOverPanel.Visibility = Visibility.Visible;
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            LoadedStatePanel.Visibility = Visibility.Collapsed;
+            ErrorStatePanel.Visibility = Visibility.Collapsed;
 
-        DropBorder.BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
-        DropBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"];
+            DropBorder.BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+            DropBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"];
+        }
+        else
+        {
+            e.AcceptedOperation = DataPackageOperation.None;
+        }
     }
 
     private void OnDragLeave(object sender, DragEventArgs e)
@@ -137,7 +145,15 @@ public sealed partial class PdfDropZone : UserControl
                     var item = items[0];
                     if (item.Path.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                     {
-                        GuideFilePath = item.Path;
+                        var info = new FileInfo(item.Path);
+                        if (info.Exists && info.Length > 50 * 1024 * 1024)
+                        {
+                            SetError("Fichier volumineux", "La taille du guide PDF dépasse la limite de 50 Mo.");
+                        }
+                        else
+                        {
+                            GuideFilePath = item.Path;
+                        }
                     }
                     else
                     {
@@ -153,6 +169,55 @@ public sealed partial class PdfDropZone : UserControl
         }
     }
 
+    private void OnDropBorderTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(GuideFilePath))
+        {
+            BrowsePdfAsync();
+        }
+    }
+
+    private void OnDropBorderKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter || e.Key == Windows.System.VirtualKey.Space)
+        {
+            if (string.IsNullOrWhiteSpace(GuideFilePath))
+            {
+                e.Handled = true;
+                BrowsePdfAsync();
+            }
+        }
+    }
+
+    private async void BrowsePdfAsync()
+    {
+        try
+        {
+            var pickerService = App.Services.GetService<PickerService>();
+            if (pickerService is not null)
+            {
+                var file = await pickerService.PickSingleFileAsync(".pdf");
+                if (file is not null && file.Path.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    var info = new FileInfo(file.Path);
+                    if (info.Exists && info.Length > 50 * 1024 * 1024)
+                    {
+                        SetError("Fichier volumineux", "La taille du guide PDF dépasse la limite de 50 Mo.");
+                    }
+                    else
+                    {
+                        GuideFilePath = file.Path;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError(Services.L10n.Get("PDZ_ErrorReadTitle", "Erreur de sélection"), Services.L10n.Get("PDZ_ErrorReadMessage", "Impossible d'accéder au fichier sélectionné."));
+            Serilog.Log.Warning(ex, "Erreur lors de la sélection du fichier PDF.");
+        }
+    }
+
     private void OnClearFileClicked(object sender, RoutedEventArgs e)
     {
         GuideFilePath = string.Empty;
@@ -165,8 +230,8 @@ public sealed partial class PdfDropZone : UserControl
     /// et alimente le sélecteur de chapitres. Silencieux en cas d'échec.</summary>
     private async void LoadChapterListAsync()
     {
-        _tocLoadCts?.Cancel();
-        _tocLoadCts?.Dispose();
+        try { _tocLoadCts?.Cancel(); } catch (ObjectDisposedException) { }
+        try { _tocLoadCts?.Dispose(); } catch (ObjectDisposedException) { }
         _tocLoadCts = new CancellationTokenSource();
         var ct = _tocLoadCts.Token;
 

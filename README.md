@@ -103,7 +103,7 @@ Elle automatise la préparation des cours en combinant la puissance des modèles
 * **Chat interactif latéral** : Demandez à l'IA d'adapter le niveau, de rajouter un exercice de remédiation, de simplifier le vocabulaire ou de traduire un passage.
 * **Diff visuel Myers O(ND)** : Prévisualisez précisément chaque ligne ajoutée (vert) ou supprimée (rouge) avant d'appliquer les modifications au document courant.
 
-### 🔒 6. Sécurité & Conformité RGPD
+### 🔒 6. Sécurité & Confidentialité des données
 * **Zéro fuite de données** : Toutes les données, documents et paramètres sont stockés localement sur votre machine (`%LOCALAPPDATA%\FicheGen`).
 * **Coffre-fort Windows Credential Locker** : Clés d'API chiffrées au repos via `PasswordVault` (avec bascule DPAPI `ProtectedData`). Jamais écrites en clair dans les fichiers de configuration ou les journaux de logs.
 * **Mode 100% hors-ligne via Ollama** : Connectez votre modèle local (`localhost:11434`) avec prise en charge du loopback réseau MSIX (`privateNetworkClientServer`).

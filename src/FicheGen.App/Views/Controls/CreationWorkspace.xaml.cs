@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Input;
+using Serilog;
 using Windows.Storage;
 
 namespace FicheGen.App.Views.Controls;
@@ -34,6 +35,8 @@ public sealed partial class CreationWorkspace : UserControl
     /// </summary>
     public IList<UIElement> FormCards { get; } = new List<UIElement>();
 
+    private System.ComponentModel.INotifyPropertyChanged? _subscribedInpc;
+
     public CreationWorkspace()
     {
         InitializeComponent();
@@ -49,6 +52,45 @@ public sealed partial class CreationWorkspace : UserControl
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+    {
+        UnsubscribeFromViewModel();
+        if (DataContext is System.ComponentModel.INotifyPropertyChanged inpc)
+        {
+            _subscribedInpc = inpc;
+            inpc.PropertyChanged += OnViewModelPropertyChanged;
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "IsGenerating")
+        {
+            DispatcherQueue.TryEnqueue(UpdateGenerationVisualState);
+        }
+    }
+
+    private void UpdateGenerationVisualState()
+    {
+        var isGenProp = DataContext?.GetType().GetProperty("IsGenerating");
+        if (isGenProp?.GetValue(DataContext) is bool isGen)
+        {
+            FormPanelRoot.IsHitTestVisible = !isGen;
+            FormPanelRoot.Opacity = isGen ? 0.6 : 1.0;
+            SetControlsEnabled(FormPanelRoot, !isGen);
+        }
+    }
+
+    private void UnsubscribeFromViewModel()
+    {
+        if (_subscribedInpc != null)
+        {
+            _subscribedInpc.PropertyChanged -= OnViewModelPropertyChanged;
+            _subscribedInpc = null;
+        }
     }
 
     // ───────────────────────── Pièces nommées exposées à la page hôte ─────────────────────────
@@ -106,6 +148,12 @@ public sealed partial class CreationWorkspace : UserControl
     {
         SpliceFormCards();
         RestoreFormColumnWidth();
+        if (_subscribedInpc == null && DataContext is System.ComponentModel.INotifyPropertyChanged inpc)
+        {
+            _subscribedInpc = inpc;
+            inpc.PropertyChanged += OnViewModelPropertyChanged;
+            UpdateGenerationVisualState();
+        }
         // Placement de l'Assistant différé hors de la passe de layout : un
         // reparenting pendant Loaded lève COMException 0x800F1000.
         DispatcherQueue.TryEnqueue(() =>
@@ -132,7 +180,11 @@ public sealed partial class CreationWorkspace : UserControl
         FormCards.Clear();
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e) => PersistFormColumnWidth();
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        PersistFormColumnWidth();
+        UnsubscribeFromViewModel();
+    }
 
     private void RestoreFormColumnWidth()
     {
@@ -221,19 +273,23 @@ public sealed partial class CreationWorkspace : UserControl
         }
     }
 
+    private Control? _lastFocusedElementBeforeOverlay;
+
     private void AssistantFab_Click(object sender, RoutedEventArgs e)
     {
-        MoveAssistantTo(OverlayHost);
-        AssistantOverlay.Visibility = Visibility.Visible;
+        _lastFocusedElementBeforeOverlay = FocusManager.GetFocusedElement(XamlRoot) as Control;
+        SetAssistantVisible(true);
     }
 
-    private void OverlayClose_Click(object sender, RoutedEventArgs e) => CloseAssistantOverlay();
-    private void OverlayBackdrop_Tapped(object sender, TappedRoutedEventArgs e) => CloseAssistantOverlay();
+    private void OverlayClose_Click(object sender, RoutedEventArgs e) => SetAssistantVisible(false);
+    private void OverlayBackdrop_Tapped(object sender, TappedRoutedEventArgs e) => SetAssistantVisible(false);
 
     private void CloseAssistantOverlay()
     {
         AssistantOverlay.Visibility = Visibility.Collapsed;
         MoveAssistantTo(AssistantInlineHost);
+        _lastFocusedElementBeforeOverlay?.Focus(FocusState.Programmatic);
+        _lastFocusedElementBeforeOverlay = null;
     }
 
     private void MoveAssistantTo(Panel host)
@@ -264,6 +320,20 @@ public sealed partial class CreationWorkspace : UserControl
             current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
         }
         return false;
+    }
+
+    private static void SetControlsEnabled(DependencyObject parent, bool isEnabled)
+    {
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is Control ctrl)
+            {
+                ctrl.IsEnabled = isEnabled;
+            }
+            SetControlsEnabled(child, isEnabled);
+        }
     }
 
     // ───────────────────────── Relais CTA & séparateur ─────────────────────────

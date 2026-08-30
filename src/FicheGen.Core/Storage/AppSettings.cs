@@ -39,13 +39,8 @@ public sealed class TemperatureSettings
 
 public sealed class AiSettings
 {
-    public string GlobalProvider { get; set; } = "aistudio";
-    public Dictionary<string, string> Models { get; set; } = new()
-    {
-        { "aistudio", "gemini-3.6-flash" },
-        { "vertex", "gemini-3.6-flash" },
-        { "proxy", "qwen2.5" }
-    };
+    public string GlobalProvider { get; set; } = "cloud";
+    public Dictionary<string, string> Models { get; set; } = new();
     public Dictionary<string, ProviderOverride> RoutingOverrides { get; set; } = new();
     public string ProxyBaseUrl { get; set; } = "http://localhost:11434/v1";
     public VertexSettings Vertex { get; set; } = new();

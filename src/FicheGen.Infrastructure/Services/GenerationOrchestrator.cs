@@ -74,8 +74,7 @@ public sealed class GenerationOrchestrator
         var result = await ProcessGenerationAsync(req, config, parameters.Topic, lessonContext, sw, ct).ConfigureAwait(false);
 
         // Normalize barème if evaluation
-        var normalizedDoc = NormalizeBaremeIfNeeded(result.Document, parameters.TargetPoints);
-        return ReferenceEquals(normalizedDoc, result.Document) ? result : result with { Document = normalizedDoc };
+        return FinalizeEvaluationResult(result, parameters.TargetPoints);
     }
 
     public async Task<GenerationResult> GenerateEvaluationStreamingAsync(
@@ -96,8 +95,7 @@ public sealed class GenerationOrchestrator
         var req = PromptBuilder.BuildEvalPrompt(parameters, lessonContext);
         var result = await ProcessStreamingGenerationAsync(req, config, parameters.Topic, lessonContext, sw, chunkProgress, ct).ConfigureAwait(false);
 
-        var normalizedDoc = NormalizeBaremeIfNeeded(result.Document, parameters.TargetPoints);
-        return ReferenceEquals(normalizedDoc, result.Document) ? result : result with { Document = normalizedDoc };
+        return FinalizeEvaluationResult(result, parameters.TargetPoints);
     }
 
     public async Task<GenerationResult> GenerateQuizAsync(
@@ -130,6 +128,9 @@ public sealed class GenerationOrchestrator
         CancellationToken ct)
     {
         var rawResponse = await _llmClient.GenerateAsync(req, config, ct).ConfigureAwait(false);
+        var rawPrompt = string.IsNullOrEmpty(req.SystemPrompt)
+            ? req.UserPrompt
+            : $"[SYSTEM]\n{req.SystemPrompt}\n\n[USER]\n{req.UserPrompt}";
 
         bool isFallback = false;
         string? warningMessage = null;
@@ -138,7 +139,11 @@ public sealed class GenerationOrchestrator
         {
             isFallback = true;
             warningMessage = "Format JSON invalide — conversion dégradée depuis le Markdown.";
-            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(rawResponse, fallbackTitle);
+            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(rawResponse, fallbackTitle, includeWarningCallout: true);
+        }
+        else if (string.IsNullOrEmpty(doc.SourceJson))
+        {
+            doc = doc with { SourceJson = System.Text.Json.JsonSerializer.Serialize(doc) };
         }
 
         var html = HtmlRenderer.RenderToFullHtml(doc);
@@ -151,7 +156,8 @@ public sealed class GenerationOrchestrator
             Elapsed: sw.Elapsed,
             LessonContextUsed: lessonContext,
             IsFallback: isFallback,
-            WarningMessage: warningMessage
+            WarningMessage: warningMessage,
+            RawPrompt: rawPrompt
         );
     }
 
@@ -173,6 +179,9 @@ public sealed class GenerationOrchestrator
         }
 
         var rawResponse = sb.ToString();
+        var rawPrompt = string.IsNullOrEmpty(req.SystemPrompt)
+            ? req.UserPrompt
+            : $"[SYSTEM]\n{req.SystemPrompt}\n\n[USER]\n{req.UserPrompt}";
 
         bool isFallback = false;
         string? warningMessage = null;
@@ -181,7 +190,11 @@ public sealed class GenerationOrchestrator
         {
             isFallback = true;
             warningMessage = "Format JSON invalide — conversion dégradée depuis le Markdown.";
-            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(rawResponse, fallbackTitle);
+            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(rawResponse, fallbackTitle, includeWarningCallout: true);
+        }
+        else if (string.IsNullOrEmpty(doc.SourceJson))
+        {
+            doc = doc with { SourceJson = System.Text.Json.JsonSerializer.Serialize(doc) };
         }
 
         var html = HtmlRenderer.RenderToFullHtml(doc);
@@ -194,7 +207,8 @@ public sealed class GenerationOrchestrator
             Elapsed: sw.Elapsed,
             LessonContextUsed: lessonContext,
             IsFallback: isFallback,
-            WarningMessage: warningMessage
+            WarningMessage: warningMessage,
+            RawPrompt: rawPrompt
         );
     }
 
@@ -284,6 +298,19 @@ public sealed class GenerationOrchestrator
         }
 
         return doc;
+    }
+
+    private static GenerationResult FinalizeEvaluationResult(GenerationResult result, double targetTotal)
+    {
+        var normalizedDoc = NormalizeBaremeIfNeeded(result.Document, targetTotal);
+        if (!ReferenceEquals(normalizedDoc, result.Document))
+        {
+            var updatedHtml = HtmlRenderer.RenderToHtml(normalizedDoc);
+            var updatedJson = System.Text.Json.JsonSerializer.Serialize(normalizedDoc);
+            normalizedDoc = normalizedDoc with { SourceJson = updatedJson };
+            return result with { Document = normalizedDoc, PreviewHtml = updatedHtml };
+        }
+        return result;
     }
 
     private static string NormalizeAccents(string input) =>

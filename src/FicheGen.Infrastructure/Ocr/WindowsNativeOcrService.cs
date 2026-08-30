@@ -23,6 +23,7 @@ public sealed class WindowsNativeOcrService : IOcrService
 {
     private OcrEngine? _ocrEngine;
     private bool _initialized;
+    private readonly object _initLock = new();
 
     public bool IsSupported
     {
@@ -36,7 +37,9 @@ public sealed class WindowsNativeOcrService : IOcrService
     private void EnsureEngine()
     {
         if (_initialized) return;
-        _initialized = true;
+        lock (_initLock)
+        {
+            if (_initialized) return;
 
         try
         {
@@ -71,6 +74,11 @@ public sealed class WindowsNativeOcrService : IOcrService
             Log.Warning(ex, "Échec d'initialisation du moteur OCR Windows.");
             _ocrEngine = null;
         }
+        finally
+        {
+            _initialized = true;
+        }
+        } // end lock
     }
 
     public async Task<string> ExtractTextFromPdfPageAsync(string pdfPath, int physicalPage, CancellationToken ct = default)
@@ -115,6 +123,10 @@ public sealed class WindowsNativeOcrService : IOcrService
                 ((global::WinRT.IWinRTObject)pdfDoc).NativeObject.Dispose();
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             Log.Warning(ex, "Erreur lors de l'OCR de la page {Page} du PDF {File}.", physicalPage, Path.GetFileName(pdfPath));
@@ -140,6 +152,10 @@ public sealed class WindowsNativeOcrService : IOcrService
 
             var result = await _ocrEngine.RecognizeAsync(softwareBitmap).AsTask(ct).ConfigureAwait(false);
             return CleanOcrText(result);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

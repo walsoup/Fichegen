@@ -13,8 +13,8 @@
     <!-- ═══════════ Workspace 3 colonnes partagé par les pages de création (§6.3) ═══════════ -->
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="FormColumnDef" Width="380" MinWidth="320" MaxWidth="560"/>
-            <ColumnDefinition x:Name="PreviewColumnDef" Width="*" MinWidth="400"/>
+            <ColumnDefinition x:Name="FormColumnDef" Width="380" MinWidth="260" MaxWidth="560"/>
+            <ColumnDefinition x:Name="PreviewColumnDef" Width="*" MinWidth="280"/>
             <ColumnDefinition x:Name="AssistantColumnDef" Width="0"/>
         </Grid.ColumnDefinitions>
 

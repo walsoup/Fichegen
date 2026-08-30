@@ -4,6 +4,7 @@ using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Serilog;
 
 namespace FicheGen.App.Views;
 
@@ -13,7 +14,7 @@ namespace FicheGen.App.Views;
 /// Le squelette 3 colonnes (formulaire / aperçu / assistant) est mutualisé dans
 /// <see cref="Controls.CreationWorkspace"/> ; cette page ne conserve que ses cartes.
 /// </summary>
-public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
+public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage, ILocalizablePage
 {
     private bool _hasSubmitAttempted;
 
@@ -99,8 +100,38 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshLocalizedStrings();
+        if (DataContext is FicheFormViewModel vm)
+        {
+            if (LevelCombo.SelectedItem == null && !string.IsNullOrWhiteSpace(vm.ClassLevel))
+                LevelCombo.SelectedItem = vm.ClassLevel;
+            if (string.IsNullOrWhiteSpace(SubjectCombo.Text) && !string.IsNullOrWhiteSpace(vm.Subject))
+            {
+                SubjectCombo.SelectedItem = SubjectOptions.FirstOrDefault(s => s.Name == vm.Subject);
+                SubjectCombo.Text = vm.Subject;
+            }
+            if (string.IsNullOrWhiteSpace(TopicBox.Text) && !string.IsNullOrWhiteSpace(vm.Topic))
+                TopicBox.Text = vm.Topic;
+        }
         Workspace.RunFormEntranceAnimation();
         ValidateForm();
+    }
+
+    public void RefreshLocalizedStrings()
+    {
+        PageTitle.Text = Services.L10n.Get("FP_Title.Text", "Nouvelle fiche pédagogique");
+        PageSubtitle.Text = Services.L10n.Get("FP_Subtitle.Text", "Préparez une séance structurée, prête à imprimer ou exporter.");
+        Step1Header.Text = Services.L10n.Get("FP_Step1_Header.Text", "1. Classe et Matière");
+        LevelCombo.Header = Services.L10n.Get("FP_LevelCombo.Header", "Niveau");
+        SubjectCombo.Header = Services.L10n.Get("FP_SubjectCombo.Header", "Matière");
+        SubjectCombo.PlaceholderText = Services.L10n.Get("FP_SubjectCombo.PlaceholderText", "Sélectionner ou saisir");
+        Step2Header.Text = Services.L10n.Get("FP_Step2_Header.Text", "2. Sujet de la séance");
+        TopicBox.PlaceholderText = Services.L10n.Get("FP_TopicBox.PlaceholderText", "ex : Les fractions décimales, La Révolution française…");
+        Step3Header.Text = Services.L10n.Get("FP_Step3_Header.Text", "3. Cadre & Durée");
+        DurationBox.Header = Services.L10n.Get("FP_DurationBox.Header", "Durée de la séance (minutes)");
+        InstructionsBox.Header = Services.L10n.Get("FP_InstructionsBox.Header", "Consignes additionnelles (optionnel)");
+        InstructionsBox.PlaceholderText = Services.L10n.Get("FP_InstructionsBox.PlaceholderText", "Précisez un contexte, des besoins DYS, un travail en groupe…");
+        Step4Header.Text = Services.L10n.Get("FP_Step4_Header.Text", "4. Appui documentaire PDF (optionnel)");
     }
 
     // ───────────────────────── Niveau & Matière ─────────────────────────
@@ -127,16 +158,34 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
                 ? TopicSuggestions.Take(8).ToList()
                 : TopicSuggestions.Where(t => t.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
         }
+        if (DataContext is FicheFormViewModel vm)
+        {
+            vm.Topic = sender.Text;
+        }
         ValidateForm();
     }
 
     private void TopicBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
     {
         if (args.SelectedItem is string suggestion)
+        {
             sender.Text = suggestion;
+            if (DataContext is FicheFormViewModel vm)
+            {
+                vm.Topic = suggestion;
+            }
+        }
+        ValidateForm();
     }
 
-    private void TopicBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) => ValidateForm();
+    private void TopicBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (DataContext is FicheFormViewModel vm)
+        {
+            vm.Topic = sender.Text;
+        }
+        ValidateForm();
+    }
 
     // ───────────────────────── Durée & Consignes ─────────────────────────
 
@@ -163,9 +212,22 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
         var missing = new System.Collections.Generic.List<string>();
         if (LevelCombo == null || SubjectCombo == null || TopicBox == null) return missing;
 
-        if (LevelCombo.SelectedValue is not string level || string.IsNullOrWhiteSpace(level)) missing.Add(Services.L10n.Get("Validation_MissingLevel"));
-        if (string.IsNullOrWhiteSpace(SubjectCombo.Text)) missing.Add(Services.L10n.Get("Validation_MissingSubject"));
-        if (string.IsNullOrWhiteSpace(TopicBox.Text)) missing.Add(Services.L10n.Get("Validation_MissingTopic"));
+        var level = LevelCombo.SelectedItem as string
+            ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
+            ?? LevelCombo.SelectedValue as string
+            ?? (DataContext as FicheFormViewModel)?.ClassLevel;
+        if (string.IsNullOrWhiteSpace(level)) missing.Add(Services.L10n.Get("Validation_MissingLevel"));
+
+        var subject = SubjectCombo.Text;
+        if (string.IsNullOrWhiteSpace(subject))
+            subject = (SubjectCombo.SelectedItem as SubjectOption)?.Name ?? (DataContext as FicheFormViewModel)?.Subject;
+        if (string.IsNullOrWhiteSpace(subject)) missing.Add(Services.L10n.Get("Validation_MissingSubject"));
+
+        var topic = TopicBox.Text;
+        if (string.IsNullOrWhiteSpace(topic))
+            topic = (DataContext as FicheFormViewModel)?.Topic;
+        if (string.IsNullOrWhiteSpace(topic)) missing.Add(Services.L10n.Get("Validation_MissingTopic"));
+
         return missing;
     }
 
@@ -187,19 +249,17 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
         target?.Focus(FocusState.Keyboard);
     }
 
-    /// <summary>Met à jour l'état du bouton Générer. L'InfoBar n'apparaît
-    /// qu'après une tentative d'envoi — jamais en pleine saisie.</summary>
+    /// <summary>Met à jour l'état du formulaire. Le bouton Générer reste actif pour
+    /// expliquer les champs manquants lors d'un clic (F13).</summary>
     private void ValidateForm()
     {
         if (LevelCombo == null || SubjectCombo == null || TopicBox == null || Workspace.FormInfoBar == null)
             return;
 
         var missing = GetMissingFields();
-
-        // Pendant une génération le bouton affiche « Arrêter » : il doit rester actif.
         bool generating = DataContext is FicheFormViewModel gvm && gvm.IsGenerating;
         if (Workspace.GenerateCta != null)
-            Workspace.GenerateCta.IsEnabled = generating || missing.Count == 0;
+            Workspace.GenerateCta.IsEnabled = true;
 
         if (_hasSubmitAttempted)
         {
@@ -210,6 +270,14 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
 
     public bool TryStartGeneration()
     {
+        if (DataContext is FicheFormViewModel vm)
+        {
+            if (!string.IsNullOrWhiteSpace(TopicBox.Text)) vm.Topic = TopicBox.Text;
+            if (!string.IsNullOrWhiteSpace(SubjectCombo.Text)) vm.Subject = SubjectCombo.Text;
+            var lvl = LevelCombo.SelectedItem as string ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            if (!string.IsNullOrWhiteSpace(lvl)) vm.ClassLevel = lvl;
+        }
+
         var missing = GetMissingFields();
         if (missing.Count > 0)
         {
@@ -219,10 +287,10 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
             return false;
         }
 
-        if (DataContext is FicheFormViewModel vm && vm.GenerateFicheCommand.CanExecute(null))
+        if (DataContext is FicheFormViewModel fvm && fvm.GenerateFicheCommand.CanExecute(null))
         {
             Workspace.FormInfoBar.IsOpen = false;
-            vm.GenerateFicheCommand.Execute(null);
+            fvm.GenerateFicheCommand.Execute(null);
             return true;
         }
         return false;
@@ -242,11 +310,6 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage
         {
             vm.CancelGenerationCommand.Execute(null);
         }
-    }
-
-    private void OnToggleAssistantClicked(object sender, RoutedEventArgs e)
-    {
-        Workspace.SetAssistantVisible(!Workspace.IsAssistantVisible);
     }
 
     // ───────────────────────── Assistant adaptatif (délégué au workspace) ─────────────────────────

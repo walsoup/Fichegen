@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Installation du paquet MSIX PROFstudio (sideload) :
@@ -52,11 +52,16 @@ foreach ($required in @($MsixPath, $CertPath)) {
     }
 }
 
-# ── 1. Installation du certificat dans Root et TrustedPeople ────────────────
+# ── 1. Installation du certificat dans TrustedPeople uniquement (sideloading) ────────
 try {
     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath)
     
-    # TrustedPeople (Personnes de confiance)
+    # Vérification basique du certificat
+    if ([string]::IsNullOrWhiteSpace($cert.Thumbprint)) {
+        throw "Certificat invalide ou illisible."
+    }
+
+    # TrustedPeople (Personnes de confiance pour le sideloading d'applications approuvées)
     $storePeople = New-Object System.Security.Cryptography.X509Certificates.X509Store("TrustedPeople", "LocalMachine")
     try {
         $storePeople.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
@@ -65,16 +70,16 @@ try {
         $storePeople.Close()
     }
 
-    # Root (Autorités de certification racines de confiance pour contourner l'erreur de confiance)
-    $storeRoot = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root", "LocalMachine")
+    # Also install in CurrentUser TrustedPeople
+    $storeUserPeople = New-Object System.Security.Cryptography.X509Certificates.X509Store("TrustedPeople", "CurrentUser")
     try {
-        $storeRoot.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-        $storeRoot.Add($cert)
+        $storeUserPeople.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        $storeUserPeople.Add($cert)
     } finally {
-        $storeRoot.Close()
+        $storeUserPeople.Close()
     }
 
-    Write-Host "  [OK] Certificat installe dans les Autorites de confiance ($($cert.Subject))." -ForegroundColor Green
+    Write-Host "  [OK] Certificat installe dans Personnes de confiance ($($cert.Subject))." -ForegroundColor Green
 }
 catch {
     Write-Host "  [AVERTISSEMENT] Erreur lors de l'enregistrement du certificat : $($_.Exception.Message)" -ForegroundColor Yellow

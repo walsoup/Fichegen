@@ -71,11 +71,10 @@ serve(async (req: Request) => {
 
     // 1. Auth check
     const authHeader = req.headers.get("Authorization");
-    const isCommunity = authHeader?.includes("profstudio-community");
     let user: any = null;
     let profile: any = null;
 
-    if (authHeader && authHeader.startsWith("Bearer ") && !isCommunity) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || DEFAULT_ANON_KEY;
       try {
@@ -97,30 +96,99 @@ serve(async (req: Request) => {
       } catch {}
     }
 
-    if (!user && !isCommunity) {
-      return new Response(JSON.stringify({ error: { message: "Accès refusé. Veuillez vous connecter avec votre compte enseignant PROFstudio." } }), {
+    if (!user || !user.id) {
+      return new Response(JSON.stringify({ error: { message: "Accès refusé. Veuillez vous connecter avec votre compte enseignant PROFstudio.", code: "unauthorized" } }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // Check access & quota
-    if (profile) {
-      if (profile.is_approved === false) {
-        return new Response(JSON.stringify({ error: { message: "Votre compte enseignant est en attente d'approbation par l'administrateur." } }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        });
+    // Check access & quota (fail-closed)
+    if (!profile) {
+      return new Response(JSON.stringify({ error: { message: "Impossible de valider le profil enseignant.", code: "profile_not_found" } }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (profile.is_approved !== true) {
+      return new Response(JSON.stringify({ error: { message: "Votre compte enseignant est en attente d'approbation par l'administrateur.", code: "account_pending_approval" } }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (typeof profile.monthly_quota === "number" && profile.monthly_quota <= 0) {
+      return new Response(JSON.stringify({ error: { message: "Quota mensuel de générations atteint.", code: "quota_exceeded" } }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Check request size (read arrayBuffer safely, max 1MB)
+    let rawText = "";
+    try {
+      const rawBuffer = await req.arrayBuffer();
+      if (rawBuffer.byteLength > 1024 * 1024) {
+        return new Response(
+          JSON.stringify({ error: { message: "Payload too large. Max size is 1MB.", code: "payload_too_large" } }),
+          { status: 413, headers: { "Content-Type": "application/json" } }
+        );
       }
-      if (typeof profile.monthly_quota === "number" && profile.monthly_quota <= 0) {
-        return new Response(JSON.stringify({ error: { message: "Quota mensuel de générations atteint." } }), {
-          status: 429,
-          headers: { "Content-Type": "application/json" },
-        });
+      rawText = new TextDecoder().decode(rawBuffer);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: { message: "Erreur de lecture de la requête.", code: "read_error" } }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    let body: any;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return new Response(JSON.stringify({ error: { message: "Corps de requête JSON invalide.", code: "invalid_json" } }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!body || typeof body !== "object") {
+      return new Response(JSON.stringify({ error: { message: "Requête invalide.", code: "invalid_request" } }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 50) {
+      return new Response(JSON.stringify({ error: { message: "Le nombre de messages doit être compris entre 1 et 50.", code: "invalid_messages_count" } }), {
+        status: 422,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    for (const msg of body.messages) {
+      if (!msg || typeof msg !== "object") {
+        return new Response(JSON.stringify({ error: { message: "Message malformé.", code: "malformed_message" } }), { status: 422, headers: { "Content-Type": "application/json" } });
+      }
+      if (!["system", "user", "assistant"].includes(msg.role)) {
+        return new Response(JSON.stringify({ error: { message: `Rôle de message non supporté : ${msg.role}`, code: "invalid_role" } }), { status: 422, headers: { "Content-Type": "application/json" } });
+      }
+      if (typeof msg.content !== "string" || msg.content.length > 50000) {
+        return new Response(JSON.stringify({ error: { message: "Contenu de message trop volumineux (50 000 caractères max).", code: "message_too_long" } }), { status: 422, headers: { "Content-Type": "application/json" } });
       }
     }
 
-    const body = await req.json();
+    if (typeof body.max_tokens === "number") {
+      body.max_tokens = Math.max(1, Math.min(8192, Math.floor(body.max_tokens)));
+    } else {
+      body.max_tokens = 4096;
+    }
+
+    if (typeof body.temperature === "number") {
+      body.temperature = Math.max(0.0, Math.min(2.0, body.temperature));
+    }
+
     const isStreaming = body.stream === true;
     const requestedTask = (body.model || "fiche").trim().toLowerCase();
 
@@ -141,7 +209,7 @@ serve(async (req: Request) => {
     } catch {}
 
     if (!route) {
-      return new Response(JSON.stringify({ error: { message: `Aucune route trouvée pour '${requestedTask}'` } }), {
+      return new Response(JSON.stringify({ error: { message: "Aucune route IA configurée pour la tâche demandée.", code: "no_route" } }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -157,20 +225,20 @@ serve(async (req: Request) => {
         try {
           return await executeCall(route.fallback_base_url, route.fallback_api_style || "openai", route.fallback_api_key_env, route.fallback_model, body, isStreaming);
         } catch (fallbackErr: any) {
-          return new Response(JSON.stringify({ error: { message: `Échec principal (${primaryErr.message}) et fallback (${fallbackErr.message})` } }), {
+          return new Response(JSON.stringify({ error: { message: "Le service d'IA est temporairement indisponible. Veuillez réessayer ultérieurement.", code: "all_providers_failed" } }), {
             status: 502,
             headers: { "Content-Type": "application/json" },
           });
         }
       }
 
-      return new Response(JSON.stringify({ error: { message: primaryErr.message } }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: { message: "Erreur lors de la génération avec le fournisseur d'IA.", code: "provider_error" } }), {
+        status: 502,
         headers: { "Content-Type": "application/json" },
       });
     }
   } catch (globalErr: any) {
-    return new Response(JSON.stringify({ error: { message: `Unhandled server error: ${globalErr.message}`, stack: globalErr.stack } }), {
+    return new Response(JSON.stringify({ error: { message: "Erreur interne du serveur proxy.", code: "internal_error" } }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -270,33 +338,55 @@ async function callAnthropic(baseUrl: string, model: string, body: any, apiKey: 
     }), { headers: { "Content-Type": "application/json" } });
   }
 
-  const { readable, writable } = new TransformStream({
-    transform(chunk, controller) {
-      const text = new TextDecoder().decode(chunk);
-      for (const line of text.split("\n")) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.substring(6));
-            if (data.type === "content_block_delta" && data.delta?.text) {
-              const chunkObj = {
-                id: `chatcmpl-${Date.now()}`,
-                object: "chat.completion.chunk",
-                model,
-                choices: [{ index: 0, delta: { content: data.delta.text }, finish_reason: null }],
-              };
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
-            }
-          } catch {}
-        }
+  const { readable, writable } = createSseTransformStream((payload, controller) => {
+    try {
+      const data = JSON.parse(payload);
+      if (data.type === "content_block_delta" && data.delta?.text) {
+        const chunkObj = {
+          id: `chatcmpl-${Date.now()}`,
+          object: "chat.completion.chunk",
+          model,
+          choices: [{ index: 0, delta: { content: data.delta.text }, finish_reason: null }],
+        };
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
       }
-    },
-    flush(controller) {
-      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-    },
+    } catch {}
   });
 
   res.body?.pipeTo(writable);
   return new Response(readable, {
     headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" },
+  });
+}
+
+function createSseTransformStream(transformer: (payload: string, controller: TransformStreamDefaultController<Uint8Array>) => void) {
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (line.startsWith("data: ")) {
+          const payload = line.substring(6).trim();
+          if (payload && payload !== "[DONE]") {
+            transformer(payload, controller);
+          }
+        }
+      }
+    },
+    flush(controller) {
+      buffer += decoder.decode();
+      if (buffer.trim().startsWith("data: ")) {
+        const payload = buffer.trim().substring(6).trim();
+        if (payload && payload !== "[DONE]") {
+          transformer(payload, controller);
+        }
+      }
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+    },
   });
 }

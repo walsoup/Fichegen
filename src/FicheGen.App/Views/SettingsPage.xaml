@@ -7,6 +7,7 @@
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:viewmodels="using:FicheGen.App.ViewModels"
     xmlns:converters="using:FicheGen.App.Converters"
+    xmlns:local="using:FicheGen.App.Views"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -34,6 +35,12 @@
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="10,3"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- Manquant en 1.4.1 — utilisé dans la galerie de thèmes Styles -->
+        <Style x:Key="ToolbarIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="MinWidth" Value="32"/>
         </Style>
     </Page.Resources>
 
@@ -66,8 +73,8 @@
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                <TextBlock x:Uid="SP_Title" Text="Paramètres" Style="{ThemeResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"/>
-                <TextBlock x:Uid="SP_Subtitle" Text="Configurez PROFstudio : apparence, intelligence artificielle, styles de documents et confidentialité."
+                <TextBlock x:Name="PageTitle" x:Uid="SP_Title" Text="Paramètres" Style="{ThemeResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"/>
+                <TextBlock x:Name="PageSubtitle" x:Uid="SP_Subtitle" Text="Configurez PROFstudio : apparence, intelligence artificielle, styles de documents et confidentialité."
                            Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
@@ -117,14 +124,14 @@
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelGeneral" Spacing="12" Visibility="Visible">
 
-                    <TextBlock Text="Compte &amp; Accès Enseignant" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Name="AccountHeader" x:Uid="SP_AccountHeader" Text="Compte &amp; Accès Enseignant" Style="{StaticResource SectionHeaderStyle}"/>
 
                     <!-- Carte Compte Déconnecté -->
-                    <controls:SettingsCard Header="Mon compte enseignant PROFstudio"
+                    <controls:SettingsCard x:Name="AccountCard" x:Uid="SP_AccountCard" Header="Mon compte enseignant PROFstudio"
                                            Description="Connectez-vous avec votre compte enseignant pour activer les modèles IA Cloud et synchroniser vos fiches."
                                            Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE77B;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/></controls:SettingsCard.HeaderIcon>
-                        <Button Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
+                        <Button x:Name="AccountConnectBtn" x:Uid="SP_AccountConnectBtn" Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
                                 Style="{ThemeResource AccentButtonStyle}"/>
                     </controls:SettingsCard>
 
@@ -152,31 +159,32 @@
                                 </StackPanel>
                             </Border>
 
-                            <Button Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
-                            <Button ToolTipService.ToolTip="Se déconnecter" Command="{x:Bind ViewModel.SignOutAccountCommand}" Background="Transparent" BorderBrush="Transparent" Padding="8,6">
-                                <FontIcon Glyph="&#xE749;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <Button x:Name="AccountProfileBtn" x:Uid="SP_AccountProfileBtn" Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
+                            <Button ToolTipService.ToolTip="Se déconnecter" Command="{x:Bind ViewModel.SignOutAccountCommand}" Background="Transparent" BorderBrush="Transparent" Padding="8,6" AutomationProperties.Name="Se déconnecter">
+                                <FontIcon Glyph="&#xE8AC;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             </Button>
                         </StackPanel>
                     </controls:SettingsCard>
 
-                    <TextBlock Text="Profil de l'enseignant·e" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Name="ProfileHeader" x:Uid="SP_ProfileHeader" Text="Profil de l'enseignant·e" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <controls:SettingsCard Header="Nom / Identité" Description="Affiché dans l'en-tête de l'application et sur vos fiches.">
+                    <controls:SettingsCard x:Name="TeacherNameCard" x:Uid="SP_TeacherName" Header="Nom / Identité" Description="Affiché dans l'en-tête de l'application et sur vos fiches.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE77B;"/></controls:SettingsCard.HeaderIcon>
-                        <TextBox MinWidth="260" Text="{x:Bind ViewModel.TeacherName, Mode=TwoWay}" PlaceholderText="ex. M. Dupont / Mme Martin"/>
+                        <TextBox x:Name="TeacherNameBox" x:Uid="SP_TeacherNameBox" MinWidth="260" Text="{x:Bind ViewModel.TeacherName, Mode=TwoWay}" PlaceholderText="ex. M. Dupont / Mme Martin"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="École / Établissement" Description="Nom de l'établissement imprimé sur les documents générés.">
+                    <controls:SettingsCard x:Name="SchoolNameCard" x:Uid="SP_SchoolName" Header="École / Établissement" Description="Nom de l'établissement imprimé sur les documents générés.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE80F;"/></controls:SettingsCard.HeaderIcon>
-                        <TextBox MinWidth="260" Text="{x:Bind ViewModel.SchoolName, Mode=TwoWay}" PlaceholderText="ex. École Louise-Michel"/>
+                        <TextBox x:Name="SchoolNameBox" x:Uid="SP_SchoolNameBox" MinWidth="260" Text="{x:Bind ViewModel.SchoolName, Mode=TwoWay}" PlaceholderText="ex. École Louise-Michel"/>
                     </controls:SettingsCard>
 
-                    <TextBlock Text="Personnalisation de l'interface" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Name="UiHeader" x:Uid="SP_UiHeader" Text="Personnalisation de l'interface" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <controls:SettingsCard Header="Thème de l'application"
+                    <controls:SettingsCard x:Name="AppThemeCard" x:Uid="SP_AppTheme" Header="Thème de l'application"
                                            Description="Appliqué immédiatement à toute l'interface PROFstudio.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE771;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
+                                  AutomationProperties.Name="Thème de l'application"
                                   ItemsSource="{x:Bind ViewModel.ThemeOptions, Mode=OneWay}"
                                   SelectedItem="{x:Bind ViewModel.SelectedThemeOption, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
@@ -190,10 +198,11 @@
                         </ComboBox>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Couleur d'accentuation"
+                    <controls:SettingsCard x:Name="AccentColorCard" x:Uid="SP_AccentColor" Header="Couleur d'accentuation"
                                            Description="Teinte de marque PROFstudio — appliquée immédiatement à toute l'interface.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
+                                  AutomationProperties.Name="Couleur d'accentuation"
                                   ItemsSource="{x:Bind ViewModel.AccentOptions, Mode=OneWay}"
                                   SelectedItem="{x:Bind ViewModel.SelectedAccent, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
@@ -207,10 +216,11 @@
                         </ComboBox>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Langue de l'interface"
+                    <controls:SettingsCard x:Name="LanguageCard" x:Uid="SP_Language" Header="Langue de l'interface"
                                            Description="Sélectionnez la langue de l'application (Français, English, العربية).">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE774;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="260"
+                                  AutomationProperties.Name="Langue de l'interface"
                                   ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneWay}"
                                   SelectedItem="{x:Bind ViewModel.SelectedLanguageOption, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
@@ -224,17 +234,9 @@
                         </ComboBox>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Affichage du texte en direct (Streaming)"
-                                           Description="Affiche le document au fur et à mesure de sa rédaction par l'IA.">
-                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsCard.HeaderIcon>
-                        <ToggleSwitch IsOn="{x:Bind ViewModel.EnableStreaming, Mode=TwoWay}"
-                                      OnContent="Activé" OffContent="Désactivé"
-                                      AutomationProperties.Name="Affichage du texte en direct"/>
-                    </controls:SettingsCard>
+                    <TextBlock x:Name="PedagogicalHeader" x:Uid="SP_PedagogicalHeader" Text="Préférences pédagogiques" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <TextBlock Text="Préférences pédagogiques" Style="{StaticResource SectionHeaderStyle}"/>
-
-                    <controls:SettingsCard Header="Niveau scolaire par défaut"
+                    <controls:SettingsCard x:Name="DefaultLevelCard" x:Uid="SP_DefaultLevel" Header="Niveau scolaire par défaut"
                                            Description="Présélectionné automatiquement à chaque nouvelle fiche.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7BE;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="180" SelectedItem="{x:Bind ViewModel.DefaultClassLevel, Mode=TwoWay}">
@@ -244,7 +246,7 @@
                         </ComboBox>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Matière par défaut"
+                    <controls:SettingsCard x:Name="DefaultSubjectCard" x:Uid="SP_DefaultSubject" Header="Matière par défaut"
                                            Description="Champ libre — choisissez dans la liste ou saisissez votre matière.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE70F;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="240" IsEditable="True" Text="{x:Bind ViewModel.DefaultSubject, Mode=TwoWay}">
@@ -259,16 +261,9 @@
                         </ComboBox>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Dossier d'exportation par défaut"
-                                           Description="{x:Bind ViewModel.ExportsDir, Mode=OneWay}">
-                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE8B7;"/></controls:SettingsCard.HeaderIcon>
-                        <Button Content="Gérer les dossiers…" Click="ManageFolders_Click"
-                                ToolTipService.ToolTip="Ouvre l'onglet Dossiers &amp; Emplacements"/>
-                    </controls:SettingsCard>
+                    <TextBlock x:Name="StartupHeader" x:Uid="SP_StartupHeader" Text="Démarrage de Windows" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <TextBlock Text="Démarrage de Windows" Style="{StaticResource SectionHeaderStyle}"/>
-
-                    <controls:SettingsCard Header="Lancer PROFstudio au démarrage de Windows"
+                    <controls:SettingsCard x:Name="LaunchAtStartupCard" x:Uid="SP_LaunchAtStartup" Header="Lancer PROFstudio au démarrage de Windows"
                                            Description="{x:Bind ViewModel.StartupStatusText, Mode=OneWay}">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch x:Name="StartupToggle" Toggled="StartupToggle_Toggled"
@@ -276,12 +271,12 @@
                                       AutomationProperties.Name="Lancer PROFstudio au démarrage"/>
                     </controls:SettingsCard>
 
-                    <TextBlock Text="À propos de l'application" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Name="AboutHeader" x:Uid="SP_AboutHeader" Text="À propos de l'application" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <controls:SettingsCard Header="À propos de PROFstudio"
+                    <controls:SettingsCard x:Name="AboutCard" x:Uid="SP_AboutCard" Header="À propos de PROFstudio"
                                            Description="Version 1.4 — Conçu pour les enseignants. Génération pédagogique locale et sécurisée.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE946;"/></controls:SettingsCard.HeaderIcon>
-                        <Button Content="Afficher les informations…" Command="{x:Bind ViewModel.ShowAboutCommand}"
+                        <Button x:Name="AboutBtn" x:Uid="SP_AboutBtn" Content="Afficher les informations…" Command="{x:Bind ViewModel.ShowAboutCommand}"
                                 ToolTipService.ToolTip="Informations sur l'application et mentions légales"/>
                     </controls:SettingsCard>
                 </StackPanel>
@@ -292,26 +287,35 @@
                 <StackPanel x:Name="PanelAi" Spacing="12" Visibility="Collapsed">
 
                     <!-- Mode de configuration IA -->
-                    <controls:SettingsCard Header="Mode de configuration IA"
+                    <controls:SettingsCard x:Uid="SP_AiConfigMode" Header="Mode de configuration IA"
                                            Description="Basculer entre le mode zéro-configuration inclus et la gestion avancée des modèles et clés.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE71D;"/></controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch IsOn="{x:Bind ViewModel.EnableExpertMode, Mode=TwoWay}"
                                       OnContent="Mode Expert (Avancé)" OffContent="Mode Clé en main (Recommandé)"/>
                     </controls:SettingsCard>
 
+                    <!-- Affichage du texte en direct (Streaming) -->
+                    <controls:SettingsCard x:Name="StreamingCard" x:Uid="SP_Streaming" Header="Affichage du texte en direct (Streaming)"
+                                           Description="Affiche le document au fur et à mesure de sa rédaction par l'IA.">
+                        <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch IsOn="{x:Bind ViewModel.EnableStreaming, Mode=TwoWay}"
+                                      OnContent="Activé" OffContent="Désactivé"
+                                      AutomationProperties.Name="Affichage du texte en direct"/>
+                    </controls:SettingsCard>
+
                     <!-- ───── Vue Standard (Zéro configuration) ───── -->
                     <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.EnableExpertMode, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
                         <!-- Déconnecté -->
-                        <controls:SettingsCard Header="Service Cloud PROFstudio"
+                        <controls:SettingsCard x:Uid="SP_CloudService" Header="Service Cloud PROFstudio"
                                                Description="Génération pédagogique haute performance incluse. Connectez-vous avec votre compte enseignant pour activer le cloud."
                                                Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource InverseBoolToVisibility}}">
                             <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xEB44;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/></controls:SettingsCard.HeaderIcon>
-                            <Button Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
+                            <Button x:Uid="SP_AccountConnectBtn" Content="Connexion / Créer un compte…" Click="OpenAccountDialog_Click"
                                     Style="{ThemeResource AccentButtonStyle}"/>
                         </controls:SettingsCard>
 
                         <!-- Connecté -->
-                        <controls:SettingsCard Header="Service Cloud PROFstudio (Actif)"
+                        <controls:SettingsCard x:Uid="SP_CloudActiveHeader" Header="Service Cloud PROFstudio (Actif)"
                                                Description="{x:Bind ViewModel.AccountDescription, Mode=OneWay}"
                                                Visibility="{x:Bind ViewModel.IsAccountConnected, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                             <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xEB44;" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/></controls:SettingsCard.HeaderIcon>
@@ -322,12 +326,12 @@
                                         <TextBlock Text="{x:Bind ViewModel.AccountQuotaText, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#107C10"/>
                                     </StackPanel>
                                 </Border>
-                                <Button Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
+                                <Button x:Uid="SP_AccountProfileBtn" Content="Mon profil &amp; Quota…" Click="OpenAccountDialog_Click" Style="{ThemeResource AccentButtonStyle}"/>
                             </StackPanel>
                         </controls:SettingsCard>
 
                         <InfoBar Severity="Success" IsOpen="True" IsClosable="False"
-                                 Title="Prêt pour vos cours"
+                                 x:Uid="SP_ReadyCard" Title="Prêt pour vos cours"
                                  Message="Vos documents sont rédigés et mis en page instantanément via le cloud PROFstudio. Activez le 'Mode Expert' ci-dessus pour configurer manuellement vos propres clés ou modèles."/>
                     </StackPanel>
 
@@ -335,13 +339,14 @@
                     <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.EnableExpertMode, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
 
                     <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
-                             Title="Routage intelligent par tâche"
+                             x:Uid="SP_TaskRouting" Title="Routage intelligent par tâche"
                              Message="Chaque tâche de PROFstudio peut utiliser un fournisseur et un modèle différents. Vos clés sont protégées par le Coffre d'identification Windows — jamais dans les fichiers de configuration."/>
 
-                    <controls:SettingsCard Header="Fournisseur IA principal"
+                    <controls:SettingsCard x:Uid="SP_MainProvider" Header="Fournisseur IA principal"
                                            Description="Utilisé par défaut pour toute nouvelle tâche ou nouveau modèle.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="300"
+                                  AutomationProperties.Name="Fournisseur IA principal"
                                   ItemsSource="{x:Bind ViewModel.ProviderOptions, Mode=OneWay}"
                                   SelectedItem="{x:Bind ViewModel.SelectedGlobalProvider, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
@@ -356,7 +361,7 @@
                     </controls:SettingsCard>
 
                     <!-- ───── Clés d'API ───── -->
-                    <controls:SettingsExpander Header="Clés d'API — sécurisées par Windows"
+                    <controls:SettingsExpander x:Uid="SP_ApiKeysHeader" Header="Clés d'API — sécurisées par Windows"
                                                Description="Vos clés sont chiffrées et conservées dans le Coffre d'identification Windows."
                                                IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8D7;"/></controls:SettingsExpander.HeaderIcon>
@@ -377,15 +382,15 @@
                                         <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock x:Uid="SP_VaultSecured" Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsGeminiKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_KeyConfigured" Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <PasswordBox x:Name="GeminiPasswordBox" PlaceholderText="Collez votre clé d'API Google AI Studio…"
+                                    <PasswordBox x:Name="GeminiPasswordBox" x:Uid="SP_GeminiPlaceholder" PlaceholderText="Collez votre clé d'API Google AI Studio…"
                                                  PasswordRevealMode="Peek" PasswordChanged="GeminiPasswordBox_PasswordChanged"/>
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -393,9 +398,9 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <HyperlinkButton Content="Obtenir une clé ↗" NavigateUri="https://aistudio.google.com/app/apikey" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="aistudio"/>
-                                        <Button Grid.Column="2" Content="Effacer" Tag="aistudio" Click="ClearApiKey_Click" ToolTipService.ToolTip="Supprime la clé du coffre Windows"/>
+                                        <HyperlinkButton x:Uid="SP_GetKeyBtn" Content="Obtenir une clé ↗" NavigateUri="https://aistudio.google.com/app/apikey" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" x:Uid="SP_TestBtn" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="aistudio"/>
+                                        <Button Grid.Column="2" x:Uid="SP_ClearBtn" Content="Effacer" Tag="aistudio" Click="ClearApiKey_Click" ToolTipService.ToolTip="Supprime la clé du coffre Windows"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.GeminiState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.GeminiState.StatusText, Mode=OneWay}"
@@ -420,15 +425,15 @@
                                         <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock x:Uid="SP_VaultSecured" Text="Securisé sur votre appareil." FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsOpenAiKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_KeyConfigured" Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <PasswordBox x:Name="OpenAiPasswordBox" PlaceholderText="sk-…"
+                                    <PasswordBox x:Name="OpenAiPasswordBox" x:Uid="SP_OpenAiPlaceholder" PlaceholderText="sk-…"
                                                  PasswordRevealMode="Peek" PasswordChanged="OpenAiPasswordBox_PasswordChanged"/>
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -436,9 +441,9 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <HyperlinkButton Content="Obtenir une clé ↗" NavigateUri="https://platform.openai.com/api-keys" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="openai"/>
-                                        <Button Grid.Column="2" Content="Effacer" Tag="openai" Click="ClearApiKey_Click"/>
+                                        <HyperlinkButton x:Uid="SP_GetKeyBtn" Content="Obtenir une clé ↗" NavigateUri="https://platform.openai.com/api-keys" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" x:Uid="SP_TestBtn" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="openai"/>
+                                        <Button Grid.Column="2" x:Uid="SP_ClearBtn" Content="Effacer" Tag="openai" Click="ClearApiKey_Click"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.OpenAiState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.OpenAiState.StatusText, Mode=OneWay}"
@@ -464,15 +469,15 @@
                                         <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
-                                                <TextBlock Text="Coffre d'identification Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock x:Uid="SP_VaultSecured" Text="Securisé sur votre appareil." FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsAnthropicKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_KeyConfigured" Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <PasswordBox x:Name="AnthropicPasswordBox" PlaceholderText="sk-ant-…"
+                                    <PasswordBox x:Name="AnthropicPasswordBox" x:Uid="SP_AnthropicPlaceholder" PlaceholderText="sk-ant-…"
                                                  PasswordRevealMode="Peek" PasswordChanged="AnthropicPasswordBox_PasswordChanged"/>
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -480,9 +485,9 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <HyperlinkButton Content="Obtenir une clé ↗" NavigateUri="https://console.anthropic.com/settings/keys" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="anthropic"/>
-                                        <Button Grid.Column="2" Content="Effacer" Tag="anthropic" Click="ClearApiKey_Click"/>
+                                        <HyperlinkButton x:Uid="SP_GetKeyBtn" Content="Obtenir une clé ↗" NavigateUri="https://console.anthropic.com/settings/keys" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" x:Uid="SP_TestBtn" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="anthropic"/>
+                                        <Button Grid.Column="2" x:Uid="SP_ClearBtn" Content="Effacer" Tag="anthropic" Click="ClearApiKey_Click"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.AnthropicState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.AnthropicState.StatusText, Mode=OneWay}"
@@ -503,21 +508,21 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="🦙" FontSize="18" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="Serveur local (Ollama, LM Studio…)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" x:Uid="SP_LocalServer" Text="Serveur local (Ollama, LM Studio…)" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
-                                            <TextBlock Text="Aucune donnée ne quitte le poste" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_LocalServerZeroData" Text="Aucune donnée ne quitte le poste" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <TextBox Header="Adresse du serveur (compatible OpenAI)"
+                                    <TextBox x:Uid="SP_LocalServerUrl" Header="Adresse du serveur (compatible OpenAI)"
                                              Text="{x:Bind ViewModel.ProxyBaseUrl, Mode=TwoWay}"
                                              PlaceholderText="http://localhost:11434/v1"/>
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Header="Modèle utilisé (ex : mistral)"
+                                        <TextBox Grid.Column="0" x:Uid="SP_LocalServerModel" Header="Modèle utilisé (ex : mistral)"
                                                  Text="{x:Bind ViewModel.CustomEndpointModel, Mode=TwoWay}"/>
-                                        <PasswordBox Grid.Column="1" x:Name="ProxyPasswordBox" Header="Clé d'API (optionnelle)"
+                                        <PasswordBox Grid.Column="1" x:Name="ProxyPasswordBox" x:Uid="SP_LocalServerKey" Header="Clé d'API (optionnelle)"
                                                      PasswordRevealMode="Peek" PasswordChanged="ProxyPasswordBox_PasswordChanged"/>
                                     </Grid>
                                     <Grid ColumnSpacing="10">
@@ -525,9 +530,9 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Button Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="proxy"/>
-                                        <Button Grid.Column="1" Content="🔍 Charger les modèles disponibles" Command="{x:Bind ViewModel.ScanProxyModelsCommand}"/>
-                                        <Button Grid.Column="2" Content="Effacer la clé" Tag="proxy" Click="ClearApiKey_Click"/>
+                                        <Button Content="Tester la connexion" x:Uid="SP_TestBtn" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="proxy"/>
+                                        <Button Grid.Column="1" x:Uid="SP_LocalServerLoadModels" Content="🔍 Charger les modèles disponibles" Command="{x:Bind ViewModel.ScanProxyModelsCommand}"/>
+                                        <Button Grid.Column="2" x:Uid="SP_ClearBtn" Content="Effacer la clé" Tag="proxy" Click="ClearApiKey_Click"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.ProxyState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.ProxyState.StatusText, Mode=OneWay}"
@@ -547,21 +552,21 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="☁️" FontSize="18" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="Google Cloud Vertex AI (entreprise)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" x:Uid="SP_VertexHeader" Text="Google Cloud Vertex AI (entreprise)" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </Grid>
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Header="Identifiant du projet Google Cloud" Text="{x:Bind ViewModel.VertexProject, Mode=TwoWay}"/>
-                                        <TextBox Grid.Column="1" Header="Région" Text="{x:Bind ViewModel.VertexRegion, Mode=TwoWay}"/>
+                                        <TextBox Grid.Column="0" x:Uid="SP_VertexProject" Header="Identifiant du projet Google Cloud" Text="{x:Bind ViewModel.VertexProject, Mode=TwoWay}"/>
+                                        <TextBox Grid.Column="1" x:Uid="SP_VertexRegion" Header="Région" Text="{x:Bind ViewModel.VertexRegion, Mode=TwoWay}"/>
                                     </Grid>
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Button Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="vertex"/>
+                                        <Button Content="Tester la connexion" x:Uid="SP_TestBtn" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="vertex"/>
                                         <ProgressRing Grid.Column="1" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.VertexState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.VertexState.StatusText, Mode=OneWay}"
@@ -582,19 +587,19 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="▲" FontSize="18" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="Vercel AI Gateway — un point d'accès multi-modèles" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" x:Uid="SP_VercelHeader" Text="Vercel AI Gateway — un point d'accès multi-modèles" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         <Border Grid.Column="2" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
-                                                <TextBlock Text="Coffre Windows" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock x:Uid="SP_VaultSecured" Text="Coffre" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Grid.Column="3" Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}"
                                                 Visibility="{x:Bind ViewModel.IsVercelKeyConfigured, Mode=OneWay}">
-                                            <TextBlock Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_KeyConfigured" Text="● Clé configurée" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                         </Border>
                                     </Grid>
-                                    <PasswordBox x:Name="VercelPasswordBox" PlaceholderText="Clé Vercel AI Gateway…"
+                                    <PasswordBox x:Name="VercelPasswordBox" x:Uid="SP_VercelPlaceholder" PlaceholderText="Clé Vercel AI Gateway…"
                                                  PasswordRevealMode="Peek" PasswordChanged="VercelPasswordBox_PasswordChanged"/>
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -602,9 +607,9 @@
                                             <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <HyperlinkButton Content="Obtenir une clé ↗" NavigateUri="https://vercel.com/ai-gateway" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="vercel"/>
-                                        <Button Grid.Column="2" Content="Effacer" Tag="vercel" Click="ClearApiKey_Click"/>
+                                        <HyperlinkButton x:Uid="SP_GetKeyBtn" Content="Obtenir une clé ↗" NavigateUri="https://vercel.com/ai-gateway" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" x:Uid="SP_TestBtn" Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}" CommandParameter="vercel"/>
+                                        <Button Grid.Column="2" x:Uid="SP_ClearBtn" Content="Effacer" Tag="vercel" Click="ClearApiKey_Click"/>
                                         <ProgressRing Grid.Column="3" Width="16" Height="16" HorizontalAlignment="Left"
                                                       IsActive="{x:Bind ViewModel.VercelState.IsTesting, Mode=OneWay}"/>
                                         <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.VercelState.StatusText, Mode=OneWay}"
@@ -614,14 +619,14 @@
                                 </StackPanel>
                             </Border>
 
-                            <Button Content="⚡ Tester tous les fournisseurs"
+                            <Button x:Uid="SP_TestAllProviders" Content="⚡ Tester tous les fournisseurs"
                                     Command="{x:Bind ViewModel.TestAllConnectionsCommand}"
                                     HorizontalAlignment="Left"/>
                         </StackPanel>
                     </controls:SettingsExpander>
 
                     <!-- ───── Matrice de routage 7 tâches (Avancé) ───── -->
-                    <controls:SettingsExpander Header="Matrice de routage détaillée (Mode avancé)"
+                    <controls:SettingsExpander x:Uid="SP_RoutingMatrix" Header="Matrice de routage détaillée (Mode avancé)"
                                                Description="Personnalisez le modèle utilisé pour chaque tâche spécifique (rédaction, quiz, assistant)."
                                                IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsExpander.HeaderIcon>
@@ -630,9 +635,9 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="2.2*"/><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="1.7*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="TÂCHE" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock Grid.Column="1" Text="FOURNISSEUR" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock Grid.Column="2" Text="MODÈLE (modifiable à la main)" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Uid="SP_MatrixColTask" Text="TÂCHE" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" x:Uid="SP_MatrixColProvider" Text="FOURNISSEUR" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Column="2" x:Uid="SP_MatrixColModel" Text="MODÈLE (modifiable à la main)" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             </Grid>
                             <ListView ItemsSource="{x:Bind ViewModel.RoutingMatrix, Mode=OneWay}"
                                       SelectionMode="None">
@@ -680,7 +685,7 @@
                     </controls:SettingsExpander>
 
                     <!-- ───── Créativité ───── -->
-                    <controls:SettingsExpander Header="Créativité des réponses"
+                    <controls:SettingsExpander x:Uid="SP_Creativity" Header="Créativité des réponses"
                                                Description="Réglage fin du niveau de créativité : 0 = réponse fidèle, 2 = réponse très libre.">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE9CA;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
@@ -701,7 +706,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="🎯 Classification d'intention" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Uid="SP_TaskIntent" Text="🎯 Classification d'intention" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.IntentTemperatureLabel, Mode=OneWay}"
                                                FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 </Grid>
@@ -713,7 +718,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="💬 Assistant conversationnel" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Uid="SP_TaskAssistant" Text="💬 Assistant conversationnel" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AssistantTemperatureLabel, Mode=OneWay}"
                                                FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 </Grid>
@@ -730,9 +735,9 @@
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelFolders" Spacing="12" Visibility="Collapsed">
 
-                    <TextBlock Text="Emplacements de stockage" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Uid="SP_StorageLocations" Text="Emplacements de stockage" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <controls:SettingsExpander Header="Guides pédagogiques (PDF)"
+                    <controls:SettingsExpander x:Uid="SP_GuidesFolder" Header="Guides pédagogiques (PDF)"
                                                Description="Sources analysées pour la table des matières et le contexte pédagogique."
                                                IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8A5;"/></controls:SettingsExpander.HeaderIcon>
@@ -743,8 +748,8 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{x:Bind ViewModel.GuidesDir, Mode=OneWay}" IsReadOnly="True"
                                          PlaceholderText="Aucun dossier sélectionné"/>
-                                <Button Grid.Column="1" Content="Parcourir…" Command="{x:Bind ViewModel.BrowseGuidesDirCommand}"/>
-                                <Button Grid.Column="2" Content="Ouvrir" Command="{x:Bind ViewModel.OpenGuidesFolderCommand}">
+                                <Button Grid.Column="1" x:Uid="SP_BrowseBtn" Content="Parcourir…" Command="{x:Bind ViewModel.BrowseGuidesDirCommand}"/>
+                                <Button Grid.Column="2" x:Uid="SP_OpenBtn" Content="Ouvrir" Command="{x:Bind ViewModel.OpenGuidesFolderCommand}">
 									<Button.KeyboardAccelerators>
 										<KeyboardAccelerator Key="O" Modifiers="Control,Shift"/>
 									</Button.KeyboardAccelerators>                                </Button>
@@ -754,14 +759,14 @@
                                 <Border Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource StatusPositiveBgBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="{ThemeResource StatusPositiveFgBrush}"/>
-                                        <TextBlock Text="Accès permanent accordé" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
+                                        <TextBlock x:Uid="SP_PermanentAccess" Text="Accès permanent accordé" FontSize="12" Foreground="{ThemeResource StatusPositiveFgBrush}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </StackPanel>
                     </controls:SettingsExpander>
 
-                    <controls:SettingsExpander Header="Dossier des exportations (PDF, DOCX, RTF)"
+                    <controls:SettingsExpander x:Uid="SP_ExportsFolder" Header="Dossier des exportations (PDF, DOCX, RTF)"
                                                Description="Destination par défaut de toutes vos fiches exportées.">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8B7;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
@@ -777,31 +782,31 @@
                         </StackPanel>
                     </controls:SettingsExpander>
 
-                    <TextBlock Text="Cache &amp; maintenance" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Uid="SP_CacheMaintenance" Text="Cache &amp; maintenance" Style="{StaticResource SectionHeaderStyle}"/>
 
-                    <controls:SettingsCard Header="Cache de la table des matières"
+                    <controls:SettingsCard x:Uid="SP_TocCache" Header="Cache de la table des matières"
                                            Description="{x:Bind ViewModel.TocCacheSizeText, Mode=OneWay}">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9F3;"/></controls:SettingsCard.HeaderIcon>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <ProgressRing Width="18" Height="18" IsActive="{x:Bind ViewModel.IsCacheBusy, Mode=OneWay}"/>
                             <Button Content="Ouvrir" Command="{x:Bind ViewModel.OpenTocCacheFolderCommand}"/>
-                            <Button Content="Vider le cache" Click="ClearCache_Click"/>
+                            <Button x:Uid="SP_ClearCacheBtn" Content="Vider le cache" Click="ClearCache_Click"/>
                         </StackPanel>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Journaux de l'application"
+                    <controls:SettingsCard x:Uid="SP_AppLogs" Header="Journaux de l'application"
                                            Description="Consultez les journaux locaux en cas de comportement inattendu.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsCard.HeaderIcon>
-                        <Button Content="Ouvrir le dossier des journaux" Command="{x:Bind ViewModel.OpenLogsFolderCommand}"/>
+                        <Button x:Uid="SP_OpenLogsBtn" Content="Ouvrir le dossier des journaux" Command="{x:Bind ViewModel.OpenLogsFolderCommand}"/>
                     </controls:SettingsCard>
                 </StackPanel>
 
                 <!-- ══════════════════════════════════════════════ -->
-                <!-- ONGLET 5 · CONFIDENTIALITÉ &amp; RGPD            -->
+                <!-- ONGLET 5 · CONFIDENTIALITÉ                    -->
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelPrivacy" Spacing="12" Visibility="Collapsed">
 
-                    <!-- Carte de flux RGPD -->
+                    <!-- Carte de flux de données -->
                     <Border Padding="18" CornerRadius="10" BorderThickness="1"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             Background="{ThemeResource LayerFillColorDefaultBrush}">
@@ -809,8 +814,8 @@
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <FontIcon Glyph="&#xE83D;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Conformité RGPD — le parcours de vos données" FontWeight="SemiBold" FontSize="15"/>
-                                    <TextBlock Text="Transparence totale sur ce qui transite, où, et comment c'est protégé."
+                                    <TextBlock x:Uid="SP_GdprHeader" Text="Confidentialité — le parcours de vos données" FontWeight="SemiBold" FontSize="15"/>
+                                    <TextBlock x:Uid="SP_GdprSubtitle" Text="Transparence totale sur ce qui transite, où, et comment c'est protégé."
                                                Style="{StaticResource CaptionNoteStyle}"/>
                                 </StackPanel>
                             </StackPanel>
@@ -819,78 +824,78 @@
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="💬" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Votre demande" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Transmise à l'IA" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="SP_GdprRequest" Text="Votre demande" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Uid="SP_GdprSentToAi" Text="Transmise à l'IA" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="🔒" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="HTTPS chiffré" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Connexion sécurisée" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="SP_GdprHttps" Text="HTTPS chiffré" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Uid="SP_GdprSecureConn" Text="Connexion sécurisée" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="☁️" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Service IA" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Rédaction du cours" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="SP_GdprAiService" Text="Service IA" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Uid="SP_GdprDrafting" Text="Rédaction du cours" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="→" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <Border Width="132" Padding="10" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="📄" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Vos documents" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Uniquement sur ce PC" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="SP_GdprYourDocs" Text="Vos documents" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Uid="SP_GdprLocalOnly" Text="Uniquement sur ce PC" FontSize="12" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
 
                             <StackPanel Spacing="4">
                                 <TextBlock Text="• Aucune donnée n'est vendue, partagée ou utilisée pour entraîner des modèles tiers par PROFstudio." Style="{StaticResource CaptionNoteStyle}"/>
-                                <TextBlock Text="• Vos clés d'API ne quittent jamais le Coffre d'identification Windows." Style="{StaticResource CaptionNoteStyle}"/>
-                                <TextBlock Text="• Recommandation : ne saisissez jamais de données nominatives d'élèves dans les prompts." Style="{StaticResource CaptionNoteStyle}"/>
-                                <TextBlock Text="• Option 100 % hors-ligne disponible via le fournisseur « Proxy local / Ollama »." Style="{StaticResource CaptionNoteStyle}"/>
+                                <TextBlock x:Uid="SP_GdprBullet2" Text="• Vos clés d'API ne quittent jamais votre appareil." Style="{StaticResource CaptionNoteStyle}"/>
+                                <TextBlock x:Uid="SP_GdprBullet3" Text="• Recommandation : ne saisissez jamais de données nominatives d'élèves dans les prompts." Style="{StaticResource CaptionNoteStyle}"/>
+                                <TextBlock x:Uid="SP_GdprBullet4" Text="• Option 100 % hors-ligne disponible via le fournisseur « Proxy local / Ollama »." Style="{StaticResource CaptionNoteStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <controls:SettingsCard Header="Télémétrie anonyme"
+                    <controls:SettingsCard x:Uid="SP_Telemetry" Header="Télémétrie anonyme"
                                            Description="Désactivée par défaut. Si activée : statistiques d'usage agrégées uniquement, sans contenu pédagogique ni identifiant.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9F5;"/></controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch IsOn="{x:Bind ViewModel.TelemetryEnabled, Mode=TwoWay}" OnContent="Autorisée" OffContent="Refusée"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Génération en deux passes (expérimental)"
+                    <controls:SettingsCard x:Uid="SP_TwoPass" Header="Génération en deux passes (expérimental)"
                                            Description="Deux passages de rédaction + une relecture automatique pour une meilleure qualité. Consomme environ deux fois plus de ressources.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE945;"/></controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch IsOn="{x:Bind ViewModel.ExpMultiPassGen, Mode=TwoWay}" OnContent="Activé" OffContent="Désactivé"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Niveau de journalisation (diagnostic)"
+                    <controls:SettingsCard x:Uid="SP_LogLevel" Header="Niveau de journalisation (diagnostic)"
                                            Description="Verbosité des journaux locaux. « Information » recommandé au quotidien.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE9D9;"/></controls:SettingsCard.HeaderIcon>
                         <ComboBox MinWidth="200" SelectedItem="{x:Bind ViewModel.DiagnosticLogLevel, Mode=TwoWay}"
                                   ItemsSource="{x:Bind ViewModel.LogLevels, Mode=OneWay}"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsCard Header="Rétention de l'historique des fiches"
+                    <controls:SettingsCard x:Uid="SP_Retention" Header="Rétention de l'historique des fiches"
                                            Description="Durée de conservation en jours. 0 = conservation illimitée.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE823;"/></controls:SettingsCard.HeaderIcon>
                         <NumberBox Minimum="0" Maximum="365" SpinButtonPlacementMode="Inline" MinWidth="140"
                                    Value="{x:Bind ViewModel.HistoryRetentionDays, Mode=TwoWay}"/>
                     </controls:SettingsCard>
 
-                    <controls:SettingsExpander Header="Diagnostic &amp; maintenance"
+                    <controls:SettingsExpander x:Uid="SP_DiagMaintenance" Header="Diagnostic &amp; maintenance"
                                                Description="Exportez un pack de diagnostic complet pour le support technique.">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE8D7;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
-                            <TextBlock Style="{StaticResource CaptionNoteStyle}"
+                            <TextBlock x:Uid="SP_DiagPackNote" Style="{StaticResource CaptionNoteStyle}"
                                        Text="Le pack (.zip) contient les journaux, la configuration et l'état du routage IA. Les clés d'API et tous les secrets sont systématiquement expurgés avant l'archivage."/>
-                            <Button Content="📦 Exporter le pack de diagnostic (.zip)"
+                            <Button x:Uid="SP_ExportDiagBtn" Content="📦 Exporter le pack de diagnostic (.zip)"
                                     Command="{x:Bind ViewModel.ExportDiagnosticBundleCommand}"
                                     HorizontalAlignment="Left"/>
                         </StackPanel>
@@ -899,10 +904,10 @@
                     <!-- Zone de danger -->
                     <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{ThemeResource StatusCriticalFgBrush}" Background="{ThemeResource StatusCriticalBgBrush}">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="⚠ Zone de danger" FontWeight="SemiBold" Foreground="{ThemeResource StatusCriticalFgBrush}"/>
-                            <TextBlock Text="Rétablit tous les paramètres d'usine (thème, routage IA, styles, prompts). Vos clés d'API du coffre Windows et vos dossiers sont conservés."
+                            <TextBlock x:Uid="SP_DangerZone" Text="⚠ Zone de danger" FontWeight="SemiBold" Foreground="{ThemeResource StatusCriticalFgBrush}"/>
+                            <TextBlock x:Uid="SP_DangerZoneDesc" Text="Rétablit tous les paramètres d'usine (thème, routage IA, styles, prompts). Vos clés d'API et vos dossiers sont conservés."
                                        Style="{StaticResource CaptionNoteStyle}"/>
-                            <Button Content="Réinitialiser tous les paramètres" Click="ResetAll_Click" HorizontalAlignment="Left"
+                            <Button x:Uid="SP_ResetAllBtn" Content="Réinitialiser tous les paramètres" Click="ResetAll_Click" HorizontalAlignment="Left"
                                     Foreground="{ThemeResource StatusCriticalFgBrush}"/>
                         </StackPanel>
                     </Border>
@@ -913,7 +918,7 @@
                 <!-- ══════════════════════════════════════════════ -->
                 <StackPanel x:Name="PanelPrompts" Spacing="12" Visibility="Collapsed">
 
-                    <TextBlock Text="Modèles de prompts personnalisables" Style="{StaticResource SectionHeaderStyle}"/>
+                    <TextBlock x:Uid="SP_PromptsHeader" Text="Modèles de prompts personnalisables" Style="{StaticResource SectionHeaderStyle}"/>
                     <TextBlock Text="Adaptez les instructions envoyées aux modèles IA. Variables disponibles : {Niveau}, {Matiere}, {Sujet}, {Consigne}."
                                Style="{StaticResource CaptionNoteStyle}"/>
 
@@ -946,24 +951,25 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{x:Bind ViewModel.SelectedPromptTemplate.Name, Mode=OneWay}"
                                                FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Content="↺ Réinitialiser ce modèle"
+                                    <Button Grid.Column="1" x:Uid="SP_ResetPromptBtn" Content="↺ Réinitialiser ce modèle"
                                             Command="{x:Bind ViewModel.ResetPromptTemplateCommand}"/>
                                 </Grid>
                                 <TextBox Text="{x:Bind ViewModel.SelectedPromptTemplate.Content, Mode=TwoWay}"
                                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="220"
                                          FontFamily="Cascadia Code, Consolas" FontSize="12"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                <TextBlock Text="Les modifications sont enregistrées avec le bouton « Enregistrer les paramètres » (Ctrl+S)."
+                                <TextBlock x:Uid="SP_PromptSaveNote" Text="Les modifications sont enregistrées avec le bouton « Enregistrer les paramètres » (Ctrl+S)."
                                            Style="{StaticResource CaptionNoteStyle}"/>
                             </StackPanel>
                         </Border>
                     </Grid>
 
-                    <TextBlock Text="Raccourcis clavier" Style="{StaticResource SectionHeaderStyle}"/>
-                    <controls:SettingsCard Header="Éditeur de raccourcis"
-                                           Description="Personnalisez les combinaisons de touches. Appliqués au prochain démarrage de PROFstudio.">
+                    <TextBlock x:Uid="SP_ShortcutsHeader" Text="Raccourcis clavier" Style="{StaticResource SectionHeaderStyle}"/>
+                    <controls:SettingsCard x:Uid="SP_ShortcutEditor" Header="Raccourcis clavier de l'application"
+                                           Description="Combinaisons de touches rapides pour optimiser votre flux de travail. Modifiez les touches ci-dessous puis enregistrez.">
                         <controls:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE765;"/></controls:SettingsCard.HeaderIcon>
-                        <Button Content="↺ Tout rétablir" Command="{x:Bind ViewModel.ResetShortcutsCommand}"/>
+                        <Button x:Uid="SP_ResetShortcutsBtn" Content="↺ Tout rétablir" Command="{x:Bind ViewModel.ResetShortcutsCommand}"
+                                Style="{ThemeResource SubtleButtonStyle}"/>
                     </controls:SettingsCard>
                     <ListView ItemsSource="{x:Bind ViewModel.Shortcuts, Mode=OneWay}" SelectionMode="None">
                         <ListView.ItemContainerStyle>
@@ -973,13 +979,22 @@
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="viewmodels:KeyboardShortcutItem">
-                                <Grid ColumnSpacing="12" Padding="4,2">
+                                <Grid ColumnSpacing="12" Padding="4,4">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{x:Bind Action}" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                    <TextBox Grid.Column="1" Text="{x:Bind Keys, Mode=TwoWay}" FontFamily="Consolas"
-                                             PlaceholderText="ex : Ctrl+Entrée"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <TextBox Text="{x:Bind Keys, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontFamily="Cascadia Code, Consolas" FontSize="12" FontWeight="SemiBold"
+                                                 MinWidth="140" MaxWidth="180" HorizontalContentAlignment="Center"
+                                                 AutomationProperties.Name="{x:Bind Action}"/>
+                                        <Button Style="{ThemeResource SubtleButtonStyle}" Padding="6,4"
+                                                Command="{x:Bind ResetCommand}" ToolTipService.ToolTip="Rétablir la touche par défaut"
+                                                AutomationProperties.Name="Rétablir le raccourci par défaut">
+                                            <FontIcon Glyph="&#xE72C;" FontSize="11"/>
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -993,8 +1008,8 @@
         <!-- ═══════════════════════════════════════════════════════ -->
         <Grid x:Name="PanelStyles" Grid.Row="2" Margin="24,8,24,14" ColumnSpacing="20" Visibility="Collapsed">
             <Grid.ColumnDefinitions>
-                <!-- Colonne gauche : Thèmes & Personnalisation (470px) -->
-                <ColumnDefinition Width="470" MinWidth="380" MaxWidth="540"/>
+                <!-- Colonne gauche : Thèmes & Personnalisation (480px) -->
+                <ColumnDefinition Width="480" MinWidth="400" MaxWidth="560"/>
                 <!-- Colonne droite : Aperçu en direct temps réel (*) -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -1004,47 +1019,134 @@
                 <StackPanel Spacing="14">
 
                     <!-- En-tête de section -->
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="Galerie de thèmes" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
-                        <TextBlock Text="Choisissez une direction artistique complète ou ajustez chaque détail ci-dessous."
-                                   Style="{StaticResource CaptionNoteStyle}"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock x:Uid="SP_ThemeGallery" Text="Galerie de thèmes" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
+                            <TextBlock x:Uid="SP_ThemeGallerySubtitle" Text="Glissez-déposez pour réorganiser, personnalisez les couleurs et créez vos propres styles."
+                                       Style="{StaticResource CaptionNoteStyle}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{ThemeResource SubtleButtonStyle}" Margin="0,0,6,0"
+                                Command="{x:Bind ViewModel.ResetThemesToDefaultCommand}"
+                                ToolTipService.ToolTip="Rétablir les thèmes par défaut d'origine"
+                                AutomationProperties.Name="Rétablir les thèmes d'usine">
+                            <FontIcon Glyph="&#xE72C;" FontSize="13"/>
+                        </Button>
+                        <Button Grid.Column="2" Style="{ThemeResource AccentButtonStyle}"
+                                Command="{x:Bind ViewModel.CreateNewThemeCommand}"
+                                ToolTipService.ToolTip="Créer un nouveau thème sur-mesure"
+                                AutomationProperties.Name="Créer un nouveau thème">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE710;" FontSize="12"/>
+                                <TextBlock Text="Nouveau thème" FontSize="12" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-                    <!-- Galerie de thèmes prédéfinis -->
-                    <GridView ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
+                    <!-- Galerie de thèmes — glisser-déposer interactif -->
+                    <GridView x:Name="ThemeGridView"
+                              ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
                               SelectedItem="{x:Bind ViewModel.SelectedPreset, Mode=TwoWay}"
                               SelectionMode="Single" IsItemClickEnabled="False">
                         <GridView.ItemTemplate>
                             <DataTemplate x:DataType="viewmodels:StylePresetItem">
-                                <Border Width="138" Height="144" CornerRadius="8" BorderThickness="1"
+                                <Border Width="144" Height="184" CornerRadius="8" BorderThickness="1"
+                                        Opacity="{x:Bind VisibleOpacity, Mode=OneWay}"
+                                        CanDrag="True" AllowDrop="True"
+                                        DragStarting="ThemeCard_DragStarting"
+                                        DragOver="ThemeCard_DragOver"
+                                        DragLeave="ThemeCard_DragLeave"
+                                        Drop="ThemeCard_Drop"
+                                        Tapped="ThemeCard_Tapped"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="52"/>
                                             <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         
-                                        <Border Grid.Row="0" CornerRadius="7,7,0,0" Background="{x:Bind PrimaryBrush}">
-                                            <Grid Padding="8,4">
-                                                <TextBlock Text="{x:Bind Icon}" FontSize="18" VerticalAlignment="Top" HorizontalAlignment="Left"/>
-                                                <Ellipse Width="10" Height="10" Fill="{x:Bind AccentBrush}"
-                                                         HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                         Stroke="White" StrokeThickness="1"/>
-                                                <TextBlock Text="{x:Bind Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
-                                                           VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+                                        <!-- En-tête de tuile avec icône, nom et poignée de glissement -->
+                                        <Border Grid.Row="0" CornerRadius="7,7,0,0" Background="{x:Bind PrimaryBrush, Mode=OneWay}">
+                                            <Grid Padding="6,4">
+                                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Top" HorizontalAlignment="Left">
+                                                    <TextBlock Text="{x:Bind Icon, Mode=OneWay}" FontSize="15" VerticalAlignment="Center"/>
+                                                    <Border Visibility="{x:Bind DefaultBadgeVisibility, Mode=OneWay}"
+                                                            Background="#E6FFFFFF" CornerRadius="4" Padding="3,1" VerticalAlignment="Center">
+                                                        <TextBlock Text="★" FontSize="9" FontWeight="Bold" Foreground="#1E3A8A"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                
+                                                <!-- Poignée de glisser-déposer -->
+                                                <FontIcon Glyph="&#xE700;" FontSize="10" Foreground="White" Opacity="0.7"
+                                                          HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"/>
+
+                                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" Foreground="White" FontWeight="SemiBold" FontSize="11.5"
+                                                           VerticalAlignment="Bottom" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis"/>
                                             </Grid>
                                         </Border>
 
-                                        <StackPanel Grid.Row="1" Padding="8,6" Spacing="4">
-                                            <TextBlock Text="{x:Bind Description}" FontSize="11" TextWrapping="Wrap" MaxHeight="48"
+                                        <!-- Description et aperçu de palette -->
+                                        <StackPanel Grid.Row="1" Padding="6,4" Spacing="2">
+                                            <TextBlock Text="{x:Bind Description, Mode=OneWay}" FontSize="10" TextWrapping="Wrap" MaxHeight="36"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,0" VerticalAlignment="Bottom">
-                                                <Ellipse Width="9" Height="9" Fill="{x:Bind PrimaryBrush}"/>
-                                                <Ellipse Width="9" Height="9" Fill="{x:Bind SecondaryBrush}"/>
-                                                <Ellipse Width="9" Height="9" Fill="{x:Bind AccentBrush}"/>
+                                                <Ellipse Width="8" Height="8" Fill="{x:Bind PrimaryBrush, Mode=OneWay}"/>
+                                                <Ellipse Width="8" Height="8" Fill="{x:Bind SecondaryBrush, Mode=OneWay}"/>
+                                                <Ellipse Width="8" Height="8" Fill="{x:Bind AccentBrush, Mode=OneWay}"/>
                                             </StackPanel>
                                         </StackPanel>
+
+                                        <!-- Barre d'outils de la tuile (Déplacer, Par défaut, Masquer, Dupliquer, Supprimer) -->
+                                        <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="0,0,7,7" Padding="2,2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="MoveThemeLeft_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la gauche"
+                                                        AutomationProperties.Name="Déplacer vers la gauche">
+                                                    <FontIcon Glyph="&#xE76B;" FontSize="10"/>
+                                                </Button>
+                                                <Button Grid.Column="1" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="MoveThemeRight_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la droite"
+                                                        AutomationProperties.Name="Déplacer vers la droite">
+                                                    <FontIcon Glyph="&#xE76C;" FontSize="10"/>
+                                                </Button>
+                                                <Button Grid.Column="3" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="SetAsDefaultTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Définir comme style par défaut"
+                                                        AutomationProperties.Name="Définir par défaut">
+                                                    <FontIcon Glyph="&#xE734;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                </Button>
+                                                <Button Grid.Column="4" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="DuplicateTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Dupliquer ce thème"
+                                                        AutomationProperties.Name="Dupliquer le thème">
+                                                    <FontIcon Glyph="&#xE8C8;" FontSize="10"/>
+                                                </Button>
+                                                <Button Grid.Column="5" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="ToggleThemeVisibility_Click" Tag="{Binding}" ToolTipService.ToolTip="Afficher / Masquer"
+                                                        AutomationProperties.Name="Afficher ou masquer la tuile">
+                                                    <FontIcon Glyph="&#xE890;" FontSize="10"/>
+                                                </Button>
+                                                <Button Grid.Column="6" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                        Click="DeleteTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Supprimer ce thème"
+                                                        Visibility="{x:Bind CustomVisibility, Mode=OneWay}"
+                                                        AutomationProperties.Name="Supprimer le thème personnalisé">
+                                                    <FontIcon Glyph="&#xE74D;" FontSize="10" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -1053,18 +1155,49 @@
 
                     <!-- Info Style par défaut -->
                     <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
-                             Title="Style par défaut"
+                             x:Uid="SP_DefaultStyleTitle" Title="Style par défaut pour les futures fiches :"
                              Message="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}"/>
 
-                    <!-- ───── StyleBuilder — Personnalisation avancée ───── -->
-                    <controls:SettingsExpander Header="StyleBuilder — personnalisation"
-                                               Description="Ajustez les couleurs, l'en-tête, la typographie et les marges."
+                    <!-- ───── StyleBuilder — Personnalisation complète ───── -->
+                    <controls:SettingsExpander x:Uid="SP_StyleBuilder" Header="StyleBuilder — Personnalisation du thème"
+                                               Description="Personnalisez couleurs, typographie, en-tête et marges du thème sélectionné."
                                                IsExpanded="True">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
 
-                            <!-- Palette -->
-                            <TextBlock Text="Palette de couleurs" FontWeight="SemiBold" FontSize="13"/>
+                            <!-- Édition du nom et de l'icône (si thème personnalisé) -->
+                            <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.IsSelectedThemeCustom, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Identité du thème personnalisé" FontWeight="SemiBold" FontSize="13"/>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="{x:Bind ViewModel.BuilderThemeIcon, Mode=OneWay}" FontSize="18" Padding="10,6"
+                                            ToolTipService.ToolTip="Changer l'icône du thème">
+                                        <Button.Flyout>
+                                            <Flyout Placement="Bottom">
+                                                <GridView ItemsSource="{x:Bind ViewModel.QuickEmojiIcons, Mode=OneWay}"
+                                                          SelectionMode="None" MaxWidth="220">
+                                                    <GridView.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <Button Content="{x:Bind}" FontSize="16" Padding="6"
+                                                                    Style="{ThemeResource SubtleButtonStyle}"
+                                                                    Click="EmojiButton_Click" Tag="{x:Bind}"/>
+                                                        </DataTemplate>
+                                                    </GridView.ItemTemplate>
+                                                </GridView>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <TextBox Grid.Column="1" Header="Nom du thème"
+                                             Text="{x:Bind ViewModel.BuilderThemeName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="ex. Mon Style CM2"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Palette de 3 couleurs harmoniques -->
+                            <TextBlock x:Uid="SP_ColorPalette" Text="Palette chromatique" FontWeight="SemiBold" FontSize="13"/>
                             
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -1079,7 +1212,7 @@
                                     <Button.Flyout>
                                         <Flyout Placement="Bottom">
                                             <StackPanel Spacing="8">
-                                                <TextBlock Text="Couleur primaire" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock x:Uid="SP_PrimaryColor" Text="Couleur primaire (Titres &amp; Bandeaux)" FontWeight="SemiBold" FontSize="13"/>
                                                 <ColorPicker Color="{x:Bind ViewModel.BuilderPrimaryColor, Mode=TwoWay}"
                                                              IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
                                             </StackPanel>
@@ -1097,7 +1230,7 @@
                                             </Border.Background>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="Primaire" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_PrimaryLabel" Text="Primaire" FontSize="11" FontWeight="SemiBold"/>
                                             <TextBlock Text="{x:Bind ViewModel.BuilderPrimaryHex, Mode=OneWay}" FontSize="10"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
@@ -1110,7 +1243,7 @@
                                     <Button.Flyout>
                                         <Flyout Placement="Bottom">
                                             <StackPanel Spacing="8">
-                                                <TextBlock Text="Couleur secondaire" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock x:Uid="SP_SecondaryColor" Text="Couleur secondaire (Sous-titres &amp; Encadrés)" FontWeight="SemiBold" FontSize="13"/>
                                                 <ColorPicker Color="{x:Bind ViewModel.BuilderSecondaryColor, Mode=TwoWay}"
                                                              IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
                                             </StackPanel>
@@ -1128,7 +1261,7 @@
                                             </Border.Background>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="Secondaire" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_SecondaryLabel" Text="Secondaire" FontSize="11" FontWeight="SemiBold"/>
                                             <TextBlock Text="{x:Bind ViewModel.BuilderSecondaryHex, Mode=OneWay}" FontSize="10"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
@@ -1141,7 +1274,7 @@
                                     <Button.Flyout>
                                         <Flyout Placement="Bottom">
                                             <StackPanel Spacing="8">
-                                                <TextBlock Text="Accentuation" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock x:Uid="SP_AccentColorLabel" Text="Accentuation (Objectifs &amp; Surlignages)" FontWeight="SemiBold" FontSize="13"/>
                                                 <ColorPicker Color="{x:Bind ViewModel.BuilderAccentColor, Mode=TwoWay}"
                                                              IsAlphaEnabled="False" IsHexInputVisible="True" IsColorPreviewVisible="True"/>
                                             </StackPanel>
@@ -1159,7 +1292,7 @@
                                             </Border.Background>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="Accent" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock x:Uid="SP_AccentLabel" Text="Accent" FontSize="11" FontWeight="SemiBold"/>
                                             <TextBlock Text="{x:Bind ViewModel.BuilderAccentHex, Mode=OneWay}" FontSize="10"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
@@ -1167,65 +1300,65 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Palettes rapides prédéfinies -->
+                            <!-- Palettes rapides harmonieuses -->
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Suggestions de palettes :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Uid="SP_PaletteSuggestions" Text="Harmonies chromatiques suggérées :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="ocean" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#1E3A8A"/>
-                                                <Ellipse Width="10" Height="10" Fill="#2563EB"/>
-                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <Ellipse Width="10" Height="10" Fill="#1E3A8A"/><Ellipse Width="10" Height="10" Fill="#2563EB"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
                                                 <TextBlock Text="Océan" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="forest" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#064E3B"/>
-                                                <Ellipse Width="10" Height="10" Fill="#059669"/>
-                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <Ellipse Width="10" Height="10" Fill="#064E3B"/><Ellipse Width="10" Height="10" Fill="#059669"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
                                                 <TextBlock Text="Émeraude" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="purple" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#311042"/>
-                                                <Ellipse Width="10" Height="10" Fill="#6D28D9"/>
-                                                <Ellipse Width="10" Height="10" Fill="#F59E0B"/>
+                                                <Ellipse Width="10" Height="10" Fill="#311042"/><Ellipse Width="10" Height="10" Fill="#6D28D9"/><Ellipse Width="10" Height="10" Fill="#F59E0B"/>
                                                 <TextBlock Text="Pourpre" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="terracotta" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#7C2D12"/>
-                                                <Ellipse Width="10" Height="10" Fill="#C2410C"/>
-                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <Ellipse Width="10" Height="10" Fill="#7C2D12"/><Ellipse Width="10" Height="10" Fill="#C2410C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
                                                 <TextBlock Text="Terracotta" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="slate" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#0F172A"/>
-                                                <Ellipse Width="10" Height="10" Fill="#334155"/>
-                                                <Ellipse Width="10" Height="10" Fill="#0284C7"/>
+                                                <Ellipse Width="10" Height="10" Fill="#0F172A"/><Ellipse Width="10" Height="10" Fill="#334155"/><Ellipse Width="10" Height="10" Fill="#0284C7"/>
                                                 <TextBlock Text="Ardoise" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Padding="8,4" Click="PaletteChip_Click" Tag="ruby" Style="{ThemeResource SubtleButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#881337"/>
-                                                <Ellipse Width="10" Height="10" Fill="#BE123C"/>
-                                                <Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <Ellipse Width="10" Height="10" Fill="#881337"/><Ellipse Width="10" Height="10" Fill="#BE123C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
                                                 <TextBlock Text="Rubis" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="pastel" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#1E40AF"/><Ellipse Width="10" Height="10" Fill="#3B82F6"/><Ellipse Width="10" Height="10" Fill="#EC4899"/>
+                                                <TextBlock Text="Pastel" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="mono" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#111827"/><Ellipse Width="10" Height="10" Fill="#374151"/><Ellipse Width="10" Height="10" Fill="#6B7280"/>
+                                                <TextBlock Text="Noir &amp; Blanc" FontSize="11"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
                                 </ScrollViewer>
                             </StackPanel>
 
-                            <!-- En-tête -->
-                            <TextBlock Text="Style de l'en-tête" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <!-- Traitement d'en-tête -->
+                            <TextBlock x:Uid="SP_HeaderStyle" Text="Style de l'en-tête du document" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
                             <ComboBox HorizontalAlignment="Stretch"
                                       ItemsSource="{x:Bind ViewModel.HeaderLayoutOptions, Mode=OneWay}"
                                       SelectedValue="{x:Bind ViewModel.BuilderHeaderLayout, Mode=TwoWay}"
@@ -1243,51 +1376,74 @@
                             </ComboBox>
 
                             <!-- Typographie & Arrondis -->
-                            <TextBlock Text="Typographie &amp; Encadrés" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <TextBlock x:Uid="SP_TypographyBorders" Text="Typographie &amp; Encadrés" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="2*"/>
                                     <ColumnDefinition Width="1.2*"/>
                                 </Grid.ColumnDefinitions>
-                                <ComboBox Grid.Column="0" Header="Police du document" HorizontalAlignment="Stretch"
+                                <ComboBox Grid.Column="0" x:Uid="SP_DocFont" Header="Police du document" HorizontalAlignment="Stretch"
                                           ItemsSource="{x:Bind ViewModel.FontOptions, Mode=OneWay}"
                                           SelectedItem="{x:Bind ViewModel.BuilderFontFamily, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="1" Header="Arrondi (px)" Minimum="0" Maximum="24"
+                                <NumberBox Grid.Column="1" x:Uid="SP_CornerRadius" Header="Arrondi (px)" Minimum="0" Maximum="24"
                                            SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderCornerRadius, Mode=TwoWay}"/>
                             </Grid>
 
-                            <!-- Marges -->
-                            <TextBlock Text="Marges de page (mm)" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <!-- Marges de page -->
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="SP_PageMargins" Text="Marges de page (mm)" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                    <Button Content="Compact" FontSize="11" Padding="6,2" Style="{ThemeResource SubtleButtonStyle}"
+                                            Command="{x:Bind ViewModel.ApplyQuickMarginsCommand}" CommandParameter="compact"/>
+                                    <Button Content="Standard" FontSize="11" Padding="6,2" Style="{ThemeResource SubtleButtonStyle}"
+                                            Command="{x:Bind ViewModel.ApplyQuickMarginsCommand}" CommandParameter="normal"/>
+                                    <Button Content="Aéré" FontSize="11" Padding="6,2" Style="{ThemeResource SubtleButtonStyle}"
+                                            Command="{x:Bind ViewModel.ApplyQuickMarginsCommand}" CommandParameter="wide"/>
+                                </StackPanel>
+                            </Grid>
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <NumberBox Grid.Column="0" Header="Haut" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                <NumberBox Grid.Column="0" x:Uid="SP_MarginTop" Header="Haut" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderMarginTop, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="1" Header="Bas" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                <NumberBox Grid.Column="1" x:Uid="SP_MarginBottom" Header="Bas" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderMarginBottom, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="2" Header="Gauche" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                <NumberBox Grid.Column="2" x:Uid="SP_MarginLeft" Header="Gauche" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderMarginLeft, Mode=TwoWay}"/>
-                                <NumberBox Grid.Column="3" Header="Droite" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
+                                <NumberBox Grid.Column="3" x:Uid="SP_MarginRight" Header="Droite" Minimum="5" Maximum="40" SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderMarginRight, Mode=TwoWay}"/>
                             </Grid>
 
-                            <TextBlock Text="Toute retouche crée un style « Personnalisé » enregistré avec Ctrl+S."
-                                       Style="{StaticResource CaptionNoteStyle}"/>
+                            <!-- Actions du StyleBuilder -->
+                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
+                                <Button Style="{ThemeResource AccentButtonStyle}" Padding="14,6"
+                                        Command="{x:Bind ViewModel.SetAsDefaultThemeCommand}"
+                                        CommandParameter="{x:Bind ViewModel.SelectedPreset, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE734;" FontSize="12"/>
+                                        <TextBlock Text="Définir comme style par défaut" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </controls:SettingsExpander>
 
                     <!-- ───── Générateur de style par IA ───── -->
-                    <controls:SettingsExpander Header="✨ Déduire le style depuis un PDF"
-                                               Description="PROFstudio analyse un PDF modèle et génère une feuille de style sur-mesure.">
+                    <controls:SettingsExpander x:Uid="SP_InferStylePdf" Header="✨ Suggérer une palette de style"
+                                               Description="Applique une harmonie de couleurs et typographie prédéfinie au StyleBuilder.">
                         <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsExpander.HeaderIcon>
                         <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
-                            <TextBlock Style="{StaticResource CaptionNoteStyle}"
-                                       Text="Fournissez une fiche PDF dont vous appréciez la charte graphique pour déduire la palette et la typographie."/>
+                            <TextBlock x:Uid="SP_InferStylePdfNote" Style="{StaticResource CaptionNoteStyle}"
+                                       Text="Sélectionnez un document modèle ou activez la suggestion pour charger une palette harmonieuse."/>
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Content="📄 Analyser un PDF de référence…" Click="AnalyzeStylePdf_Click"
+                                <Button x:Uid="SP_AnalyzePdfBtn" Content="🎨 Suggérer une palette…" Click="AnalyzeStylePdf_Click"
                                         Style="{ThemeResource DefaultButtonStyle}"/>
                                 <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsAnalyzingStyle, Mode=OneWay}"/>
                                 <TextBlock Text="{x:Bind ViewModel.StyleAnalysisStatus, Mode=OneWay}"
@@ -1298,7 +1454,7 @@
                                      FontFamily="Cascadia Code, Consolas" FontSize="12" AcceptsReturn="True"
                                      TextWrapping="NoWrap" MinHeight="120"
                                      Visibility="{x:Bind ViewModel.HasGeneratedCss, Mode=OneWay}"
-                                     Header="Feuille de style générée"/>
+                                     x:Uid="SP_GeneratedStyleSheet" Header="Feuille de style générée"/>
                         </StackPanel>
                     </controls:SettingsExpander>
                 </StackPanel>
@@ -1327,7 +1483,7 @@
 
                             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <FontIcon Glyph="&#xE890;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                                <TextBlock Text="Aperçu en direct" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                                <TextBlock x:Uid="SP_LivePreview" Text="Aperçu en direct" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
                                 <Border Style="{StaticResource PillBadgeStyle}" Background="{ThemeResource LayerFillColorAltBrush}">
                                     <TextBlock Text="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"/>
                                 </Border>
@@ -1337,7 +1493,7 @@
                                     Click="RefreshPreview_Click" ToolTipService.ToolTip="Actualiser le rendu">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE72C;" FontSize="12"/>
-                                    <TextBlock Text="Actualiser" FontSize="12"/>
+                                    <TextBlock x:Uid="SP_RefreshPreviewBtn" Text="Actualiser" FontSize="12"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -1356,8 +1512,8 @@
                             <StackPanel x:Name="WebViewFallback" Visibility="Collapsed" Spacing="8" Padding="24"
                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <FontIcon Glyph="&#xE7BA;" FontSize="32" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
-                                <TextBlock Text="Runtime WebView2 requis pour l'aperçu en direct." FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <HyperlinkButton Content="Télécharger le runtime WebView2 ↗" HorizontalAlignment="Center"
+                                <TextBlock x:Uid="SP_WebView2Required" Text="Runtime WebView2 requis pour l'aperçu en direct." FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <HyperlinkButton x:Uid="SP_DownloadWebView2Btn" Content="Télécharger le runtime WebView2 ↗" HorizontalAlignment="Center"
                                                  NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/"/>
                             </StackPanel>
                         </Grid>
@@ -1378,7 +1534,8 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" FontSize="13"
+                               AutomationProperties.LiveSetting="Polite"/>
                     <TextBlock Text="{x:Bind ViewModel.LastSavedText, Mode=OneWay}"
                                Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
                 </StackPanel>
@@ -1389,7 +1546,7 @@
                             ToolTipService.ToolTip="Enregistrer (Ctrl+S)" x:Uid="SP_SaveButton">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE74E;" FontSize="14"/>
-                            <TextBlock x:Uid="SP_SaveLabel" Text="Enregistrer les paramètres"/>
+                            <TextBlock x:Name="SaveLabel" x:Uid="SP_SaveLabel" Text="Enregistrer les paramètres"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

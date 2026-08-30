@@ -10,6 +10,8 @@ namespace FicheGen.Infrastructure.Ai.Adapters;
 
 public sealed class OpenAiCompatibleAdapter : IProviderAdapter
 {
+    private const string DefaultSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJib2RsaWR0YW9zeGV5ZW92aXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NTcxODIsImV4cCI6MjEwMzMzMzE4Mn0.qFHCVxa_iBuOFl-hQ29MkTUTacTq7hk58B4cBbf_sME";
+
     public ProviderAdapterKind Kind => ProviderAdapterKind.OpenAiCompatible;
 
     public HttpRequestMessage BuildRequest(LlmRequest req, ProviderRoute route, string? secretKey, double temperature)
@@ -17,9 +19,20 @@ public sealed class OpenAiCompatibleAdapter : IProviderAdapter
         var isStreaming = route.IsStreaming;
         var request = new HttpRequestMessage(HttpMethod.Post, route.Endpoint);
 
+        var isSupabase = route.Endpoint.Contains("supabase.co", StringComparison.OrdinalIgnoreCase);
+
         if (!string.IsNullOrEmpty(secretKey))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secretKey);
+        }
+        else if (isSupabase)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", DefaultSupabaseAnonKey);
+        }
+
+        if (isSupabase && !request.Headers.Contains("apikey"))
+        {
+            request.Headers.Add("apikey", DefaultSupabaseAnonKey);
         }
 
         var messages = new List<object>();

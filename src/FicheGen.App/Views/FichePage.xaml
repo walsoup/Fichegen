@@ -26,33 +26,13 @@
 
         <!-- ═══════════ Ligne 0 : Barre de commandes unifiée (§6.2) ═══════════ -->
         <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
             <!-- Titre de la page -->
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
-                <TextBlock x:Uid="FP_Title" Text="Nouvelle fiche pédagogique" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"/>
-                <TextBlock x:Uid="FP_Subtitle" Text="Préparez une séance structurée, prête à imprimer ou exporter."
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="PageTitle" x:Uid="FP_Title" Text="Nouvelle fiche pédagogique" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"
+                           AutomationProperties.HeadingLevel="Level1"/>
+                <TextBlock x:Name="PageSubtitle" x:Uid="FP_Subtitle" Text="Préparez une séance structurée, prête à imprimer ou exporter."
                            Style="{StaticResource CaptionSecondaryStyle}"/>
             </StackPanel>
-
-            <!-- Les commandes du document (zoom, exports, impression, élève/corrigé)
-                 vivent désormais uniquement dans la barre d'outils de l'aperçu (PreviewHost). -->
-
-            <!-- Bouton Assistant à droite -->
-            <Button Grid.Column="2" x:Name="AssistantToggleButton" Margin="8,0,0,0"
-                    Style="{ThemeResource SubtleButtonStyle}"
-                    Click="OnToggleAssistantClicked"
-                    VerticalAlignment="Center"
-                    x:Uid="FP_AssistantToggle">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="✨" FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Uid="FP_AssistantLabel" Text="Assistant" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
         </Grid>
 
         <!-- ═══════════ Ligne 1 : Workspace 3 colonnes partagé ═══════════ -->
@@ -67,27 +47,17 @@
                 <!-- Étape 1 : Classe et Matière -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="FP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step1Header" x:Uid="FP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="LevelCombo" x:Uid="FP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
-                                      SelectedValuePath="Content"
-                                      SelectedValue="{Binding ClassLevel, Mode=TwoWay}"
+                                      ItemsSource="{Binding ClassLevels}"
+                                      SelectedItem="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
-                                      AutomationProperties.Name="Niveau scolaire">
-                                <ComboBoxItem Content="CP"/>
-                                <ComboBoxItem Content="CE1"/>
-                                <ComboBoxItem Content="CE2"/>
-                                <ComboBoxItem Content="CM1"/>
-                                <ComboBoxItem Content="CM2"/>
-                                <ComboBoxItem Content="6e"/>
-                                <ComboBoxItem Content="5e"/>
-                                <ComboBoxItem Content="4e"/>
-                                <ComboBoxItem Content="3e"/>
-                            </ComboBox>
+                                      AutomationProperties.Name="Niveau scolaire"/>
                             <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="FP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
@@ -103,7 +73,7 @@
                 <!-- Étape 2 : Sujet de la séance -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock x:Uid="FP_Step2_Header" Text="2. Sujet de la séance" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step2Header" x:Uid="FP_Step2_Header" Text="2. Sujet de la séance" Style="{StaticResource CardHeaderStyle}"/>
                         <AutoSuggestBox x:Name="TopicBox" x:Uid="FP_TopicBox"
                                         PlaceholderText="ex : Les fractions décimales, La Révolution française…"
                                         Text="{Binding Topic, Mode=TwoWay}"
@@ -117,7 +87,7 @@
                 <!-- Étape 3 : Durée & Consignes -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="FP_Step3_Header" Text="3. Cadre &amp; Durée" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step3Header" x:Uid="FP_Step3_Header" Text="3. Cadre &amp; Durée" Style="{StaticResource CardHeaderStyle}"/>
                         <NumberBox x:Name="DurationBox" x:Uid="FP_DurationBox" Header="Durée de la séance (minutes)"
                                    Minimum="15" Maximum="180" SmallChange="5" LargeChange="15"
                                    Value="{Binding DurationMinutes, Mode=TwoWay}"
@@ -136,13 +106,46 @@
                                  Text="{Binding AdditionalInstructions, Mode=TwoWay}"
                                  TextChanged="InstructionsBox_TextChanged"
                                  AutomationProperties.Name="Consignes additionnelles"/>
+
+                        <!-- Longueur du document (Slider n6) -->
+                        <StackPanel Spacing="4" Margin="0,4,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Longueur / Densité du document" FontSize="12.5" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Text="{Binding DocumentLengthLabel}" FontSize="12"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            </Grid>
+                            <Slider Minimum="0" Maximum="5" StepFrequency="1" TickFrequency="1"
+                                    SnapsTo="StepValues"
+                                    Value="{Binding DocumentLengthIndex, Mode=TwoWay}"
+                                    AutomationProperties.Name="Longueur du document"/>
+                            <Grid Margin="2,-4,2,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Bref" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Left"/>
+                                <TextBlock Grid.Column="1" Text="Raccourci" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="Défaut" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="Long" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="Détaillé" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="5" Text="Exhaustif" FontSize="10.5" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Étape 4 : Manuel PDF optionnel -->
                 <Border Style="{StaticResource FormCardStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock x:Uid="FP_Step4_Header" Text="4. Appui documentaire PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
+                        <TextBlock x:Name="Step4Header" x:Uid="FP_Step4_Header" Text="4. Appui documentaire PDF (optionnel)" Style="{StaticResource CardHeaderStyle}"/>
                         <controls:PdfDropZone x:Name="PdfDropZoneControl"
                                               GuideFilePath="{Binding GuideFilePath, Mode=TwoWay}"/>
                     </StackPanel>

@@ -62,7 +62,7 @@ public static class ErrorMessageTranslator
                 {
                     return code switch
                     {
-                        400 => "تم رفض الطلب من خدمة ��لذكاء الاصطناعي. يرجى التحقق من صحة المفتاح في الإعدادات.",
+                        400 => "تم رفض الطلب من خدمة الذكاء الاصطناعي. يرجى التحقق من صحة المفتاح في الإعدادات.",
                         401 or 403 => "مفتاح الربط غير صالح أو غير مصرح به. يرجى مراجعة مفتاحك في الإعدادات.",
                         429 => "تم بلوغ الحد الأقصى للاستخدام. يرجى الانتظار دقيقة قبل المحاولة من جديد.",
                         >= 500 => "خدمة الذكاء الاصطناعي غير متوفرة مؤقتاً. يرجى المحاولة بعد لحظات.",
@@ -113,7 +113,7 @@ public static class ErrorMessageTranslator
 
         if (ex is FileNotFoundException || ex is DirectoryNotFoundException)
         {
-            if (isAr) return "الملف أو دليل PDF المحدد غير موجود أو يتعذر الوص��ل إليه.";
+            if (isAr) return "الملف أو دليل PDF المحدد غير موجود أو يتعذر الوصول إليه.";
             if (isEn) return "The selected textbook or PDF file could not be found or accessed.";
             return "Le manuel ou fichier PDF sélectionné est introuvable ou inaccessible.";
         }

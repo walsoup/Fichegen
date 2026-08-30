@@ -58,6 +58,7 @@ public partial class FicheFormViewModel : ObservableValidator
     private readonly GenerationOrchestrator _orchestrator;
     private readonly ISettingsStore _settingsStore;
     private readonly ICredentialStore? _credentialStore;
+    private readonly FicheGen.Core.Auth.IAuthService? _authService;
     private readonly IHistoryRepository _historyRepository;
     private readonly StylePresetService _stylePresetService;
     private readonly IDraftStore? _draftStore;
@@ -67,7 +68,6 @@ public partial class FicheFormViewModel : ObservableValidator
     private readonly DispatcherQueueTimer? _draftTimer;
     private readonly DispatcherQueueTimer? _elapsedTimer;
 
-    private CancellationTokenSource? _cts;
     private DateTimeOffset _generationStartedUtc;
     private bool _isRestoringDraft;
 
@@ -108,6 +108,33 @@ public partial class FicheFormViewModel : ObservableValidator
 
     [ObservableProperty]
     public partial string? GuideFilePath { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DocumentLengthLabel))]
+    [NotifyPropertyChangedFor(nameof(DocumentLengthKey))]
+    public partial int DocumentLengthIndex { get; set; } = 2;
+
+    public string DocumentLengthKey => DocumentLengthIndex switch
+    {
+        0 => "Bref",
+        1 => "Raccourci",
+        2 => "Defaut",
+        3 => "Long",
+        4 => "Detaille",
+        5 => "Exhaustif",
+        _ => "Defaut"
+    };
+
+    public string DocumentLengthLabel => DocumentLengthIndex switch
+    {
+        0 => "Bref (1 page courte)",
+        1 => "Raccourci (1 page)",
+        2 => "Défaut (1-2 pages)",
+        3 => "Long (2-3 pages)",
+        4 => "Détaillé (3-4 pages)",
+        5 => "Exhaustif (4+ pages)",
+        _ => "Défaut"
+    };
 
     // ------------------------------------------------------------------
     // État d'exécution
@@ -193,6 +220,7 @@ public partial class FicheFormViewModel : ObservableValidator
         StylePresetService stylePresetService,
         ResultViewModel resultViewModel,
         ICredentialStore? credentialStore = null,
+        FicheGen.Core.Auth.IAuthService? authService = null,
         IDraftStore? draftStore = null,
         IHistoryRetentionService? historyRetentionService = null,
         IReadinessService? readinessService = null)
@@ -200,6 +228,7 @@ public partial class FicheFormViewModel : ObservableValidator
         _orchestrator = orchestrator;
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
+        _authService = authService;
         _historyRepository = historyRepository;
         _stylePresetService = stylePresetService;
         ResultViewModel = resultViewModel;
@@ -266,16 +295,11 @@ public partial class FicheFormViewModel : ObservableValidator
         }
 
         IsGenerating = true;
-        ResultViewModel.IsBusy = true;
-        ResultViewModel.CurrentHtml = string.Empty;
-        ResultViewModel.ResetStreaming();
+        var opId = ResultViewModel.BeginOperation("fiche");
+        var ct = ResultViewModel.GetActiveCancellationToken();
         ElapsedTimeText = "0,0 s";
         _generationStartedUtc = DateTimeOffset.UtcNow;
         _elapsedTimer?.Start();
-
-        _cts?.Cancel();
-        var currentCts = new CancellationTokenSource();
-        _cts = currentCts;
 
         try
         {
@@ -288,33 +312,38 @@ public partial class FicheFormViewModel : ObservableValidator
                 Topic.Trim(),
                 DurationMinutes,
                 AdditionalInstructions,
-                UsePedagogicalGuide
+                UsePedagogicalGuide,
+                CurrentDate: DateTime.Now.ToString("yyyy-MM-dd"),
+                Language: appSettings.Ui.Language,
+                DocumentLength: DocumentLengthKey
             );
 
-            ResultViewModel.SetGenerationPhase(1, "Analyse du sujet et préparation des objectifs…");
+            ResultViewModel.SetGenerationPhase(1, "Analyse du sujet et préparation des objectifs…", opId);
             SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
 
             FicheGen.Core.Services.GenerationResult result;
             if (appSettings.Ui.EnableStreaming)
             {
-                ResultViewModel.SetGenerationPhase(2, "Élaboration de la structure pédagogique…");
+                ResultViewModel.SetGenerationPhase(2, "Élaboration de la structure pédagogique…", opId);
                 var progress = new Progress<string>(chunk =>
                 {
-                    ResultViewModel.AppendStreamedChunk(chunk);
+                    ResultViewModel.AppendStreamedChunk(chunk, opId);
                 });
-                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, currentCts.Token);
+                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, ct);
             }
             else
             {
-                ResultViewModel.SetGenerationPhase(3, "Rédaction de la fiche pédagogique par l'IA…");
-                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, currentCts.Token);
+                ResultViewModel.SetGenerationPhase(3, "Rédaction de la fiche pédagogique par l'IA…", opId);
+                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, ct);
             }
 
-            ResultViewModel.SetGenerationPhase(4, "Mise en page et finalisation du document…");
+            if (!ResultViewModel.IsActiveOperation(opId)) return;
+
+            ResultViewModel.SetGenerationPhase(4, "Mise en page et finalisation du document…", opId);
             var document = result.Document;
             var html = result.PreviewHtml;
 
-            ResultViewModel.LoadDocument(document, html, appSettings.Defaults.StylePresetId);
+            ResultViewModel.LoadDocument(document, html, appSettings.Defaults.StylePresetId, opId);
 
             var historyItem = new HistoryItem
             {
@@ -327,8 +356,10 @@ public partial class FicheFormViewModel : ObservableValidator
                 IsFavorite = false,
                 PlainText = GetPlainText(document),
                 Html = html,
-                SourceJson = document.SourceJson,
-                StylePresetId = appSettings.Defaults.StylePresetId
+                SourceJson = document.SourceJson ?? System.Text.Json.JsonSerializer.Serialize(document),
+                StylePresetId = appSettings.Defaults.StylePresetId,
+                RawPrompt = null,
+                RawResponse = null
             };
 
             await _historyRepository.SaveAsync(historyItem);
@@ -337,30 +368,27 @@ public partial class FicheFormViewModel : ObservableValidator
         }
         catch (OperationCanceledException)
         {
-            if (_cts == currentCts)
+            if (ResultViewModel.IsActiveOperation(opId))
             {
-                SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
+                ResultViewModel.ReportOperationCancelled(opId);
             }
+            SetStatus("Génération annulée par l'utilisateur.", StatusSeverity.Warning);
         }
         catch (Exception ex)
         {
             _readinessService?.ReportExecutionOutcome(false, ex);
-            SetStatus(ErrorMessageTranslator.ToUserFriendlyMessage(ex), StatusSeverity.Error);
+            var friendlyMessage = ErrorMessageTranslator.ToUserFriendlyMessage(ex);
+            if (ResultViewModel.IsActiveOperation(opId))
+            {
+                ResultViewModel.ReportOperationFailure(opId, ex);
+            }
+            SetStatus($"Échec de la génération : {friendlyMessage}", StatusSeverity.Error);
         }
         finally
         {
-            if (_cts == currentCts)
-            {
-                _elapsedTimer?.Stop();
-                IsGenerating = false;
-                ResultViewModel.IsBusy = false;
-                _cts.Dispose();
-                _cts = null;
-            }
-            else
-            {
-                currentCts.Dispose();
-            }
+            _elapsedTimer?.Stop();
+            IsGenerating = false;
+            ResultViewModel.EndOperation(opId);
         }
     }
 
@@ -368,7 +396,7 @@ public partial class FicheFormViewModel : ObservableValidator
 
     /// <summary>Échap — Annule la génération en cours.</summary>
     [RelayCommand(CanExecute = nameof(IsGenerating))]
-    public void CancelGeneration() => _cts?.Cancel();
+    public void CancelGeneration() => ResultViewModel.CancelActiveOperation();
 
     public System.Windows.Input.ICommand CancelCommand => CancelGenerationCommand;
 
@@ -565,7 +593,14 @@ public partial class FicheFormViewModel : ObservableValidator
         appSettings.Ai.Vertex.Project,
         appSettings.Ai.Vertex.Region,
         new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation } },
-        (k, _) => ValueTask.FromResult(_credentialStore?.Get(k)));
+        async (k, ct) =>
+        {
+            if (k == "supabase_access_token" && _authService != null)
+            {
+                return await _authService.GetValidTokenAsync(ct).ConfigureAwait(false);
+            }
+            return _credentialStore?.Get(k);
+        });
 
     private static string GetPlainText(GeneratedDocument doc) => doc.ToPlainText();
 }

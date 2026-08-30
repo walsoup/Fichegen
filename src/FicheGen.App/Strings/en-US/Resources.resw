@@ -1,485 +1,2293 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- ═══════════ Shell (MainWindow) ═══════════ -->
-  <data name="Shell_TitleBar.AutomationProperties.Name" xml:space="preserve"><value>PROFstudio Title Bar</value></data>
-  <data name="Shell_AiChipText.Text" xml:space="preserve"><value>AI Assistant — checking…</value></data>
-  <data name="Shell_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>Show or hide AI Assistant (Ctrl+B)</value></data>
-  <data name="Shell_AssistantToggle.AutomationProperties.Name" xml:space="preserve"><value>AI Assistant</value></data>
-  <data name="Shell_ThemeButton.ToolTipService.ToolTip" xml:space="preserve"><value>Display Theme: Light, Dark, or System</value></data>
-  <data name="Shell_ThemeButton.AutomationProperties.Name" xml:space="preserve"><value>Change theme</value></data>
-  <data name="Shell_ThemeSystemItem.ToolTipService.ToolTip" xml:space="preserve"><value>Follows Windows theme</value></data>
-  <data name="Shell_ThemeSystemItem.AutomationProperties.Name" xml:space="preserve"><value>System theme</value></data>
-  <data name="Shell_ThemeLightItem.ToolTipService.ToolTip" xml:space="preserve"><value>Light interface</value></data>
-  <data name="Shell_ThemeLightItem.AutomationProperties.Name" xml:space="preserve"><value>Light theme</value></data>
-  <data name="Shell_ThemeDarkItem.ToolTipService.ToolTip" xml:space="preserve"><value>Dark interface</value></data>
-  <data name="Shell_ThemeDarkItem.AutomationProperties.Name" xml:space="preserve"><value>Dark theme</value></data>
-  <data name="Shell_ThemeOledItem.ToolTipService.ToolTip" xml:space="preserve"><value>Deep black interface for OLED screens</value></data>
-  <data name="Shell_ThemeOledItem.AutomationProperties.Name" xml:space="preserve"><value>OLED absolute black theme</value></data>
-  <data name="Shell_ThemeOledItem.Text" xml:space="preserve"><value>OLED Dark</value></data>
-  <data name="Shell_SettingsButton.ToolTipService.ToolTip" xml:space="preserve"><value>Settings (Ctrl+,)</value></data>
-  <data name="Shell_SettingsButton.AutomationProperties.Name" xml:space="preserve"><value>Settings</value></data>
-  <data name="Shell_ProfileButton.ToolTipService.ToolTip" xml:space="preserve"><value>Teacher profile</value></data>
-  <data name="Shell_ProfileButton.AutomationProperties.Name" xml:space="preserve"><value>Teacher profile</value></data>
-  <data name="Shell_ProfileSettingsButton.AutomationProperties.Name" xml:space="preserve"><value>Settings</value></data>
-  <data name="Shell_ProfileSettingsLabel.Text" xml:space="preserve"><value>Application Settings</value></data>
-  <data name="Shell_ProfileShortcutsButton.AutomationProperties.Name" xml:space="preserve"><value>Keyboard shortcuts</value></data>
-  <data name="Shell_ProfileShortcutsLabel.Text" xml:space="preserve"><value>Keyboard Shortcuts (F1)</value></data>
-  <data name="Shell_ProfileAboutButton.AutomationProperties.Name" xml:space="preserve"><value>About</value></data>
-  <data name="Shell_ProfileAboutLabel.Text" xml:space="preserve"><value>About PROFstudio</value></data>
-  <data name="Shell_GlobalSearchBox.PlaceholderText" xml:space="preserve"><value>Search documents…</value></data>
-  <data name="Shell_GlobalSearchBox.ToolTipService.ToolTip" xml:space="preserve"><value>Search my documents (Ctrl+F)</value></data>
-  <data name="Shell_GlobalSearchBox.AutomationProperties.Name" xml:space="preserve"><value>Global search</value></data>
-  <data name="Nav_FicheItem.Content" xml:space="preserve"><value>Lesson Plan</value></data>
-  <data name="Nav_FicheItem.ToolTipService.ToolTip" xml:space="preserve"><value>Create a lesson plan (Ctrl+1)</value></data>
-  <data name="Nav_FicheItem.AutomationProperties.Name" xml:space="preserve"><value>Lesson Plan</value></data>
-  <data name="Nav_EvaluationItem.Content" xml:space="preserve"><value>Evaluations &amp; Tests</value></data>
-  <data name="Nav_EvaluationItem.ToolTipService.ToolTip" xml:space="preserve"><value>Create an evaluation with grading rubric (Ctrl+2)</value></data>
-  <data name="Nav_EvaluationItem.AutomationProperties.Name" xml:space="preserve"><value>Evaluations and Tests</value></data>
-  <data name="Nav_QuizItem.Content" xml:space="preserve"><value>Quick Quizzes</value></data>
-  <data name="Nav_QuizItem.ToolTipService.ToolTip" xml:space="preserve"><value>Create a quiz or multiple-choice test (Ctrl+3)</value></data>
-  <data name="Nav_QuizItem.AutomationProperties.Name" xml:space="preserve"><value>Quick Quizzes</value></data>
-  <data name="Nav_HistoryItem.Content" xml:space="preserve"><value>My Documents</value></data>
-  <data name="Nav_HistoryItem.ToolTipService.ToolTip" xml:space="preserve"><value>Browse all created documents (Ctrl+4)</value></data>
-  <data name="Nav_HistoryItem.AutomationProperties.Name" xml:space="preserve"><value>My Documents</value></data>
-  <data name="Nav_HelpItem.Content" xml:space="preserve"><value>Help &amp; Shortcuts</value></data>
-  <data name="Nav_HelpItem.ToolTipService.ToolTip" xml:space="preserve"><value>Help and keyboard shortcuts (F1)</value></data>
-  <data name="Nav_HelpItem.AutomationProperties.Name" xml:space="preserve"><value>Help and keyboard shortcuts</value></data>
-  <data name="Shell_StatusText.Text" xml:space="preserve"><value>Ready for a new session</value></data>
-  <data name="Shell_NotificationAction.Content" xml:space="preserve"><value>Configure</value></data>
-  <data name="Shell_NotificationDismiss.AutomationProperties.Name" xml:space="preserve"><value>Dismiss notification</value></data>
-
-  <!-- ═══════════ Shell — code-behind ═══════════ -->
-  <data name="Status_Ready" xml:space="preserve"><value>Ready for a new session</value></data>
-  <data name="Status_Generating" xml:space="preserve"><value>⏳ Generating…</value></data>
-  <data name="Status_Cancelled" xml:space="preserve"><value>✋ Generation cancelled</value></data>
-  <data name="Status_SearchHistory" xml:space="preserve"><value>🔍 Searching history</value></data>
-  <data name="Status_NewFiche" xml:space="preserve"><value>📄 New lesson plan</value></data>
-  <data name="Status_Exporting" xml:space="preserve"><value>📄 Exporting document…</value></data>
-  <data name="Status_Printing" xml:space="preserve"><value>🖨️ Preparing print…</value></data>
-  <data name="Status_Undone" xml:space="preserve"><value>↩️ Action undone</value></data>
-  <data name="Status_Theme" xml:space="preserve"><value>🎨 Theme: {0}</value></data>
-  <data name="Theme_Light" xml:space="preserve"><value>Light</value></data>
-  <data name="Theme_Dark" xml:space="preserve"><value>Dark</value></data>
-  <data name="Theme_Oled" xml:space="preserve"><value>Absolute Black (OLED)</value></data>
-  <data name="Theme_System" xml:space="preserve"><value>System Default</value></data>
-  <data name="Section_Fiche" xml:space="preserve"><value>Lesson Plan</value></data>
-  <data name="Section_Evaluation" xml:space="preserve"><value>Evaluations &amp; Tests</value></data>
-  <data name="Section_Quiz" xml:space="preserve"><value>Quick Quizzes</value></data>
-  <data name="Section_History" xml:space="preserve"><value>My Documents</value></data>
-  <data name="Section_Settings" xml:space="preserve"><value>Settings</value></data>
-  <data name="Hint_OpenCreationPage_Title" xml:space="preserve"><value>Generation</value></data>
-  <data name="Hint_OpenCreationPage_Message" xml:space="preserve"><value>Open a creation page first (Lesson Plan, Evaluation, or Quiz).</value></data>
-  <data name="Hint_Cancel_Title" xml:space="preserve"><value>Cancelled</value></data>
-  <data name="Hint_Cancel_Message" xml:space="preserve"><value>The active generation was cancelled.</value></data>
-  <data name="Hint_NewFiche_Title" xml:space="preserve"><value>New lesson plan</value></data>
-  <data name="Hint_NewFiche_Message" xml:space="preserve"><value>Form is ready — let's create! ✨</value></data>
-  <data name="Hint_Export_Title" xml:space="preserve"><value>Export</value></data>
-  <data name="Hint_Export_Message" xml:space="preserve"><value>Document export started… 📄</value></data>
-  <data name="Hint_Export_GenerateFirst" xml:space="preserve"><value>Generate a document first (Ctrl+G) to export it.</value></data>
-  <data name="Hint_NothingToExport" xml:space="preserve"><value>No document to export on this page.</value></data>
-  <data name="Hint_Preview_Title" xml:space="preserve"><value>Preview</value></data>
-  <data name="Hint_Preview_Shown" xml:space="preserve"><value>Preview panel shown.</value></data>
-  <data name="Hint_Preview_Hidden" xml:space="preserve"><value>Preview panel hidden.</value></data>
-  <data name="Hint_Preview_Unavailable" xml:space="preserve"><value>Preview is not available on this page.</value></data>
-  <data name="Hint_Print_Title" xml:space="preserve"><value>Print</value></data>
-  <data name="Hint_Print_Message" xml:space="preserve"><value>Preparing print / PDF… 🖨️</value></data>
-  <data name="Hint_Print_GenerateFirst" xml:space="preserve"><value>Generate a document first (Ctrl+G) to print it.</value></data>
-  <data name="Hint_NothingToPrint" xml:space="preserve"><value>Nothing to print on this page.</value></data>
-  <data name="Hint_Undo_Title" xml:space="preserve"><value>Undo</value></data>
-  <data name="Hint_Undo_Message" xml:space="preserve"><value>Last action undone. ↩️</value></data>
-  <data name="Hint_NothingToUndo" xml:space="preserve"><value>Nothing to undo right now.</value></data>
-  <data name="Hint_Unavailable" xml:space="preserve"><value>Currently unavailable.</value></data>
-  <data name="Hint_PartialStart_Title" xml:space="preserve"><value>Partial Start</value></data>
-  <data name="Hint_PartialStart_Message" xml:space="preserve"><value>An initial configuration step could not be completed. You can adjust it in Settings.</value></data>
-  <data name="Hint_Welcome_Title" xml:space="preserve"><value>Welcome to PROFstudio 👋</value></data>
-  <data name="Hint_Welcome_Message" xml:space="preserve"><value>Your workspace is ready! Open « Lesson Plan » on the left to create your first document.</value></data>
-  <data name="Hint_FirstDoc_Title" xml:space="preserve"><value>🎉 Your first lesson plan is ready!</value></data>
-  <data name="Hint_FirstDoc_Message" xml:space="preserve"><value>It is already saved in « My Documents ». The AI assistant can refine it — just ask.</value></data>
-  <data name="Dialog_WebView2Missing_Title" xml:space="preserve"><value>Missing Runtime Component</value></data>
-  <data name="Dialog_WebView2Missing_Message" xml:space="preserve"><value>PROFstudio requires Microsoft Edge WebView2 to render and export documents. You can install it now or later from the setup directory.</value></data>
-  <data name="Dialog_WebView2Missing_Primary" xml:space="preserve"><value>Install now</value></data>
-  <data name="Dialog_WebView2Missing_Close" xml:space="preserve"><value>Later</value></data>
-  <data name="Dialog_Shortcuts_Title" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
-  <data name="Dialog_Close" xml:space="preserve"><value>Close</value></data>
-  <data name="Dialog_Cancel" xml:space="preserve"><value>Cancel</value></data>
-  <data name="Dialog_About_Title" xml:space="preserve"><value>About PROFstudio</value></data>
-  <data name="Dialog_About_Tagline" xml:space="preserve"><value>Intelligent pedagogical document generator</value></data>
-  <data name="Dialog_About_Version" xml:space="preserve"><value>Version: {0}</value></data>
-  <data name="Dialog_About_Description" xml:space="preserve"><value>PROFstudio empowers teachers to rapidly create lesson plans, evaluations, and quizzes with AI assistance.</value></data>
-  <data name="Dialog_About_Copyright" xml:space="preserve"><value>© 2026 PROFstudio. All rights reserved.</value></data>
-  <data name="Profile_DefaultName" xml:space="preserve"><value>Educator</value></data>
-  <data name="Profile_DefaultSchool" xml:space="preserve"><value>Local Account — Zero data shared</value></data>
-
-  <!-- Palette de commandes -->
-  <data name="Palette_GotoFiche" xml:space="preserve"><value>Go to: Lesson Plan</value></data>
-  <data name="Palette_GotoFiche_Sub" xml:space="preserve"><value>Create a session lesson plan</value></data>
-  <data name="Palette_GotoEvaluation" xml:space="preserve"><value>Go to: Evaluations &amp; Tests</value></data>
-  <data name="Palette_GotoEvaluation_Sub" xml:space="preserve"><value>Tests with grading rubrics</value></data>
-  <data name="Palette_GotoQuiz" xml:space="preserve"><value>Go to: Quick Quizzes</value></data>
-  <data name="Palette_GotoQuiz_Sub" xml:space="preserve"><value>Printable multiple-choice quizzes with keys</value></data>
-  <data name="Palette_GotoHistory" xml:space="preserve"><value>Go to: My Documents</value></data>
-  <data name="Palette_GotoHistory_Sub" xml:space="preserve"><value>History and search</value></data>
-  <data name="Palette_NewFiche" xml:space="preserve"><value>New Lesson Plan</value></data>
-  <data name="Palette_NewFiche_Sub" xml:space="preserve"><value>Blank form, ready to fill</value></data>
-  <data name="Palette_ToggleAssistant" xml:space="preserve"><value>Toggle AI Assistant</value></data>
-  <data name="Palette_ToggleAssistant_Sub" xml:space="preserve"><value>Show or hide the side pane</value></data>
-  <data name="Palette_ChangeTheme" xml:space="preserve"><value>Change theme</value></data>
-  <data name="Palette_ChangeTheme_Sub" xml:space="preserve"><value>Cycle System → Light → Dark</value></data>
-  <data name="Palette_SearchDocs" xml:space="preserve"><value>Search my documents</value></data>
-  <data name="Palette_SearchDocs_Sub" xml:space="preserve"><value>Find a document by subject or keyword</value></data>
-  <data name="Palette_OpenSettings" xml:space="preserve"><value>Open Settings</value></data>
-  <data name="Palette_OpenSettings_Sub" xml:space="preserve"><value>Appearance, AI, folders, privacy</value></data>
-  <data name="Palette_Shortcuts" xml:space="preserve"><value>Keyboard shortcuts</value></data>
-  <data name="Palette_Shortcuts_Sub" xml:space="preserve"><value>Full list of shortcuts</value></data>
-  <data name="Palette_GenerateNow" xml:space="preserve"><value>Generate now</value></data>
-  <data name="Palette_GenerateNow_Sub" xml:space="preserve"><value>Start drafting the active document</value></data>
-  <data name="Palette_StopGeneration" xml:space="preserve"><value>Stop generation</value></data>
-  <data name="Palette_StopGeneration_Sub" xml:space="preserve"><value>Interrupt active AI generation</value></data>
-  <data name="Palette_ExportPdf" xml:space="preserve"><value>Export to PDF</value></data>
-  <data name="Palette_ExportPdf_Sub" xml:space="preserve"><value>Print-ready, distributed format</value></data>
-  <data name="Palette_ExportWord" xml:space="preserve"><value>Export to Word (.docx)</value></data>
-  <data name="Palette_ExportWord_Sub" xml:space="preserve"><value>Editable in Microsoft Word</value></data>
-  <data name="Palette_PrintDoc" xml:space="preserve"><value>Print document</value></data>
-  <data name="Palette_PrintDoc_Sub" xml:space="preserve"><value>Opens the print dialog</value></data>
-  <data name="Palette_ShowTeacherVersion" xml:space="preserve"><value>Show teacher version</value></data>
-  <data name="Palette_ShowStudentVersion" xml:space="preserve"><value>Show student version</value></data>
-  <data name="Palette_ToggleView_Sub" xml:space="preserve"><value>Toggle between answer key and student handout</value></data>
-
-  <!-- Raccourcis (dialogue F1) -->
-  <data name="Shortcut_Palette" xml:space="preserve"><value>Command Palette — search and trigger any action</value></data>
-  <data name="Shortcut_Generate" xml:space="preserve"><value>Generate lesson plan, evaluation, or quiz</value></data>
-  <data name="Shortcut_WheelZoom" xml:space="preserve"><value>Zoom document preview</value></data>
-  <data name="Shortcut_ResetZoom" xml:space="preserve"><value>Reset preview zoom</value></data>
-  <data name="Shortcut_Escape" xml:space="preserve"><value>Cancel active generation</value></data>
-  <data name="Shortcut_Assistant" xml:space="preserve"><value>Show or hide AI Assistant</value></data>
-  <data name="Shortcut_NewFiche" xml:space="preserve"><value>Create a new lesson plan</value></data>
-  <data name="Shortcut_Export" xml:space="preserve"><value>Export document (Word, PDF…)</value></data>
-  <data name="Shortcut_TogglePreview" xml:space="preserve"><value>Show or hide preview pane</value></data>
-  <data name="Shortcut_Print" xml:space="preserve"><value>Print or export to PDF</value></data>
-  <data name="Shortcut_Search" xml:space="preserve"><value>Search in document history</value></data>
-  <data name="Shortcut_Undo" xml:space="preserve"><value>Undo last action</value></data>
-  <data name="Shortcut_NextSection" xml:space="preserve"><value>Go to next section</value></data>
-  <data name="Shortcut_PreviousSection" xml:space="preserve"><value>Go to previous section</value></data>
-  <data name="Shortcut_GotoSection" xml:space="preserve"><value>Go directly to a section</value></data>
-  <data name="Shortcut_Settings" xml:space="preserve"><value>Open Settings</value></data>
-  <data name="Shortcut_Help" xml:space="preserve"><value>Show this help dialog</value></data>
-
-  <!-- ═══════════ CommandPalette ═══════════ -->
-  <data name="CP_Panel.AutomationProperties.Name" xml:space="preserve"><value>Command Palette</value></data>
-  <data name="CP_QueryBox.PlaceholderText" xml:space="preserve"><value>Search an action… (e.g. « quiz », « pdf », « theme »)</value></data>
-  <data name="CP_QueryBox.AutomationProperties.Name" xml:space="preserve"><value>Command search</value></data>
-  <data name="CP_CloseBadge.ToolTipService.ToolTip" xml:space="preserve"><value>Close (Esc)</value></data>
-  <data name="CP_NavHint.Text" xml:space="preserve"><value>↑↓ Navigate</value></data>
-  <data name="CP_RunHint.Text" xml:space="preserve"><value>Enter Run</value></data>
-  <data name="CP_EscapeHint.Text" xml:space="preserve"><value>Esc Close</value></data>
-
-  <!-- ═══════════ GenerateCta ═══════════ -->
-  <data name="CTA_IdleLabel.Text" xml:space="preserve"><value>Generate with AI</value></data>
-  <data name="CTA_ShortcutIdle.Text" xml:space="preserve"><value>Ctrl+G</value></data>
-  <data name="CTA_BusyLabel.Text" xml:space="preserve"><value>Stop generation</value></data>
-  <data name="CTA_ShortcutBusy.Text" xml:space="preserve"><value>Esc</value></data>
-  <data name="CTA_Name_Idle" xml:space="preserve"><value>Generate with AI</value></data>
-  <data name="CTA_Name_Busy" xml:space="preserve"><value>Stop generation</value></data>
-  <data name="CTA_Tooltip_Idle" xml:space="preserve"><value>Starts document drafting with the AI assistant (Ctrl+G)</value></data>
-  <data name="CTA_Tooltip_Busy" xml:space="preserve"><value>Interrupts active generation (Esc)</value></data>
-
-  <!-- ═══════════ PreviewHost ═══════════ -->
-  <data name="PH_Toolbar.AutomationProperties.Name" xml:space="preserve"><value>Document toolbar</value></data>
-  <data name="PH_StyleCombo.ToolTipService.ToolTip" xml:space="preserve"><value>Document visual style</value></data>
-  <data name="PH_StyleCombo.AutomationProperties.Name" xml:space="preserve"><value>Visual style of the document</value></data>
-  <data name="PH_StyleModern.Content" xml:space="preserve"><value>Modern</value></data>
-  <data name="PH_StyleClassic.Content" xml:space="preserve"><value>Classic</value></data>
-  <data name="PH_StyleMinimal.Content" xml:space="preserve"><value>Minimal</value></data>
-  <data name="PH_StyleAcademic.Content" xml:space="preserve"><value>Academic</value></data>
-  <data name="PH_StylePlayful.Content" xml:space="preserve"><value>Playful</value></data>
-  <data name="PH_StudentButton.ToolTipService.ToolTip" xml:space="preserve"><value>Toggle between teacher version (with answers) and student handout (Ctrl+Shift+V)</value></data>
-  <data name="PH_StudentButton.AutomationProperties.Name" xml:space="preserve"><value>Toggle student / teacher version</value></data>
-  <data name="PH_StudentLabel.Text" xml:space="preserve"><value>Student / Key</value></data>
-  <data name="PH_ZoomOut.ToolTipService.ToolTip" xml:space="preserve"><value>Zoom out</value></data>
-  <data name="PH_ZoomOut.AutomationProperties.Name" xml:space="preserve"><value>Zoom out</value></data>
-  <data name="PH_ZoomLevel.AutomationProperties.Name" xml:space="preserve"><value>Zoom level</value></data>
-  <data name="PH_ZoomIn.ToolTipService.ToolTip" xml:space="preserve"><value>Zoom in</value></data>
-  <data name="PH_ZoomIn.AutomationProperties.Name" xml:space="preserve"><value>Zoom in</value></data>
-  <data name="PH_ZoomReset.ToolTipService.ToolTip" xml:space="preserve"><value>Reset zoom to 100% (Ctrl+0)</value></data>
-  <data name="PH_ZoomReset.AutomationProperties.Name" xml:space="preserve"><value>Reset zoom</value></data>
-  <data name="PH_ExportWord.ToolTipService.ToolTip" xml:space="preserve"><value>Export to editable Word document (Ctrl+Shift+W)</value></data>
-  <data name="PH_ExportWord.AutomationProperties.Name" xml:space="preserve"><value>Export to Word</value></data>
-  <data name="PH_WordLabel.Text" xml:space="preserve"><value>Word</value></data>
-  <data name="PH_ExportPdf.ToolTipService.ToolTip" xml:space="preserve"><value>Export to print-ready PDF (Ctrl+Shift+E)</value></data>
-  <data name="PH_ExportPdf.AutomationProperties.Name" xml:space="preserve"><value>Export to PDF</value></data>
-  <data name="PH_PdfLabel.Text" xml:space="preserve"><value>PDF</value></data>
-  <data name="PH_PrintButton.ToolTipService.ToolTip" xml:space="preserve"><value>Print document (Ctrl+P)</value></data>
-  <data name="PH_PrintButton.AutomationProperties.Name" xml:space="preserve"><value>Print document</value></data>
-  <data name="PH_PrintLabel.Text" xml:space="preserve"><value>Print</value></data>
-  <data name="PH_EditButton.ToolTipService.ToolTip" xml:space="preserve"><value>Edit document text and instructions</value></data>
-  <data name="PH_EditButton.AutomationProperties.Name" xml:space="preserve"><value>Edit document</value></data>
-  <data name="PH_EditLabel.Text" xml:space="preserve"><value>Edit</value></data>
-  <data name="PH_MoreActions.ToolTipService.ToolTip" xml:space="preserve"><value>More actions</value></data>
-  <data name="PH_MoreActions.AutomationProperties.Name" xml:space="preserve"><value>More export and audio options</value></data>
-  <data name="PH_MenuEdit.Text" xml:space="preserve"><value>✏️ Edit document</value></data>
-  <data name="PH_MenuRtf.Text" xml:space="preserve"><value>📄 Export to RTF</value></data>
-  <data name="PH_MenuCopyText.Text" xml:space="preserve"><value>📋 Copy full text</value></data>
-  <data name="PH_MenuFind.Text" xml:space="preserve"><value>🔎 Find in document</value></data>
-  <data name="PH_MenuOpenFolder.Text" xml:space="preserve"><value>📂 Open export folder</value></data>
-  <data name="PH_MenuReadAloud.Text" xml:space="preserve"><value>🔊 Read aloud</value></data>
-  <data name="PH_ReadAloudStop" xml:space="preserve"><value>⏹ Stop reading</value></data>
-  <data name="PH_ExportBanner.Title" xml:space="preserve"><value>Document exported successfully</value></data>
-  <data name="PH_OpenExportedFile.Content" xml:space="preserve"><value>Open file</value></data>
-  <data name="PH_OpenExportedFile.AutomationProperties.Name" xml:space="preserve"><value>Open exported file</value></data>
-  <data name="PH_OpenExportedFolder.Content" xml:space="preserve"><value>Open folder</value></data>
-  <data name="PH_OpenExportedFolder.AutomationProperties.Name" xml:space="preserve"><value>Open folder in Windows Explorer</value></data>
-  <data name="PH_CopiedToast" xml:space="preserve"><value>✓ Full text copied to clipboard</value></data>
-  <data name="PH_StreamingBanner.AutomationProperties.Name" xml:space="preserve"><value>Streaming document rendering in progress</value></data>
-  <data name="PH_EmptyState.AutomationProperties.Name" xml:space="preserve"><value>No document generated</value></data>
-  <data name="PH_EmptyTitle.Text" xml:space="preserve"><value>Generate your first document</value></data>
-  <data name="PH_EmptyBody.Text" xml:space="preserve"><value>Describe your lesson goals, adjust settings, and click « Generate ». The interactive preview will appear here.</value></data>
-  <data name="PH_PaletteButton.AutomationProperties.Name" xml:space="preserve"><value>Explore commands (Ctrl+K)</value></data>
-  <data name="PH_PaletteButton.ToolTipService.ToolTip" xml:space="preserve"><value>Opens the command palette</value></data>
-  <data name="PH_PaletteLabel.Text" xml:space="preserve"><value>What can I do?</value></data>
-  <data name="PH_HistoryButton.AutomationProperties.Name" xml:space="preserve"><value>Open my documents</value></data>
-  <data name="PH_HistoryLabel.Text" xml:space="preserve"><value>My Documents</value></data>
-  <data name="PH_TipsTitle.Text" xml:space="preserve"><value>Quick Tips</value></data>
-  <data name="PH_Tip1.Text" xml:space="preserve"><value>Specify grade level and clear objectives for highly tailored content.</value></data>
-  <data name="PH_Tip2.Text" xml:space="preserve"><value>After generation, ask the AI assistant in the side panel for targeted revisions.</value></data>
-  <data name="PH_Tip3.Text" xml:space="preserve"><value>Shortcuts: Ctrl+G generates • Ctrl+P prints • Ctrl+Shift+E exports PDF.</value></data>
-  <data name="PH_Skeleton.AutomationProperties.Name" xml:space="preserve"><value>Generating document…</value></data>
-  <data name="PH_WebView.AutomationProperties.Name" xml:space="preserve"><value>Interactive WebView2 document preview</value></data>
-  <data name="PH_ErrorPanel.AutomationProperties.Name" xml:space="preserve"><value>Preview unavailable: missing component</value></data>
-  <data name="PH_ErrorTitle.Text" xml:space="preserve"><value>Preview cannot be displayed</value></data>
-  <data name="PH_ErrorBody.Text" xml:space="preserve"><value>PROFstudio requires Microsoft Edge WebView2 to display and export documents. It is not installed on this PC.</value></data>
-  <data name="PH_InstallButton.Content" xml:space="preserve"><value>Install component ↗</value></data>
-  <data name="PH_InstallButton.AutomationProperties.Name" xml:space="preserve"><value>Install WebView2 component</value></data>
-  <data name="PH_CopyLinkButton.Content" xml:space="preserve"><value>Copy link for IT administrator</value></data>
-  <data name="PH_CopyLinkButton.AutomationProperties.Name" xml:space="preserve"><value>Copy download link for administrator</value></data>
-  <data name="PH_LinkCopied.Text" xml:space="preserve"><value>✓ Link copied to clipboard</value></data>
-  <data name="Preview_Generating" xml:space="preserve"><value>Generating your document with AI…</value></data>
-  <data name="Preview_StatusDefault" xml:space="preserve"><value>Preparing preview…</value></data>
-
-  <!-- ═══════════ AssistantPane ═══════════ -->
-  <data name="AP_Title.Text" xml:space="preserve"><value>AI Assistant</value></data>
-  <data name="AP_NewConversation.ToolTipService.ToolTip" xml:space="preserve"><value>Start a new conversation</value></data>
-  <data name="AP_NewConversation.AutomationProperties.Name" xml:space="preserve"><value>New conversation</value></data>
-  <data name="AP_NewLabel.Text" xml:space="preserve"><value>New</value></data>
-  <data name="AP_ModeSegmented.AutomationProperties.Name" xml:space="preserve"><value>Assistant mode</value></data>
-  <data name="AP_ModeAuto.Content" xml:space="preserve"><value>Auto</value></data>
-  <data name="AP_ModeGenerate.Content" xml:space="preserve"><value>Generate</value></data>
-  <data name="AP_ModeEdit.Content" xml:space="preserve"><value>Edit</value></data>
-  <data name="AP_ModeQuestion.Content" xml:space="preserve"><value>Question</value></data>
-  <data name="AP_DiffHeader.Text" xml:space="preserve"><value>Proposed Revision</value></data>
-  <data name="AP_ApplyButton.ToolTipService.ToolTip" xml:space="preserve"><value>Apply this revision to the document (undoable with Ctrl+Z)</value></data>
-  <data name="AP_ApplyButton.AutomationProperties.Name" xml:space="preserve"><value>Apply revision</value></data>
-  <data name="AP_ApplyLabel.Text" xml:space="preserve"><value>Apply revision</value></data>
-  <data name="AP_RejectButton.ToolTipService.ToolTip" xml:space="preserve"><value>Ignore this proposal</value></data>
-  <data name="AP_RejectButton.AutomationProperties.Name" xml:space="preserve"><value>Ignore proposal</value></data>
-  <data name="AP_IgnoreLabel.Text" xml:space="preserve"><value>Ignore</value></data>
-  <data name="AP_CopyButton.ToolTipService.ToolTip" xml:space="preserve"><value>Copy text</value></data>
-  <data name="AP_CopyButton.AutomationProperties.Name" xml:space="preserve"><value>Copy text</value></data>
-  <data name="AP_CopyLabel.Text" xml:space="preserve"><value>Copy</value></data>
-  <data name="AP_UndoableNote.Text" xml:space="preserve"><value>Undoable (Ctrl+Z)</value></data>
-  <data name="AP_Typing.Text" xml:space="preserve"><value>Assistant is writing…</value></data>
-  <data name="AP_SuggestionsLabel.Text" xml:space="preserve"><value>Suggestions:</value></data>
-  <data name="AP_Chip1.AutomationProperties.Name" xml:space="preserve"><value>Suggestion: simplify vocabulary</value></data>
-  <data name="AP_Chip1Label.Text" xml:space="preserve"><value>Simplify vocabulary</value></data>
-  <data name="AP_Chip2.AutomationProperties.Name" xml:space="preserve"><value>Suggestion: add three comprehension questions</value></data>
-  <data name="AP_Chip2Label.Text" xml:space="preserve"><value>Add 3 comprehension questions</value></data>
-  <data name="AP_Chip3.AutomationProperties.Name" xml:space="preserve"><value>Suggestion: translate to French</value></data>
-  <data name="AP_Chip3Label.Text" xml:space="preserve"><value>Translate to French</value></data>
-  <data name="AP_Chip4.AutomationProperties.Name" xml:space="preserve"><value>Suggestion: summarize in five points</value></data>
-  <data name="AP_Chip4Label.Text" xml:space="preserve"><value>Summarize in 5 points</value></data>
-  <data name="AP_Chip5.AutomationProperties.Name" xml:space="preserve"><value>Suggestion: differentiate activity</value></data>
-  <data name="AP_Chip5Label.Text" xml:space="preserve"><value>Differentiate activity</value></data>
-  <data name="AP_PromptBox.PlaceholderText" xml:space="preserve"><value>Ask for an edit or ask a question…</value></data>
-  <data name="AP_PromptBox.AutomationProperties.Name" xml:space="preserve"><value>Message for assistant</value></data>
-  <data name="AP_SendButton.ToolTipService.ToolTip" xml:space="preserve"><value>Send (Enter)</value></data>
-  <data name="AP_SendButton.AutomationProperties.Name" xml:space="preserve"><value>Send message</value></data>
-  <data name="AP_StopButton.ToolTipService.ToolTip" xml:space="preserve"><value>Stop response</value></data>
-  <data name="AP_StopButton.AutomationProperties.Name" xml:space="preserve"><value>Stop response</value></data>
-  <data name="AP_ModelBadge.Text" xml:space="preserve"><value>Automatic model</value></data>
-  <data name="AP_KeyHints.Text" xml:space="preserve"><value>Enter: send • Shift+Enter: new line</value></data>
-  <data name="AP_ModeGenerate_Caption" xml:space="preserve"><value>Creates a new document based on your prompt.</value></data>
-  <data name="AP_ModeGenerate_Prompt" xml:space="preserve"><value>Describe the document to generate…</value></data>
-  <data name="AP_ModeEdit_Caption" xml:space="preserve"><value>Suggests targeted revisions for the active document.</value></data>
-  <data name="AP_ModeEdit_Prompt" xml:space="preserve"><value>Describe changes to make to the document…</value></data>
-  <data name="AP_ModeQuestion_Caption" xml:space="preserve"><value>Answers questions without altering the document.</value></data>
-  <data name="AP_ModeQuestion_Prompt" xml:space="preserve"><value>Ask a pedagogical question…</value></data>
-  <data name="AP_ModeAuto_Caption" xml:space="preserve"><value>Automatically detects whether to generate, edit, or answer.</value></data>
-
-  <!-- ═══════════ PdfDropZone ═══════════ -->
-  <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve"><value>Textbook guide PDF selection area</value></data>
-  <data name="PDZ_Zone.AutomationProperties.HelpText" xml:space="preserve"><value>Drag and drop a PDF guide or click to browse</value></data>
-  <data name="PDZ_EmptyPrimary.Text" xml:space="preserve"><value>Drag a PDF guide or click to browse</value></data>
-  <data name="PDZ_EmptySecondary.Text" xml:space="preserve"><value>Textbook, curriculum progression, etc. (optional)</value></data>
-  <data name="PDZ_DragOver.Text" xml:space="preserve"><value>Drop PDF file here</value></data>
-  <data name="PDZ_FileMeta.Text" xml:space="preserve"><value>PDF guide ready for pedagogical grounding</value></data>
-  <data name="PDZ_MetaMb" xml:space="preserve"><value>{0:F1} MB · Ready for pedagogical grounding</value></data>
-  <data name="PDZ_MetaKb" xml:space="preserve"><value>{0} KB · Ready for pedagogical grounding</value></data>
-  <data name="PDZ_FileSelected" xml:space="preserve"><value>PDF guide selected</value></data>
-  <data name="PDZ_RemoveFile.ToolTipService.ToolTip" xml:space="preserve"><value>Remove this guide</value></data>
-  <data name="PDZ_RemoveFile.AutomationProperties.Name" xml:space="preserve"><value>Remove PDF file</value></data>
-  <data name="PDZ_ErrorTitle.Text" xml:space="preserve"><value>Unsupported format</value></data>
-  <data name="PDZ_ErrorMessage.Text" xml:space="preserve"><value>Only .pdf files are supported.</value></data>
-  <data name="PDZ_ErrorPdfOnly" xml:space="preserve"><value>Only PDF files (.pdf) are accepted for guides.</value></data>
-  <data name="PDZ_ErrorReadTitle" xml:space="preserve"><value>Unable to read file</value></data>
-  <data name="PDZ_ErrorReadMessage" xml:space="preserve"><value>The file could not be read. Please ensure it is not locked.</value></data>
-  <data name="PDZ_ErrorClose.ToolTipService.ToolTip" xml:space="preserve"><value>Close</value></data>
-  <data name="PDZ_ErrorClose.AutomationProperties.Name" xml:space="preserve"><value>Dismiss error</value></data>
-  <data name="PDZ_Processing.Text" xml:space="preserve"><value>Analyzing PDF guide…</value></data>
-
-  <!-- ═══════════ CreationWorkspace ═══════════ -->
-  <data name="CW_Splitter.AutomationProperties.Name" xml:space="preserve"><value>Resize panels</value></data>
-  <data name="CW_Fab.AutomationProperties.Name" xml:space="preserve"><value>Open pedagogical assistant</value></data>
-  <data name="CW_Fab.ToolTipService.ToolTip" xml:space="preserve"><value>Ask a question to the AI assistant</value></data>
-  <data name="CW_FabLabel.Text" xml:space="preserve"><value>Assistant</value></data>
-  <data name="CW_OverlayTitle.Text" xml:space="preserve"><value>Pedagogical Assistant</value></data>
-  <data name="CW_CloseOverlay.AutomationProperties.Name" xml:space="preserve"><value>Close assistant</value></data>
-  <data name="CW_CloseOverlay.ToolTipService.ToolTip" xml:space="preserve"><value>Close</value></data>
-
-  <!-- ═══════════ Pages de création : titres & validation ═══════════ -->
-  <data name="FP_Title.Text" xml:space="preserve"><value>New Lesson Plan</value></data>
-  <data name="FP_Subtitle.Text" xml:space="preserve"><value>Prepare a structured session, ready to print or export.</value></data>
-  <data name="EP_Title.Text" xml:space="preserve"><value>New Evaluation</value></data>
-  <data name="EP_Subtitle.Text" xml:space="preserve"><value>Create a test with progressive exercises and grading rubrics.</value></data>
-  <data name="QP_Title.Text" xml:space="preserve"><value>New Quiz</value></data>
-  <data name="QP_Subtitle.Text" xml:space="preserve"><value>Generate a printable questionnaire with its detailed answer key.</value></data>
-  <data name="FP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>Show or hide side AI assistant</value></data>
-  <data name="EP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>Show or hide side AI assistant</value></data>
-  <data name="QP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>Show or hide side AI assistant</value></data>
-  <data name="FP_AssistantLabel.Text" xml:space="preserve"><value>Assistant</value></data>
-  <data name="EP_AssistantLabel.Text" xml:space="preserve"><value>Assistant</value></data>
-  <data name="QP_AssistantLabel.Text" xml:space="preserve"><value>Assistant</value></data>
-  <data name="Validation_Title" xml:space="preserve"><value>Almost ready!</value></data>
-  <data name="Validation_MissingLevel" xml:space="preserve"><value>the grade level</value></data>
-  <data name="Validation_MissingSubject" xml:space="preserve"><value>the subject</value></data>
-  <data name="Validation_MissingTopic" xml:space="preserve"><value>the lesson topic</value></data>
-  <data name="Validation_MissingTopics" xml:space="preserve"><value>at least one concept to evaluate</value></data>
-  <data name="FP_MissingFields_Message" xml:space="preserve"><value>To generate the lesson plan, please provide: {0}.</value></data>
-  <data name="EP_MissingFields_Message" xml:space="preserve"><value>To generate the evaluation, please provide: {0}.</value></data>
-  <data name="QP_MissingFields_Message" xml:space="preserve"><value>To generate your quiz, please provide: {0}.</value></data>
-
-  <!-- ═══════════ HistoryPage ═══════════ -->
-  <data name="HP_Title.Text" xml:space="preserve"><value>My Documents</value></data>
-  <data name="HP_Subtitle.Text" xml:space="preserve"><value>Browse all lesson plans, evaluations, and quizzes saved locally on this PC.</value></data>
-  <data name="HP_SearchBox.PlaceholderText" xml:space="preserve"><value>Search by title, subject, level, or keyword…</value></data>
-  <data name="HP_FilterAll.Content" xml:space="preserve"><value>All</value></data>
-  <data name="HP_FilterFiches.Content" xml:space="preserve"><value>Lesson Plans</value></data>
-  <data name="HP_FilterEvals.Content" xml:space="preserve"><value>Evaluations</value></data>
-  <data name="HP_FilterQuiz.Content" xml:space="preserve"><value>Quizzes</value></data>
-  <data name="HP_FilterFavorites.Content" xml:space="preserve"><value>Favorites</value></data>
-  <data name="HP_EmptyState.AutomationProperties.Name" xml:space="preserve"><value>No documents in library</value></data>
-  <data name="HP_Tip1.Text" xml:space="preserve"><value>Every generated lesson plan, evaluation, or quiz is automatically saved here.</value></data>
-  <data name="HP_Tip2.Text" xml:space="preserve"><value>Use search to quickly find documents by subject, grade level, or keyword.</value></data>
-  <data name="HP_OptionsButton.ToolTipService.ToolTip" xml:space="preserve"><value>Document options (⋯)</value></data>
-  <data name="HP_OptionsButton.AutomationProperties.Name" xml:space="preserve"><value>Document options</value></data>
-  <data name="HP_MenuOpen.Text" xml:space="preserve"><value>Open document</value></data>
-  <data name="HP_MenuExportWord.Text" xml:space="preserve"><value>Export to Word (.docx)</value></data>
-  <data name="HP_MenuExportPdf.Text" xml:space="preserve"><value>Export to PDF</value></data>
-  <data name="HP_MenuDelete.Text" xml:space="preserve"><value>Delete document</value></data>
-  <data name="HP_UndoToastDefault.Text" xml:space="preserve"><value>Document deleted</value></data>
-  <data name="HP_UndoToast" xml:space="preserve"><value>« {0} » deleted.</value></data>
-  <data name="HP_UndoButton.Content" xml:space="preserve"><value>Undo</value></data>
-  <data name="HP_DeleteTitle" xml:space="preserve"><value>Delete this document?</value></data>
-  <data name="HP_DeleteContent" xml:space="preserve"><value>« {0} » will be removed from your saved documents.</value></data>
-  <data name="HP_DeleteConfirm" xml:space="preserve"><value>Delete</value></data>
-
-  <!-- ═══════════ SettingsPage (titre & onglets) ═══════════ -->
-  <data name="SP_Title.Text" xml:space="preserve"><value>Settings</value></data>
-  <data name="SP_Subtitle.Text" xml:space="preserve"><value>Configure PROFstudio: appearance, artificial intelligence, document styles, and privacy.</value></data>
-  <data name="SP_TabGeneral.Text" xml:space="preserve"><value>General</value></data>
-  <data name="SP_TabAi.Text" xml:space="preserve"><value>AI &amp; Routing</value></data>
-  <data name="SP_TabFolders.Text" xml:space="preserve"><value>Folders</value></data>
-  <data name="SP_TabStyles.Text" xml:space="preserve"><value>Styles</value></data>
-  <data name="SP_TabPrivacy.Text" xml:space="preserve"><value>Privacy</value></data>
-  <data name="SP_TabPrompts.Text" xml:space="preserve"><value>Prompts &amp; Shortcuts</value></data>
-  <data name="SP_SaveButton.ToolTipService.ToolTip" xml:space="preserve"><value>Save (Ctrl+S)</value></data>
-  <data name="SP_SaveLabel.Text" xml:space="preserve"><value>Save Settings</value></data>
-
-  <!-- ═══════════ FirstRunDialog ═══════════ -->
-  <data name="FRD_Dialog.Title" xml:space="preserve"><value>Welcome to PROFstudio</value></data>
-  <data name="FRD_Dialog.PrimaryButtonText" xml:space="preserve"><value>Get Started</value></data>
-  <data name="FRD_Dialog.CloseButtonText" xml:space="preserve"><value>Skip for now</value></data>
-  <data name="FRD_StepIndicator.Text" xml:space="preserve"><value>Step 1 of 3</value></data>
-  <data name="FRD_StepFormat" xml:space="preserve"><value>Step {0} of {1}</value></data>
-  <data name="FRD_HeroTitle.Text" xml:space="preserve"><value>Your Lesson Preparation Assistant</value></data>
-  <data name="FRD_HeroSubtitle.Text" xml:space="preserve"><value>Less time at your desk, more time with your students.</value></data>
-  <data name="FRD_Intro.Text" xml:space="preserve"><value>PROFstudio prepares documents alongside you — never without your oversight. You review, adjust, and validate: the final result fits your exact style.</value></data>
-  <data name="FRD_CardFicheTitle.Text" xml:space="preserve"><value>Lesson Plan</value></data>
-  <data name="FRD_CardFicheDesc.Text" xml:space="preserve"><value>Structured, ready to print or export.</value></data>
-  <data name="FRD_CardEvalTitle.Text" xml:space="preserve"><value>Evaluation</value></data>
-  <data name="FRD_CardEvalDesc.Text" xml:space="preserve"><value>Progressive exercises with rubrics.</value></data>
-  <data name="FRD_CardQuizTitle.Text" xml:space="preserve"><value>Quiz</value></data>
-  <data name="FRD_CardQuizDesc.Text" xml:space="preserve"><value>Printable multiple-choice quizzes with answer keys.</value></data>
-  <data name="FRD_LocalNote.Text" xml:space="preserve"><value>Rest assured: your documents stay on your computer, with no mandatory online account.</value></data>
-  <data name="FRD_GuidesHeader.Text" xml:space="preserve"><value>Your Reference Documents</value></data>
-  <data name="FRD_OptionalBadge.Text" xml:space="preserve"><value>Optional</value></data>
-  <data name="FRD_GuidesIntro.Text" xml:space="preserve"><value>Do you frequently prepare lessons using a PDF textbook or syllabus? Select that folder here: PROFstudio will ground generated documents in your curriculum.</value></data>
-  <data name="FRD_DropHint.Text" xml:space="preserve"><value>Drag and drop a folder here</value></data>
-  <data name="FRD_Or.Text" xml:space="preserve"><value>or</value></data>
-  <data name="FRD_PickFolder.Content" xml:space="preserve"><value>Choose a folder…</value></data>
-  <data name="FRD_PickFolder.AutomationProperties.Name" xml:space="preserve"><value>Choose a document folder</value></data>
-  <data name="FRD_FolderBox.PlaceholderText" xml:space="preserve"><value>No folder selected — you can configure one later</value></data>
-  <data name="FRD_FolderHint.Text" xml:space="preserve"><value>Not sure which folder to select? Simply skip to the next step: everything can be configured in Settings ▸ Folders.</value></data>
-  <data name="FRD_ProviderHeader.Text" xml:space="preserve"><value>Select Your AI Assistant</value></data>
-  <data name="FRD_ProviderSub.Text" xml:space="preserve"><value>It drafts the initial content. You always maintain final control.</value></data>
-  <data name="FRD_ProviderSelector.AutomationProperties.Name" xml:space="preserve"><value>AI Assistant used for drafting</value></data>
-  <data name="FRD_ProviderGoogle.AutomationProperties.Name" xml:space="preserve"><value>Google AI Studio, free, recommended</value></data>
-  <data name="FRD_GoogleName.Text" xml:space="preserve"><value>Google AI Studio</value></data>
-  <data name="FRD_GoogleBadge.Text" xml:space="preserve"><value>Free · Recommended</value></data>
-  <data name="FRD_GoogleDesc.Text" xml:space="preserve"><value>The easiest way to start: just requires a standard Google account.</value></data>
-  <data name="FRD_ProviderOpenAi.AutomationProperties.Name" xml:space="preserve"><value>OpenAI GPT</value></data>
-  <data name="FRD_OpenAiName.Text" xml:space="preserve"><value>OpenAI (ChatGPT)</value></data>
-  <data name="FRD_OpenAiDesc.Text" xml:space="preserve"><value>For users who already have an OpenAI API key.</value></data>
-  <data name="FRD_ProviderLocal.AutomationProperties.Name" xml:space="preserve"><value>Local Server, Advanced</value></data>
-  <data name="FRD_LocalName.Text" xml:space="preserve"><value>Local Server — Advanced</value></data>
-  <data name="FRD_LocalDesc.Text" xml:space="preserve"><value>100% offline, zero data leaves the school. Requires Ollama configured by your IT staff.</value></data>
-  <data name="FRD_KeyQuestion.Text" xml:space="preserve"><value>What is an « API Key »?</value></data>
-  <data name="FRD_KeyExplain.Text" xml:space="preserve"><value>It is a personal access token that securely connects PROFstudio to your chosen AI service — like a password. Paste it once below: it is encrypted in Windows Credential Locker and never leaves this computer.</value></data>
-  <data name="FRD_KeyBox.PlaceholderText" xml:space="preserve"><value>Paste your key here (Ctrl+V)</value></data>
-  <data name="FRD_KeyBoxName.AutomationProperties.Name" xml:space="preserve"><value>AI service access key</value></data>
-  <data name="FRD_GetKeyLink.Content" xml:space="preserve"><value>Where can I find my free key? ↗</value></data>
-  <data name="FRD_GetKeyLinkOpenAi" xml:space="preserve"><value>Where can I find my OpenAI key? ↗</value></data>
-  <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve"><value>Open the page providing the key</value></data>
-  <data name="FRD_LocalKeyNote" xml:space="preserve"><value>With a local server, no data leaves your institution. Your IT administrator can assist with setup.</value></data>
-  <data name="FRD_KeyOptionalNote.Text" xml:space="preserve"><value>In a hurry? Finish without a key: PROFstudio will prompt you when needed.</value></data>
-  <data name="FRD_CloudName.Text" xml:space="preserve"><value>PROFstudio Cloud Service</value></data>
-  <data name="FRD_CloudBadge.Text" xml:space="preserve"><value>Included · Ready to use</value></data>
-  <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>Ready immediately: no API key or manual setup required.</value></data>
-  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>My Teacher Account</value></data>
-  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>My Teacher Account</value></data>
-  <data name="Nav_Help" xml:space="preserve"><value>Help &amp; Shortcuts</value></data>
-  <data name="Shell_AssistantToggle_Label" xml:space="preserve"><value>Assistant</value></data>
-  <data name="FP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
-  <data name="FP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
-  <data name="FP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
-  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
-  <data name="FP_Step2_Header.Text" xml:space="preserve"><value>2. Lesson Topic</value></data>
-  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve"><value>e.g., Fractions, French Revolution…</value></data>
-  <data name="FP_Step3_Header.Text" xml:space="preserve"><value>3. Frame &amp; Duration</value></data>
-  <data name="FP_DurationBox.Header" xml:space="preserve"><value>Lesson duration (minutes)</value></data>
-  <data name="FP_InstructionsBox.Header" xml:space="preserve"><value>Additional instructions (optional)</value></data>
-  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve"><value>Specify context, special needs, group work…</value></data>
-  <data name="FP_Step4_Header.Text" xml:space="preserve"><value>4. PDF Reference Guide (optional)</value></data>
-  <data name="EP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
-  <data name="EP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
-  <data name="EP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
-  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
-  <data name="EP_Step2_Header.Text" xml:space="preserve"><value>2. Concepts to Evaluate</value></data>
-  <data name="EP_Step2_Sub.Text" xml:space="preserve"><value>Select one or more concepts or add your own topic:</value></data>
-  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve"><value>Another concept… (e.g., Angle calculation)</value></data>
-  <data name="EP_AddTagButton.Content" xml:space="preserve"><value>Add</value></data>
-  <data name="EP_Step3_Header.Text" xml:space="preserve"><value>3. Format &amp; Rubric</value></data>
-  <data name="EP_EvalTypeCombo.Header" xml:space="preserve"><value>Type</value></data>
-  <data name="EP_TotalPointsBox.Header" xml:space="preserve"><value>Total points</value></data>
-  <data name="QP_Step1_Header.Text" xml:space="preserve"><value>1. Class and Subject</value></data>
-  <data name="QP_LevelCombo.Header" xml:space="preserve"><value>Grade / Level</value></data>
-  <data name="QP_SubjectCombo.Header" xml:space="preserve"><value>Subject</value></data>
-  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>Select or type</value></data>
-  <data name="QP_Step2_Header.Text" xml:space="preserve"><value>2. Quiz Topic</value></data>
-  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve"><value>e.g., Multiplication tables, Water cycle…</value></data>
-  <data name="QP_Step3_Header.Text" xml:space="preserve"><value>3. Format &amp; Options</value></data>
-  <data name="QP_QuestionCountBox.Header" xml:space="preserve"><value>Questions (3-30)</value></data>
-  <data name="QP_QuizDurationBox.Header" xml:space="preserve"><value>Duration (minutes)</value></data>
-  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve"><value>Question types:</value></data>
-  <data name="QP_QcmCheck.Content" xml:space="preserve"><value>Multiple Choice</value></data>
-  <data name="QP_TfCheck.Content" xml:space="preserve"><value>True / False</value></data>
-  <data name="QP_ShortCheck.Content" xml:space="preserve"><value>Short Answer</value></data>
+  <data name="Shell_TitleBar.AutomationProperties.Name" xml:space="preserve">
+    <value>PROFstudio Title Bar</value>
+  </data>
+  <data name="Shell_AiChipText.Text" xml:space="preserve">
+    <value>AI Assistant — checking…</value>
+  </data>
+  <data name="Shell_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show or hide AI Assistant (Ctrl+B)</value>
+  </data>
+  <data name="Shell_AssistantToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>AI Assistant</value>
+  </data>
+  <data name="Shell_ThemeButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Display Theme: Light, Dark, or System</value>
+  </data>
+  <data name="Shell_ThemeButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Change theme</value>
+  </data>
+  <data name="Shell_ThemeSystemItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Follows Windows theme</value>
+  </data>
+  <data name="Shell_ThemeSystemItem.AutomationProperties.Name" xml:space="preserve">
+    <value>System theme</value>
+  </data>
+  <data name="Shell_ThemeLightItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Light interface</value>
+  </data>
+  <data name="Shell_ThemeLightItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Light theme</value>
+  </data>
+  <data name="Shell_ThemeDarkItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Dark interface</value>
+  </data>
+  <data name="Shell_ThemeDarkItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Dark theme</value>
+  </data>
+  <data name="Shell_ThemeOledItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Deep black interface for OLED screens</value>
+  </data>
+  <data name="Shell_ThemeOledItem.AutomationProperties.Name" xml:space="preserve">
+    <value>OLED absolute black theme</value>
+  </data>
+  <data name="Shell_ThemeOledItem.Text" xml:space="preserve">
+    <value>OLED Dark</value>
+  </data>
+  <data name="Shell_SettingsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Settings (Ctrl+,)</value>
+  </data>
+  <data name="Shell_SettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Shell_ProfileButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Teacher profile</value>
+  </data>
+  <data name="Shell_ProfileButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Teacher profile</value>
+  </data>
+  <data name="Shell_ProfileSettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Shell_ProfileSettingsLabel.Text" xml:space="preserve">
+    <value>Application Settings</value>
+  </data>
+  <data name="Shell_ProfileShortcutsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Keyboard shortcuts</value>
+  </data>
+  <data name="Shell_ProfileShortcutsLabel.Text" xml:space="preserve">
+    <value>Keyboard Shortcuts (F1)</value>
+  </data>
+  <data name="Shell_ProfileAboutButton.AutomationProperties.Name" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Shell_ProfileAboutLabel.Text" xml:space="preserve">
+    <value>About PROFstudio</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search documents…</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Search my documents (Ctrl+F)</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.AutomationProperties.Name" xml:space="preserve">
+    <value>Global search</value>
+  </data>
+  <data name="Nav_FicheItem.Content" xml:space="preserve">
+    <value>Lesson Plan</value>
+  </data>
+  <data name="Nav_FicheItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Create a lesson plan (Ctrl+1)</value>
+  </data>
+  <data name="Nav_FicheItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Lesson Plan</value>
+  </data>
+  <data name="Nav_EvaluationItem.Content" xml:space="preserve">
+    <value>Evaluations &amp; Tests</value>
+  </data>
+  <data name="Nav_EvaluationItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Create an evaluation with grading rubric (Ctrl+2)</value>
+  </data>
+  <data name="Nav_EvaluationItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Evaluations and Tests</value>
+  </data>
+  <data name="Nav_QuizItem.Content" xml:space="preserve">
+    <value>Quick Quizzes</value>
+  </data>
+  <data name="Nav_QuizItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Create a quiz or multiple-choice test (Ctrl+3)</value>
+  </data>
+  <data name="Nav_QuizItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Quick Quizzes</value>
+  </data>
+  <data name="Nav_HistoryItem.Content" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="Nav_HistoryItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Browse all created documents (Ctrl+4)</value>
+  </data>
+  <data name="Nav_HistoryItem.AutomationProperties.Name" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="Nav_HelpItem.Content" xml:space="preserve">
+    <value>Help &amp; Shortcuts</value>
+  </data>
+  <data name="Nav_HelpItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Help and keyboard shortcuts (F1)</value>
+  </data>
+  <data name="Nav_HelpItem.AutomationProperties.Name" xml:space="preserve">
+    <value>Help and keyboard shortcuts</value>
+  </data>
+  <data name="Shell_StatusText.Text" xml:space="preserve">
+    <value>Ready for a new session</value>
+  </data>
+  <data name="Shell_NotificationAction.Content" xml:space="preserve">
+    <value>Configure</value>
+  </data>
+  <data name="Shell_NotificationDismiss.AutomationProperties.Name" xml:space="preserve">
+    <value>Dismiss notification</value>
+  </data>
+  <data name="Status_Ready" xml:space="preserve">
+    <value>Ready for a new session</value>
+  </data>
+  <data name="Status_Generating" xml:space="preserve">
+    <value>⏳ Generating…</value>
+  </data>
+  <data name="Status_Cancelled" xml:space="preserve">
+    <value>Generation cancelled</value>
+  </data>
+  <data name="Status_SearchHistory" xml:space="preserve">
+    <value>Searching history</value>
+  </data>
+  <data name="Status_NewFiche" xml:space="preserve">
+    <value>New lesson plan</value>
+  </data>
+  <data name="Status_Exporting" xml:space="preserve">
+    <value>Exporting document…</value>
+  </data>
+  <data name="Status_Printing" xml:space="preserve">
+    <value>Preparing print…</value>
+  </data>
+  <data name="Status_Undone" xml:space="preserve">
+    <value>Action undone</value>
+  </data>
+  <data name="Status_Theme" xml:space="preserve">
+    <value>Theme: {0}</value>
+  </data>
+  <data name="Theme_Light" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Theme_Dark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Theme_Oled" xml:space="preserve">
+    <value>Absolute Black (OLED)</value>
+  </data>
+  <data name="Theme_System" xml:space="preserve">
+    <value>System Default</value>
+  </data>
+  <data name="Section_Fiche" xml:space="preserve">
+    <value>Lesson Plan</value>
+  </data>
+  <data name="Section_Evaluation" xml:space="preserve">
+    <value>Evaluations &amp; Tests</value>
+  </data>
+  <data name="Section_Quiz" xml:space="preserve">
+    <value>Quick Quizzes</value>
+  </data>
+  <data name="Section_History" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="Section_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Hint_OpenCreationPage_Title" xml:space="preserve">
+    <value>Generation</value>
+  </data>
+  <data name="Hint_OpenCreationPage_Message" xml:space="preserve">
+    <value>Open a creation page first (Lesson Plan, Evaluation, or Quiz).</value>
+  </data>
+  <data name="Hint_Cancel_Title" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="Hint_Cancel_Message" xml:space="preserve">
+    <value>The active generation was cancelled.</value>
+  </data>
+  <data name="Hint_NewFiche_Title" xml:space="preserve">
+    <value>New lesson plan</value>
+  </data>
+  <data name="Hint_NewFiche_Message" xml:space="preserve">
+    <value>Form is ready — let's create!</value>
+  </data>
+  <data name="Hint_Export_Title" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Hint_Export_Message" xml:space="preserve">
+    <value>Document export started…</value>
+  </data>
+  <data name="Hint_Export_GenerateFirst" xml:space="preserve">
+    <value>Generate a document first (Ctrl+G) to export it.</value>
+  </data>
+  <data name="Hint_NothingToExport" xml:space="preserve">
+    <value>No document to export on this page.</value>
+  </data>
+  <data name="Hint_Preview_Title" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Hint_Preview_Shown" xml:space="preserve">
+    <value>Preview panel shown.</value>
+  </data>
+  <data name="Hint_Preview_Hidden" xml:space="preserve">
+    <value>Preview panel hidden.</value>
+  </data>
+  <data name="Hint_Preview_Unavailable" xml:space="preserve">
+    <value>Preview is not available on this page.</value>
+  </data>
+  <data name="Hint_Print_Title" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="Hint_Print_Message" xml:space="preserve">
+    <value>Preparing print / PDF…</value>
+  </data>
+  <data name="Hint_Print_GenerateFirst" xml:space="preserve">
+    <value>Generate a document first (Ctrl+G) to print it.</value>
+  </data>
+  <data name="Hint_NothingToPrint" xml:space="preserve">
+    <value>Nothing to print on this page.</value>
+  </data>
+  <data name="Hint_Undo_Title" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="Hint_Undo_Message" xml:space="preserve">
+    <value>Last action undone.</value>
+  </data>
+  <data name="Hint_NothingToUndo" xml:space="preserve">
+    <value>Nothing to undo right now.</value>
+  </data>
+  <data name="Hint_Unavailable" xml:space="preserve">
+    <value>Currently unavailable.</value>
+  </data>
+  <data name="Hint_PartialStart_Title" xml:space="preserve">
+    <value>Partial Start</value>
+  </data>
+  <data name="Hint_PartialStart_Message" xml:space="preserve">
+    <value>An initial configuration step could not be completed. You can adjust it in Settings.</value>
+  </data>
+  <data name="Hint_Welcome_Title" xml:space="preserve">
+    <value>Welcome to PROFstudio</value>
+  </data>
+  <data name="Hint_Welcome_Message" xml:space="preserve">
+    <value>Your workspace is ready! Open « Lesson Plan » on the left to create your first document.</value>
+  </data>
+  <data name="Hint_FirstDoc_Title" xml:space="preserve">
+    <value>Your first lesson plan is ready!</value>
+  </data>
+  <data name="Hint_FirstDoc_Message" xml:space="preserve">
+    <value>It is already saved in « My Documents ». The AI assistant can refine it — just ask.</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Title" xml:space="preserve">
+    <value>Missing Runtime Component</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Message" xml:space="preserve">
+    <value>PROFstudio requires Microsoft Edge WebView2 to render and export documents. You can install it now or later from the setup directory.</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Primary" xml:space="preserve">
+    <value>Install now</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Close" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="Dialog_Shortcuts_Title" xml:space="preserve">
+    <value>Keyboard Shortcuts</value>
+  </data>
+  <data name="Dialog_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Dialog_About_Title" xml:space="preserve">
+    <value>About PROFstudio</value>
+  </data>
+  <data name="Dialog_About_Tagline" xml:space="preserve">
+    <value>Intelligent pedagogical document generator</value>
+  </data>
+  <data name="Dialog_About_Version" xml:space="preserve">
+    <value>Version: {0}</value>
+  </data>
+  <data name="Dialog_About_Description" xml:space="preserve">
+    <value>PROFstudio empowers teachers to rapidly create lesson plans, evaluations, and quizzes with AI assistance.</value>
+  </data>
+  <data name="Dialog_About_Copyright" xml:space="preserve">
+    <value>© 2026 PROFstudio. All rights reserved.</value>
+  </data>
+  <data name="Profile_DefaultName" xml:space="preserve">
+    <value>Educator</value>
+  </data>
+  <data name="Profile_DefaultSchool" xml:space="preserve">
+    <value>Local Account — Zero data shared</value>
+  </data>
+  <data name="Palette_GotoFiche" xml:space="preserve">
+    <value>Go to: Lesson Plan</value>
+  </data>
+  <data name="Palette_GotoFiche_Sub" xml:space="preserve">
+    <value>Create a session lesson plan</value>
+  </data>
+  <data name="Palette_GotoEvaluation" xml:space="preserve">
+    <value>Go to: Evaluations &amp; Tests</value>
+  </data>
+  <data name="Palette_GotoEvaluation_Sub" xml:space="preserve">
+    <value>Tests with grading rubrics</value>
+  </data>
+  <data name="Palette_GotoQuiz" xml:space="preserve">
+    <value>Go to: Quick Quizzes</value>
+  </data>
+  <data name="Palette_GotoQuiz_Sub" xml:space="preserve">
+    <value>Printable multiple-choice quizzes with keys</value>
+  </data>
+  <data name="Palette_GotoHistory" xml:space="preserve">
+    <value>Go to: My Documents</value>
+  </data>
+  <data name="Palette_GotoHistory_Sub" xml:space="preserve">
+    <value>History and search</value>
+  </data>
+  <data name="Palette_NewFiche" xml:space="preserve">
+    <value>New Lesson Plan</value>
+  </data>
+  <data name="Palette_NewFiche_Sub" xml:space="preserve">
+    <value>Blank form, ready to fill</value>
+  </data>
+  <data name="Palette_ToggleAssistant" xml:space="preserve">
+    <value>Toggle AI Assistant</value>
+  </data>
+  <data name="Palette_ToggleAssistant_Sub" xml:space="preserve">
+    <value>Show or hide the side pane</value>
+  </data>
+  <data name="Palette_ChangeTheme" xml:space="preserve">
+    <value>Change theme</value>
+  </data>
+  <data name="Palette_ChangeTheme_Sub" xml:space="preserve">
+    <value>Cycle System → Light → Dark</value>
+  </data>
+  <data name="Palette_SearchDocs" xml:space="preserve">
+    <value>Search my documents</value>
+  </data>
+  <data name="Palette_SearchDocs_Sub" xml:space="preserve">
+    <value>Find a document by subject or keyword</value>
+  </data>
+  <data name="Palette_OpenSettings" xml:space="preserve">
+    <value>Open Settings</value>
+  </data>
+  <data name="Palette_OpenSettings_Sub" xml:space="preserve">
+    <value>Appearance, AI, folders, privacy</value>
+  </data>
+  <data name="Palette_Shortcuts" xml:space="preserve">
+    <value>Keyboard shortcuts</value>
+  </data>
+  <data name="Palette_Shortcuts_Sub" xml:space="preserve">
+    <value>Full list of shortcuts</value>
+  </data>
+  <data name="Palette_GenerateNow" xml:space="preserve">
+    <value>Generate now</value>
+  </data>
+  <data name="Palette_GenerateNow_Sub" xml:space="preserve">
+    <value>Start drafting the active document</value>
+  </data>
+  <data name="Palette_StopGeneration" xml:space="preserve">
+    <value>Stop generation</value>
+  </data>
+  <data name="Palette_StopGeneration_Sub" xml:space="preserve">
+    <value>Interrupt active AI generation</value>
+  </data>
+  <data name="Palette_ExportPdf" xml:space="preserve">
+    <value>Export to PDF</value>
+  </data>
+  <data name="Palette_ExportPdf_Sub" xml:space="preserve">
+    <value>Print-ready, distributed format</value>
+  </data>
+  <data name="Palette_ExportWord" xml:space="preserve">
+    <value>Export to Word (.docx)</value>
+  </data>
+  <data name="Palette_ExportWord_Sub" xml:space="preserve">
+    <value>Editable in Microsoft Word</value>
+  </data>
+  <data name="Palette_PrintDoc" xml:space="preserve">
+    <value>Print document</value>
+  </data>
+  <data name="Palette_PrintDoc_Sub" xml:space="preserve">
+    <value>Opens the print dialog</value>
+  </data>
+  <data name="Palette_ShowTeacherVersion" xml:space="preserve">
+    <value>Show teacher version</value>
+  </data>
+  <data name="Palette_ShowStudentVersion" xml:space="preserve">
+    <value>Show student version</value>
+  </data>
+  <data name="Palette_ToggleView_Sub" xml:space="preserve">
+    <value>Toggle between answer key and student handout</value>
+  </data>
+  <data name="Shortcut_Palette" xml:space="preserve">
+    <value>Command Palette — search and trigger any action</value>
+  </data>
+  <data name="Shortcut_Generate" xml:space="preserve">
+    <value>Generate lesson plan, evaluation, or quiz</value>
+  </data>
+  <data name="Shortcut_WheelZoom" xml:space="preserve">
+    <value>Zoom document preview</value>
+  </data>
+  <data name="Shortcut_ResetZoom" xml:space="preserve">
+    <value>Reset preview zoom</value>
+  </data>
+  <data name="Shortcut_Escape" xml:space="preserve">
+    <value>Cancel active generation</value>
+  </data>
+  <data name="Shortcut_Assistant" xml:space="preserve">
+    <value>Show or hide AI Assistant</value>
+  </data>
+  <data name="Shortcut_NewFiche" xml:space="preserve">
+    <value>Create a new lesson plan</value>
+  </data>
+  <data name="Shortcut_Export" xml:space="preserve">
+    <value>Export document (Word, PDF…)</value>
+  </data>
+  <data name="Shortcut_TogglePreview" xml:space="preserve">
+    <value>Show or hide preview pane</value>
+  </data>
+  <data name="Shortcut_Print" xml:space="preserve">
+    <value>Print or export to PDF</value>
+  </data>
+  <data name="Shortcut_Search" xml:space="preserve">
+    <value>Search in document history</value>
+  </data>
+  <data name="Shortcut_Undo" xml:space="preserve">
+    <value>Undo last action</value>
+  </data>
+  <data name="Shortcut_NextSection" xml:space="preserve">
+    <value>Go to next section</value>
+  </data>
+  <data name="Shortcut_PreviousSection" xml:space="preserve">
+    <value>Go to previous section</value>
+  </data>
+  <data name="Shortcut_GotoSection" xml:space="preserve">
+    <value>Go directly to a section</value>
+  </data>
+  <data name="Shortcut_Settings" xml:space="preserve">
+    <value>Open Settings</value>
+  </data>
+  <data name="Shortcut_Help" xml:space="preserve">
+    <value>Show this help dialog</value>
+  </data>
+  <data name="CP_Panel.AutomationProperties.Name" xml:space="preserve">
+    <value>Command Palette</value>
+  </data>
+  <data name="CP_QueryBox.PlaceholderText" xml:space="preserve">
+    <value>Search an action… (e.g. « quiz », « pdf », « theme »)</value>
+  </data>
+  <data name="CP_QueryBox.AutomationProperties.Name" xml:space="preserve">
+    <value>Command search</value>
+  </data>
+  <data name="CP_CloseBadge.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close (Esc)</value>
+  </data>
+  <data name="CP_NavHint.Text" xml:space="preserve">
+    <value>↑↓ Navigate</value>
+  </data>
+  <data name="CP_RunHint.Text" xml:space="preserve">
+    <value>Enter Run</value>
+  </data>
+  <data name="CP_EscapeHint.Text" xml:space="preserve">
+    <value>Esc Close</value>
+  </data>
+  <data name="CTA_IdleLabel.Text" xml:space="preserve">
+    <value>Generate with AI</value>
+  </data>
+  <data name="CTA_ShortcutIdle.Text" xml:space="preserve">
+    <value>Ctrl+G</value>
+  </data>
+  <data name="CTA_BusyLabel.Text" xml:space="preserve">
+    <value>Stop generation</value>
+  </data>
+  <data name="CTA_ShortcutBusy.Text" xml:space="preserve">
+    <value>Esc</value>
+  </data>
+  <data name="CTA_Name_Idle" xml:space="preserve">
+    <value>Generate with AI</value>
+  </data>
+  <data name="CTA_Name_Busy" xml:space="preserve">
+    <value>Stop generation</value>
+  </data>
+  <data name="CTA_Tooltip_Idle" xml:space="preserve">
+    <value>Starts document drafting with the AI assistant (Ctrl+G)</value>
+  </data>
+  <data name="CTA_Tooltip_Busy" xml:space="preserve">
+    <value>Interrupts active generation (Esc)</value>
+  </data>
+  <data name="PH_Toolbar.AutomationProperties.Name" xml:space="preserve">
+    <value>Document toolbar</value>
+  </data>
+  <data name="PH_StyleCombo.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Document visual style</value>
+  </data>
+  <data name="PH_StyleCombo.AutomationProperties.Name" xml:space="preserve">
+    <value>Visual style of the document</value>
+  </data>
+  <data name="PH_StyleModern.Content" xml:space="preserve">
+    <value>Modern</value>
+  </data>
+  <data name="PH_StyleClassic.Content" xml:space="preserve">
+    <value>Classic</value>
+  </data>
+  <data name="PH_StyleMinimal.Content" xml:space="preserve">
+    <value>Minimal</value>
+  </data>
+  <data name="PH_StyleAcademic.Content" xml:space="preserve">
+    <value>Academic</value>
+  </data>
+  <data name="PH_StylePlayful.Content" xml:space="preserve">
+    <value>Playful</value>
+  </data>
+  <data name="PH_StyleDyslexie.Content" xml:space="preserve">
+    <value>DYS Accessible</value>
+  </data>
+  <data name="PH_StudentButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Toggle between teacher version (with answers) and student handout (Ctrl+Shift+V)</value>
+  </data>
+  <data name="PH_StudentButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Toggle student / teacher version</value>
+  </data>
+  <data name="PH_StudentLabel.Text" xml:space="preserve">
+    <value>Student / Key</value>
+  </data>
+  <data name="PH_ZoomOut.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Zoom out</value>
+  </data>
+  <data name="PH_ZoomOut.AutomationProperties.Name" xml:space="preserve">
+    <value>Zoom out</value>
+  </data>
+  <data name="PH_ZoomLevel.AutomationProperties.Name" xml:space="preserve">
+    <value>Zoom level</value>
+  </data>
+  <data name="PH_ZoomIn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Zoom in</value>
+  </data>
+  <data name="PH_ZoomIn.AutomationProperties.Name" xml:space="preserve">
+    <value>Zoom in</value>
+  </data>
+  <data name="PH_ZoomReset.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reset zoom to 100% (Ctrl+0)</value>
+  </data>
+  <data name="PH_ZoomReset.AutomationProperties.Name" xml:space="preserve">
+    <value>Reset zoom</value>
+  </data>
+  <data name="PH_ExportWord.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Export to editable Word document (Ctrl+Shift+W)</value>
+  </data>
+  <data name="PH_ExportWord.AutomationProperties.Name" xml:space="preserve">
+    <value>Export to Word</value>
+  </data>
+  <data name="PH_WordLabel.Text" xml:space="preserve">
+    <value>Word</value>
+  </data>
+  <data name="PH_ExportPdf.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Export to print-ready PDF (Ctrl+Shift+E)</value>
+  </data>
+  <data name="PH_ExportPdf.AutomationProperties.Name" xml:space="preserve">
+    <value>Export to PDF</value>
+  </data>
+  <data name="PH_PdfLabel.Text" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="PH_PrintButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Print document (Ctrl+P)</value>
+  </data>
+  <data name="PH_PrintButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Print document</value>
+  </data>
+  <data name="PH_PrintLabel.Text" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="PH_EditButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Edit document text and instructions</value>
+  </data>
+  <data name="PH_EditButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Edit document</value>
+  </data>
+  <data name="PH_EditLabel.Text" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="PH_MoreActions.ToolTipService.ToolTip" xml:space="preserve">
+    <value>More actions</value>
+  </data>
+  <data name="PH_MoreActions.AutomationProperties.Name" xml:space="preserve">
+    <value>More export and audio options</value>
+  </data>
+  <data name="PH_MenuEdit.Text" xml:space="preserve">
+    <value>Edit document</value>
+  </data>
+  <data name="PH_MenuRtf.Text" xml:space="preserve">
+    <value>Export to RTF</value>
+  </data>
+  <data name="PH_MenuCopyText.Text" xml:space="preserve">
+    <value>Copy full text</value>
+  </data>
+  <data name="PH_MenuFind.Text" xml:space="preserve">
+    <value>Find in document</value>
+  </data>
+  <data name="PH_MenuOpenFolder.Text" xml:space="preserve">
+    <value>Open export folder</value>
+  </data>
+  <data name="PH_MenuReadAloud.Text" xml:space="preserve">
+    <value>Read aloud</value>
+  </data>
+  <data name="PH_ReadAloudStop" xml:space="preserve">
+    <value>⏹ Stop reading</value>
+  </data>
+  <data name="PH_ExportBanner.Title" xml:space="preserve">
+    <value>Document exported successfully</value>
+  </data>
+  <data name="PH_OpenExportedFile.Content" xml:space="preserve">
+    <value>Open file</value>
+  </data>
+  <data name="PH_OpenExportedFile.AutomationProperties.Name" xml:space="preserve">
+    <value>Open exported file</value>
+  </data>
+  <data name="PH_OpenExportedFolder.Content" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="PH_OpenExportedFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>Open folder in Windows Explorer</value>
+  </data>
+  <data name="PH_CopiedToast" xml:space="preserve">
+    <value>Full text copied to clipboard</value>
+  </data>
+  <data name="PH_StreamingBanner.AutomationProperties.Name" xml:space="preserve">
+    <value>Streaming document rendering in progress</value>
+  </data>
+  <data name="PH_EmptyState.AutomationProperties.Name" xml:space="preserve">
+    <value>No document generated</value>
+  </data>
+  <data name="PH_EmptyTitle.Text" xml:space="preserve">
+    <value>Generate your first document</value>
+  </data>
+  <data name="PH_EmptyBody.Text" xml:space="preserve">
+    <value>Describe your lesson goals, adjust settings, and click « Generate ». The interactive preview will appear here.</value>
+  </data>
+  <data name="PH_PaletteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Explore commands (Ctrl+K)</value>
+  </data>
+  <data name="PH_PaletteButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Opens the command palette</value>
+  </data>
+  <data name="PH_PaletteLabel.Text" xml:space="preserve">
+    <value>What can I do?</value>
+  </data>
+  <data name="PH_HistoryButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Open my documents</value>
+  </data>
+  <data name="PH_HistoryLabel.Text" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="PH_TipsTitle.Text" xml:space="preserve">
+    <value>Quick Tips</value>
+  </data>
+  <data name="PH_Tip1.Text" xml:space="preserve">
+    <value>Specify grade level and clear objectives for highly tailored content.</value>
+  </data>
+  <data name="PH_Tip2.Text" xml:space="preserve">
+    <value>After generation, ask the AI assistant in the side panel for targeted revisions.</value>
+  </data>
+  <data name="PH_Tip3.Text" xml:space="preserve">
+    <value>Shortcuts: Ctrl+G generates • Ctrl+P prints • Ctrl+Shift+E exports PDF.</value>
+  </data>
+  <data name="PH_Skeleton.AutomationProperties.Name" xml:space="preserve">
+    <value>Generating document…</value>
+  </data>
+  <data name="PH_WebView.AutomationProperties.Name" xml:space="preserve">
+    <value>Interactive WebView2 document preview</value>
+  </data>
+  <data name="PH_ErrorPanel.AutomationProperties.Name" xml:space="preserve">
+    <value>Preview unavailable: missing component</value>
+  </data>
+  <data name="PH_ErrorTitle.Text" xml:space="preserve">
+    <value>Preview cannot be displayed</value>
+  </data>
+  <data name="PH_ErrorBody.Text" xml:space="preserve">
+    <value>PROFstudio requires Microsoft Edge WebView2 to display and export documents. It is not installed on this PC.</value>
+  </data>
+  <data name="PH_InstallButton.Content" xml:space="preserve">
+    <value>Install component ↗</value>
+  </data>
+  <data name="PH_InstallButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Install WebView2 component</value>
+  </data>
+  <data name="PH_CopyLinkButton.Content" xml:space="preserve">
+    <value>Copy link for IT administrator</value>
+  </data>
+  <data name="PH_CopyLinkButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Copy download link for administrator</value>
+  </data>
+  <data name="PH_LinkCopied.Text" xml:space="preserve">
+    <value>Link copied to clipboard</value>
+  </data>
+  <data name="Preview_Generating" xml:space="preserve">
+    <value>Generating your document with AI…</value>
+  </data>
+  <data name="Preview_StatusDefault" xml:space="preserve">
+    <value>Preparing preview…</value>
+  </data>
+  <data name="AP_Title.Text" xml:space="preserve">
+    <value>AI Assistant</value>
+  </data>
+  <data name="AP_NewConversation.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Start a new conversation</value>
+  </data>
+  <data name="AP_NewConversation.AutomationProperties.Name" xml:space="preserve">
+    <value>New conversation</value>
+  </data>
+  <data name="AP_NewLabel.Text" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="AP_ModeSegmented.AutomationProperties.Name" xml:space="preserve">
+    <value>Assistant mode</value>
+  </data>
+  <data name="AP_ModeAuto.Content" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="AP_ModeGenerate.Content" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="AP_ModeEdit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AP_ModeQuestion.Content" xml:space="preserve">
+    <value>Question</value>
+  </data>
+  <data name="AP_DiffHeader.Text" xml:space="preserve">
+    <value>Proposed Revision</value>
+  </data>
+  <data name="AP_ApplyButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Apply this revision to the document (undoable with Ctrl+Z)</value>
+  </data>
+  <data name="AP_ApplyButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Apply revision</value>
+  </data>
+  <data name="AP_ApplyLabel.Text" xml:space="preserve">
+    <value>Apply revision</value>
+  </data>
+  <data name="AP_RejectButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Ignore this proposal</value>
+  </data>
+  <data name="AP_RejectButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Ignore proposal</value>
+  </data>
+  <data name="AP_IgnoreLabel.Text" xml:space="preserve">
+    <value>Ignore</value>
+  </data>
+  <data name="AP_CopyButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Copy text</value>
+  </data>
+  <data name="AP_CopyButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Copy text</value>
+  </data>
+  <data name="AP_CopyLabel.Text" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="AP_UndoableNote.Text" xml:space="preserve">
+    <value>Undoable (Ctrl+Z)</value>
+  </data>
+  <data name="AP_Typing.Text" xml:space="preserve">
+    <value>Assistant is writing…</value>
+  </data>
+  <data name="AP_SuggestionsLabel.Text" xml:space="preserve">
+    <value>Suggestions:</value>
+  </data>
+  <data name="AP_Chip1.AutomationProperties.Name" xml:space="preserve">
+    <value>Suggestion: simplify vocabulary</value>
+  </data>
+  <data name="AP_Chip1Label.Text" xml:space="preserve">
+    <value>Simplify vocabulary</value>
+  </data>
+  <data name="AP_Chip2.AutomationProperties.Name" xml:space="preserve">
+    <value>Suggestion: add three comprehension questions</value>
+  </data>
+  <data name="AP_Chip2Label.Text" xml:space="preserve">
+    <value>Add 3 comprehension questions</value>
+  </data>
+  <data name="AP_Chip3.AutomationProperties.Name" xml:space="preserve">
+    <value>Suggestion: translate to French</value>
+  </data>
+  <data name="AP_Chip3Label.Text" xml:space="preserve">
+    <value>Translate to French</value>
+  </data>
+  <data name="AP_Chip4.AutomationProperties.Name" xml:space="preserve">
+    <value>Suggestion: summarize in five points</value>
+  </data>
+  <data name="AP_Chip4Label.Text" xml:space="preserve">
+    <value>Summarize in 5 points</value>
+  </data>
+  <data name="AP_Chip5.AutomationProperties.Name" xml:space="preserve">
+    <value>Suggestion: differentiate activity</value>
+  </data>
+  <data name="AP_Chip5Label.Text" xml:space="preserve">
+    <value>Differentiate activity</value>
+  </data>
+  <data name="AP_PromptBox.PlaceholderText" xml:space="preserve">
+    <value>Ask for an edit or ask a question…</value>
+  </data>
+  <data name="AP_PromptBox.AutomationProperties.Name" xml:space="preserve">
+    <value>Message for assistant</value>
+  </data>
+  <data name="AP_SendButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Send (Enter)</value>
+  </data>
+  <data name="AP_SendButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Send message</value>
+  </data>
+  <data name="AP_StopButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop response</value>
+  </data>
+  <data name="AP_StopButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Stop response</value>
+  </data>
+  <data name="AP_ModelBadge.Text" xml:space="preserve">
+    <value>Automatic model</value>
+  </data>
+  <data name="AP_KeyHints.Text" xml:space="preserve">
+    <value>Enter: send • Shift+Enter: new line</value>
+  </data>
+  <data name="AP_ModeGenerate_Caption" xml:space="preserve">
+    <value>Creates a new document based on your prompt.</value>
+  </data>
+  <data name="AP_ModeGenerate_Prompt" xml:space="preserve">
+    <value>Describe the document to generate…</value>
+  </data>
+  <data name="AP_ModeEdit_Caption" xml:space="preserve">
+    <value>Suggests targeted revisions for the active document.</value>
+  </data>
+  <data name="AP_ModeEdit_Prompt" xml:space="preserve">
+    <value>Describe changes to make to the document…</value>
+  </data>
+  <data name="AP_ModeQuestion_Caption" xml:space="preserve">
+    <value>Answers questions without altering the document.</value>
+  </data>
+  <data name="AP_ModeQuestion_Prompt" xml:space="preserve">
+    <value>Ask a pedagogical question…</value>
+  </data>
+  <data name="AP_ModeAuto_Caption" xml:space="preserve">
+    <value>Automatically detects whether to generate, edit, or answer.</value>
+  </data>
+  <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve">
+    <value>Textbook guide PDF selection area</value>
+  </data>
+  <data name="PDZ_Zone.AutomationProperties.HelpText" xml:space="preserve">
+    <value>Drag and drop a PDF guide or click to browse</value>
+  </data>
+  <data name="PDZ_EmptyPrimary.Text" xml:space="preserve">
+    <value>Drag a PDF guide or click to browse</value>
+  </data>
+  <data name="PDZ_EmptySecondary.Text" xml:space="preserve">
+    <value>Textbook, curriculum progression, etc. (optional)</value>
+  </data>
+  <data name="PDZ_DragOver.Text" xml:space="preserve">
+    <value>Drop PDF file here</value>
+  </data>
+  <data name="PDZ_FileMeta.Text" xml:space="preserve">
+    <value>PDF guide ready for pedagogical grounding</value>
+  </data>
+  <data name="PDZ_MetaMb" xml:space="preserve">
+    <value>{0:F1} MB · Ready for pedagogical grounding</value>
+  </data>
+  <data name="PDZ_MetaKb" xml:space="preserve">
+    <value>{0} KB · Ready for pedagogical grounding</value>
+  </data>
+  <data name="PDZ_FileSelected" xml:space="preserve">
+    <value>PDF guide selected</value>
+  </data>
+  <data name="PDZ_RemoveFile.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove this guide</value>
+  </data>
+  <data name="PDZ_RemoveFile.AutomationProperties.Name" xml:space="preserve">
+    <value>Remove PDF file</value>
+  </data>
+  <data name="PDZ_ErrorTitle.Text" xml:space="preserve">
+    <value>Unsupported format</value>
+  </data>
+  <data name="PDZ_ErrorMessage.Text" xml:space="preserve">
+    <value>Only .pdf files are supported.</value>
+  </data>
+  <data name="PDZ_ErrorPdfOnly" xml:space="preserve">
+    <value>Only PDF files (.pdf) are accepted for guides.</value>
+  </data>
+  <data name="PDZ_ErrorReadTitle" xml:space="preserve">
+    <value>Unable to read file</value>
+  </data>
+  <data name="PDZ_ErrorReadMessage" xml:space="preserve">
+    <value>The file could not be read. Please ensure it is not locked.</value>
+  </data>
+  <data name="PDZ_ErrorClose.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="PDZ_ErrorClose.AutomationProperties.Name" xml:space="preserve">
+    <value>Dismiss error</value>
+  </data>
+  <data name="PDZ_Processing.Text" xml:space="preserve">
+    <value>Analyzing PDF guide…</value>
+  </data>
+  <data name="CW_Splitter.AutomationProperties.Name" xml:space="preserve">
+    <value>Resize panels</value>
+  </data>
+  <data name="CW_Fab.AutomationProperties.Name" xml:space="preserve">
+    <value>Open pedagogical assistant</value>
+  </data>
+  <data name="CW_Fab.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Ask a question to the AI assistant</value>
+  </data>
+  <data name="CW_FabLabel.Text" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="CW_OverlayTitle.Text" xml:space="preserve">
+    <value>Pedagogical Assistant</value>
+  </data>
+  <data name="CW_CloseOverlay.AutomationProperties.Name" xml:space="preserve">
+    <value>Close assistant</value>
+  </data>
+  <data name="CW_CloseOverlay.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="FP_Title.Text" xml:space="preserve">
+    <value>New Lesson Plan</value>
+  </data>
+  <data name="FP_Subtitle.Text" xml:space="preserve">
+    <value>Prepare a structured session, ready to print or export.</value>
+  </data>
+  <data name="EP_Title.Text" xml:space="preserve">
+    <value>New Evaluation</value>
+  </data>
+  <data name="EP_Subtitle.Text" xml:space="preserve">
+    <value>Create a test with progressive exercises and grading rubrics.</value>
+  </data>
+  <data name="QP_Title.Text" xml:space="preserve">
+    <value>New Quiz</value>
+  </data>
+  <data name="QP_Subtitle.Text" xml:space="preserve">
+    <value>Generate a printable questionnaire with its detailed answer key.</value>
+  </data>
+  <data name="FP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show or hide side AI assistant</value>
+  </data>
+  <data name="EP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show or hide side AI assistant</value>
+  </data>
+  <data name="QP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show or hide side AI assistant</value>
+  </data>
+  <data name="FP_AssistantLabel.Text" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="EP_AssistantLabel.Text" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="QP_AssistantLabel.Text" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="Validation_Title" xml:space="preserve">
+    <value>Almost ready!</value>
+  </data>
+  <data name="Validation_MissingLevel" xml:space="preserve">
+    <value>the grade level</value>
+  </data>
+  <data name="Validation_MissingSubject" xml:space="preserve">
+    <value>the subject</value>
+  </data>
+  <data name="Validation_MissingTopic" xml:space="preserve">
+    <value>the lesson topic</value>
+  </data>
+  <data name="Validation_MissingTopics" xml:space="preserve">
+    <value>at least one concept to evaluate</value>
+  </data>
+  <data name="FP_MissingFields_Message" xml:space="preserve">
+    <value>To generate the lesson plan, please provide: {0}.</value>
+  </data>
+  <data name="EP_MissingFields_Message" xml:space="preserve">
+    <value>To generate the evaluation, please provide: {0}.</value>
+  </data>
+  <data name="QP_MissingFields_Message" xml:space="preserve">
+    <value>To generate your quiz, please provide: {0}.</value>
+  </data>
+  <data name="HP_Title.Text" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="HP_Subtitle.Text" xml:space="preserve">
+    <value>Browse all lesson plans, evaluations, and quizzes saved locally on this PC.</value>
+  </data>
+  <data name="HP_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search by title, subject, level, or keyword…</value>
+  </data>
+  <data name="HP_FilterAll.Content" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="HP_FilterFiches.Content" xml:space="preserve">
+    <value>Lesson Plans</value>
+  </data>
+  <data name="HP_FilterEvals.Content" xml:space="preserve">
+    <value>Evaluations</value>
+  </data>
+  <data name="HP_FilterQuiz.Content" xml:space="preserve">
+    <value>Quizzes</value>
+  </data>
+  <data name="HP_FilterFavorites.Content" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="HP_EmptyState.AutomationProperties.Name" xml:space="preserve">
+    <value>No documents in library</value>
+  </data>
+  <data name="HP_Tip1.Text" xml:space="preserve">
+    <value>Every generated lesson plan, evaluation, or quiz is automatically saved here.</value>
+  </data>
+  <data name="HP_Tip2.Text" xml:space="preserve">
+    <value>Use search to quickly find documents by subject, grade level, or keyword.</value>
+  </data>
+  <data name="HP_OptionsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Document options (⋯)</value>
+  </data>
+  <data name="HP_OptionsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Document options</value>
+  </data>
+  <data name="HP_MenuOpen.Text" xml:space="preserve">
+    <value>Open document</value>
+  </data>
+  <data name="HP_MenuRename.Text" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="HP_RenameTitle" xml:space="preserve">
+    <value>Rename document</value>
+  </data>
+  <data name="HP_RenameConfirm" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="HP_MenuExportWord.Text" xml:space="preserve">
+    <value>Export to Word (.docx)</value>
+  </data>
+  <data name="HP_MenuExportPdf.Text" xml:space="preserve">
+    <value>Export to PDF</value>
+  </data>
+  <data name="HP_MenuDelete.Text" xml:space="preserve">
+    <value>Delete document</value>
+  </data>
+  <data name="HP_UndoToastDefault.Text" xml:space="preserve">
+    <value>Document deleted</value>
+  </data>
+  <data name="HP_UndoToast" xml:space="preserve">
+    <value>« {0} » deleted.</value>
+  </data>
+  <data name="HP_UndoButton.Content" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="HP_DeleteTitle" xml:space="preserve">
+    <value>Delete this document?</value>
+  </data>
+  <data name="HP_DeleteContent" xml:space="preserve">
+    <value>« {0} » will be removed from your saved documents.</value>
+  </data>
+  <data name="HP_DeleteConfirm" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="SP_Title.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SP_Subtitle.Text" xml:space="preserve">
+    <value>Configure PROFstudio: appearance, artificial intelligence, document styles, and privacy.</value>
+  </data>
+  <data name="SP_TabGeneral.Text" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="SP_TabAi.Text" xml:space="preserve">
+    <value>AI &amp; Routing</value>
+  </data>
+  <data name="SP_TabFolders.Text" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="SP_TabStyles.Text" xml:space="preserve">
+    <value>Styles</value>
+  </data>
+  <data name="SP_TabPrivacy.Text" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="SP_TabPrompts.Text" xml:space="preserve">
+    <value>Prompts &amp; Shortcuts</value>
+  </data>
+  <data name="SP_SaveButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Save (Ctrl+S)</value>
+  </data>
+  <data name="SP_SaveLabel.Text" xml:space="preserve">
+    <value>Save Settings</value>
+  </data>
+  <data name="FRD_Dialog.Title" xml:space="preserve">
+    <value>Welcome to PROFstudio</value>
+  </data>
+  <data name="FRD_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>Get Started</value>
+  </data>
+  <data name="FRD_Dialog.CloseButtonText" xml:space="preserve">
+    <value>Skip for now</value>
+  </data>
+  <data name="FRD_StepIndicator.Text" xml:space="preserve">
+    <value>Step 1 of 3</value>
+  </data>
+  <data name="FRD_StepFormat" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+  </data>
+  <data name="FRD_HeroTitle.Text" xml:space="preserve">
+    <value>Your Lesson Preparation Assistant</value>
+  </data>
+  <data name="FRD_HeroSubtitle.Text" xml:space="preserve">
+    <value>Less time at your desk, more time with your students.</value>
+  </data>
+  <data name="FRD_Intro.Text" xml:space="preserve">
+    <value>PROFstudio prepares documents alongside you — never without your oversight. You review, adjust, and validate: the final result fits your exact style.</value>
+  </data>
+  <data name="FRD_CardFicheTitle.Text" xml:space="preserve">
+    <value>Lesson Plan</value>
+  </data>
+  <data name="FRD_CardFicheDesc.Text" xml:space="preserve">
+    <value>Structured, ready to print or export.</value>
+  </data>
+  <data name="FRD_CardEvalTitle.Text" xml:space="preserve">
+    <value>Evaluation</value>
+  </data>
+  <data name="FRD_CardEvalDesc.Text" xml:space="preserve">
+    <value>Progressive exercises with rubrics.</value>
+  </data>
+  <data name="FRD_CardQuizTitle.Text" xml:space="preserve">
+    <value>Quiz</value>
+  </data>
+  <data name="FRD_CardQuizDesc.Text" xml:space="preserve">
+    <value>Printable multiple-choice quizzes with answer keys.</value>
+  </data>
+  <data name="FRD_LocalNote.Text" xml:space="preserve">
+    <value>Rest assured: your documents stay on your computer, with no mandatory online account.</value>
+  </data>
+  <data name="FRD_GuidesHeader.Text" xml:space="preserve">
+    <value>Your Reference Documents</value>
+  </data>
+  <data name="FRD_OptionalBadge.Text" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="FRD_GuidesIntro.Text" xml:space="preserve">
+    <value>Do you frequently prepare lessons using a PDF textbook or syllabus? Select that folder here: PROFstudio will ground generated documents in your curriculum.</value>
+  </data>
+  <data name="FRD_DropHint.Text" xml:space="preserve">
+    <value>Drag and drop a folder here</value>
+  </data>
+  <data name="FRD_Or.Text" xml:space="preserve">
+    <value>or</value>
+  </data>
+  <data name="FRD_PickFolder.Content" xml:space="preserve">
+    <value>Choose a folder…</value>
+  </data>
+  <data name="FRD_PickFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>Choose a document folder</value>
+  </data>
+  <data name="FRD_FolderBox.PlaceholderText" xml:space="preserve">
+    <value>No folder selected — you can configure one later</value>
+  </data>
+  <data name="FRD_FolderHint.Text" xml:space="preserve">
+    <value>Not sure which folder to select? Simply skip to the next step: everything can be configured in Settings ▸ Folders.</value>
+  </data>
+  <data name="FRD_ProviderHeader.Text" xml:space="preserve">
+    <value>Select Your AI Assistant</value>
+  </data>
+  <data name="FRD_ProviderSub.Text" xml:space="preserve">
+    <value>It drafts the initial content. You always maintain final control.</value>
+  </data>
+  <data name="FRD_ProviderSelector.AutomationProperties.Name" xml:space="preserve">
+    <value>AI Assistant used for drafting</value>
+  </data>
+  <data name="FRD_ProviderGoogle.AutomationProperties.Name" xml:space="preserve">
+    <value>Google AI Studio, free, recommended</value>
+  </data>
+  <data name="FRD_GoogleName.Text" xml:space="preserve">
+    <value>Google AI Studio</value>
+  </data>
+  <data name="FRD_GoogleBadge.Text" xml:space="preserve">
+    <value>Free · Recommended</value>
+  </data>
+  <data name="FRD_GoogleDesc.Text" xml:space="preserve">
+    <value>The easiest way to start: just requires a standard Google account.</value>
+  </data>
+  <data name="FRD_ProviderOpenAi.AutomationProperties.Name" xml:space="preserve">
+    <value>OpenAI GPT</value>
+  </data>
+  <data name="FRD_OpenAiName.Text" xml:space="preserve">
+    <value>OpenAI (ChatGPT)</value>
+  </data>
+  <data name="FRD_OpenAiDesc.Text" xml:space="preserve">
+    <value>For users who already have an OpenAI API key.</value>
+  </data>
+  <data name="FRD_ProviderLocal.AutomationProperties.Name" xml:space="preserve">
+    <value>Local Server, Advanced</value>
+  </data>
+  <data name="FRD_LocalName.Text" xml:space="preserve">
+    <value>Local Server — Advanced</value>
+  </data>
+  <data name="FRD_LocalDesc.Text" xml:space="preserve">
+    <value>100% offline, zero data leaves the school. Requires Ollama configured by your IT staff.</value>
+  </data>
+  <data name="FRD_KeyQuestion.Text" xml:space="preserve">
+    <value>What is an « API Key »?</value>
+  </data>
+  <data name="FRD_KeyExplain.Text" xml:space="preserve">
+    <value>It is a personal access token that securely connects PROFstudio to your chosen AI service — like a password. Paste it once below: it is encrypted in Windows Credential Locker and never leaves this computer.</value>
+  </data>
+  <data name="FRD_KeyBox.PlaceholderText" xml:space="preserve">
+    <value>Paste your key here (Ctrl+V)</value>
+  </data>
+  <data name="FRD_KeyBoxName.AutomationProperties.Name" xml:space="preserve">
+    <value>AI service access key</value>
+  </data>
+  <data name="FRD_GetKeyLink.Content" xml:space="preserve">
+    <value>Where can I find my free key? ↗</value>
+  </data>
+  <data name="FRD_GetKeyLinkOpenAi" xml:space="preserve">
+    <value>Where can I find my OpenAI key? ↗</value>
+  </data>
+  <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve">
+    <value>Open the page providing the key</value>
+  </data>
+  <data name="FRD_LocalKeyNote" xml:space="preserve">
+    <value>With a local server, no data leaves your institution. Your IT administrator can assist with setup.</value>
+  </data>
+  <data name="FRD_KeyOptionalNote.Text" xml:space="preserve">
+    <value>In a hurry? Finish without a key: PROFstudio will prompt you when needed.</value>
+  </data>
+  <data name="FRD_CloudName.Text" xml:space="preserve">
+    <value>PROFstudio Cloud Service</value>
+  </data>
+  <data name="FRD_CloudBadge.Text" xml:space="preserve">
+    <value>Teacher Account · Included</value>
+  </data>
+  <data name="FRD_CloudDesc.Text" xml:space="preserve">
+    <value>Cloud service for teachers. Account sign-in required.</value>
+  </data>
+  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve">
+    <value>My Teacher Account</value>
+  </data>
+  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve">
+    <value>My Teacher Account</value>
+  </data>
+  <data name="Nav_Help" xml:space="preserve">
+    <value>Help &amp; Shortcuts</value>
+  </data>
+  <data name="Shell_AssistantToggle_Label" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="FP_Step1_Header.Text" xml:space="preserve">
+    <value>1. Class and Subject</value>
+  </data>
+  <data name="FP_LevelCombo.Header" xml:space="preserve">
+    <value>Grade / Level</value>
+  </data>
+  <data name="FP_SubjectCombo.Header" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>Select or type</value>
+  </data>
+  <data name="FP_Step2_Header.Text" xml:space="preserve">
+    <value>2. Lesson Topic</value>
+  </data>
+  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve">
+    <value>e.g., Fractions, French Revolution…</value>
+  </data>
+  <data name="FP_Step3_Header.Text" xml:space="preserve">
+    <value>3. Frame &amp; Duration</value>
+  </data>
+  <data name="FP_DurationBox.Header" xml:space="preserve">
+    <value>Lesson duration (minutes)</value>
+  </data>
+  <data name="FP_InstructionsBox.Header" xml:space="preserve">
+    <value>Additional instructions (optional)</value>
+  </data>
+  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve">
+    <value>Specify context, special needs, group work…</value>
+  </data>
+  <data name="FP_Step4_Header.Text" xml:space="preserve">
+    <value>4. PDF Reference Guide (optional)</value>
+  </data>
+  <data name="EP_Step1_Header.Text" xml:space="preserve">
+    <value>1. Class and Subject</value>
+  </data>
+  <data name="EP_LevelCombo.Header" xml:space="preserve">
+    <value>Grade / Level</value>
+  </data>
+  <data name="EP_SubjectCombo.Header" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>Select or type</value>
+  </data>
+  <data name="EP_Step2_Header.Text" xml:space="preserve">
+    <value>2. Concepts to Evaluate</value>
+  </data>
+  <data name="EP_Step2_Sub.Text" xml:space="preserve">
+    <value>Select one or more concepts or add your own topic:</value>
+  </data>
+  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve">
+    <value>Another concept… (e.g., Angle calculation)</value>
+  </data>
+  <data name="EP_AddTagButton.Content" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="EP_Step3_Header.Text" xml:space="preserve">
+    <value>3. Format &amp; Rubric</value>
+  </data>
+  <data name="EP_EvalTypeCombo.Header" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="EP_TotalPointsBox.Header" xml:space="preserve">
+    <value>Total points</value>
+  </data>
+  <data name="QP_Step1_Header.Text" xml:space="preserve">
+    <value>1. Class and Subject</value>
+  </data>
+  <data name="QP_LevelCombo.Header" xml:space="preserve">
+    <value>Grade / Level</value>
+  </data>
+  <data name="QP_SubjectCombo.Header" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>Select or type</value>
+  </data>
+  <data name="QP_Step2_Header.Text" xml:space="preserve">
+    <value>2. Quiz Topic</value>
+  </data>
+  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve">
+    <value>e.g., Multiplication tables, Water cycle…</value>
+  </data>
+  <data name="QP_Step3_Header.Text" xml:space="preserve">
+    <value>3. Format &amp; Options</value>
+  </data>
+  <data name="QP_QuestionCountBox.Header" xml:space="preserve">
+    <value>Questions (3-30)</value>
+  </data>
+  <data name="QP_QuizDurationBox.Header" xml:space="preserve">
+    <value>Duration (minutes)</value>
+  </data>
+  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve">
+    <value>Question types:</value>
+  </data>
+  <data name="QP_QcmCheck.Content" xml:space="preserve">
+    <value>Multiple Choice</value>
+  </data>
+  <data name="QP_TfCheck.Content" xml:space="preserve">
+    <value>True / False</value>
+  </data>
+  <data name="QP_ShortCheck.Content" xml:space="preserve">
+    <value>Short Answer</value>
+  </data>
+  <data name="History_NoResultsTitle" xml:space="preserve">
+    <value>No results found</value>
+  </data>
+  <data name="History_EmptyLibraryTitle" xml:space="preserve">
+    <value>Your library is currently empty</value>
+  </data>
+  <data name="History_Loading" xml:space="preserve">
+    <value>Loading history…</value>
+  </data>
+  <data name="History_Searching" xml:space="preserve">
+    <value>Searching for « {0} »…</value>
+  </data>
+  <data name="History_NoResultsMatching" xml:space="preserve">
+    <value>No documents match the criteria.</value>
+  </data>
+  <data name="History_OneResultFound" xml:space="preserve">
+    <value>1 document found.</value>
+  </data>
+  <data name="History_MultipleResultsFound" xml:space="preserve">
+    <value>{0} documents found.</value>
+  </data>
+  <data name="History_LoadError" xml:space="preserve">
+    <value>Error loading history: {0}</value>
+  </data>
+  <data name="History_SelectionSummary" xml:space="preserve">
+    <value>{0} document(s) selected</value>
+  </data>
+  <data name="History_StatsTotal" xml:space="preserve">
+    <value>{0} document(s)</value>
+  </data>
+  <data name="History_StatsMonthEmpty" xml:space="preserve">
+    <value>No generations this month</value>
+  </data>
+  <data name="History_StatsMonthCount" xml:space="preserve">
+    <value>{0} generation(s) this month</value>
+  </data>
+  <data name="History_StatsFavorites" xml:space="preserve">
+    <value>{0} favorite(s)</value>
+  </data>
+  <data name="History_GroupToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="History_GroupYesterday" xml:space="preserve">
+    <value>Yesterday</value>
+  </data>
+  <data name="History_GroupThisWeek" xml:space="preserve">
+    <value>This week</value>
+  </data>
+  <data name="History_GroupOlder" xml:space="preserve">
+    <value>Older</value>
+  </data>
+  <data name="History_GroupCount" xml:space="preserve">
+    <value>{0} document(s)</value>
+  </data>
+  <data name="History_Untitled" xml:space="preserve">
+    <value>Untitled</value>
+  </data>
+  <data name="History_TypeEvaluation" xml:space="preserve">
+    <value>Evaluation</value>
+  </data>
+  <data name="History_TypeQuiz" xml:space="preserve">
+    <value>Quiz</value>
+  </data>
+  <data name="History_TypeFiche" xml:space="preserve">
+    <value>Lesson Plan</value>
+  </data>
+  <data name="History_FavoriteRemove" xml:space="preserve">
+    <value>Remove from favorites</value>
+  </data>
+  <data name="History_FavoriteAdd" xml:space="preserve">
+    <value>Add to favorites</value>
+  </data>
+  <data name="History_FavoriteMark" xml:space="preserve">
+    <value>Mark as favorite</value>
+  </data>
+  <data name="History_FavoriteSuffix" xml:space="preserve">
+    <value>, favorite</value>
+  </data>
+  <data name="History_AutomationItem" xml:space="preserve">
+    <value>{0} « {1} », created on {2}{3}</value>
+  </data>
+  <data name="History_AutomationSelect" xml:space="preserve">
+    <value>Select document « {0} »</value>
+  </data>
+  <data name="History_AutomationMore" xml:space="preserve">
+    <value>More actions for « {0} »</value>
+  </data>
+  <data name="EP_Step4_Header.Text" xml:space="preserve">
+    <value>4. Textbook or PDF guide (optional)</value>
+  </data>
+  <data name="EP_DifficultyHeader.Text" xml:space="preserve">
+    <value>Difficulty level</value>
+  </data>
+  <data name="EP_Difficulty_Discovery" xml:space="preserve">
+    <value>Discovery</value>
+  </data>
+  <data name="EP_Difficulty_Easy" xml:space="preserve">
+    <value>Easy</value>
+  </data>
+  <data name="EP_Difficulty_Intermediate" xml:space="preserve">
+    <value>Intermediate</value>
+  </data>
+  <data name="EP_Difficulty_Demanding" xml:space="preserve">
+    <value>Challenging</value>
+  </data>
+  <data name="EP_Difficulty_Expert" xml:space="preserve">
+    <value>Expert</value>
+  </data>
+  <data name="EP_Type_Formative.Content" xml:space="preserve">
+    <value>Formative (assessment)</value>
+  </data>
+  <data name="EP_Type_Diagnostic.Content" xml:space="preserve">
+    <value>Diagnostic</value>
+  </data>
+  <data name="EP_Type_Summative.Content" xml:space="preserve">
+    <value>Summative (exam)</value>
+  </data>
+  <data name="QP_AnswerKeyCheck.Content" xml:space="preserve">
+    <value>Include teacher answer key</value>
+  </data>
+  <data name="QP_DyslexiaFontCheck.Content" xml:space="preserve">
+    <value>Adapted layout (Dyslexia-friendly font)</value>
+  </data>
+  <data name="QP_Step4_Header.Text" xml:space="preserve">
+    <value>4. Textbook or PDF guide (optional)</value>
+  </data>
+  <data name="PH_Step1_Analyse.Text" xml:space="preserve">
+    <value>1. Analysis</value>
+  </data>
+  <data name="PH_Step2_Structure.Text" xml:space="preserve">
+    <value>2. Structure</value>
+  </data>
+  <data name="PH_Step3_Draft.Text" xml:space="preserve">
+    <value>3. Drafting</value>
+  </data>
+  <data name="PH_Step4_Render.Text" xml:space="preserve">
+    <value>4. Rendering</value>
+  </data>
+  <data name="PH_StreamedLiveHeader.Text" xml:space="preserve">
+    <value>Live AI drafting</value>
+  </data>
+  <data name="PH_FindPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>Search in document…</value>
+  </data>
+  <data name="PH_FindPrevious.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Previous (Shift+Enter)</value>
+  </data>
+  <data name="PH_FindNext.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Next (Enter)</value>
+  </data>
+  <data name="PH_FindClose.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close search (Esc)</value>
+  </data>
+  <data name="PH_ClipboardTipTitle" xml:space="preserve">
+    <value>Clipboard</value>
+  </data>
+  <data name="PH_ClipboardTipSubtitle" xml:space="preserve">
+    <value>Full text copied to clipboard.</value>
+  </data>
+  <data name="AP_WelcomeText.Text" xml:space="preserve">
+    <value>Hello! I can generate a lesson plan, edit the current document, or answer your pedagogical questions.</value>
+  </data>
+  <data name="AD_Dialog.Title" xml:space="preserve">
+    <value>PROFstudio Teacher Account</value>
+  </data>
+  <data name="AD_Close.Text" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AD_School.Text" xml:space="preserve">
+    <value>School / Institution</value>
+  </data>
+  <data name="AD_Active.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="AD_CloudAccess.Text" xml:space="preserve">
+    <value>Cloud Access &amp; Quota</value>
+  </data>
+  <data name="AD_SignOut.Content" xml:space="preserve">
+    <value>Sign Out</value>
+  </data>
+  <data name="AD_VerifyEmailTitle.Text" xml:space="preserve">
+    <value>Verify your email address</value>
+  </data>
+  <data name="AD_VerifyEmailDesc.Text" xml:space="preserve">
+    <value>Once you have clicked the link received in your inbox, click below to sign in.</value>
+  </data>
+  <data name="AD_GoToSignIn.Content" xml:space="preserve">
+    <value>Proceed to Sign In</value>
+  </data>
+  <data name="AD_SignUpTitle.Text" xml:space="preserve">
+    <value>Create a Teacher Account</value>
+  </data>
+  <data name="AD_SignUpDesc.Text" xml:space="preserve">
+    <value>Fill in your professional information to activate your access.</value>
+  </data>
+  <data name="AD_Civility.Header" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="AD_LastName.Header" xml:space="preserve">
+    <value>Last Name</value>
+  </data>
+  <data name="AD_LastName.PlaceholderText" xml:space="preserve">
+    <value>e.g. Smith</value>
+  </data>
+  <data name="AD_FirstName.Header" xml:space="preserve">
+    <value>First Name</value>
+  </data>
+  <data name="AD_FirstName.PlaceholderText" xml:space="preserve">
+    <value>e.g. John</value>
+  </data>
+  <data name="AD_BirthDate.Header" xml:space="preserve">
+    <value>Date of birth</value>
+  </data>
+  <data name="AD_BirthDate.PlaceholderText" xml:space="preserve">
+    <value>Select your date of birth</value>
+  </data>
+  <data name="AD_SchoolHeader.Header" xml:space="preserve">
+    <value>School / Institution</value>
+  </data>
+  <data name="AD_SchoolHeader.PlaceholderText" xml:space="preserve">
+    <value>e.g. Lincoln High School</value>
+  </data>
+  <data name="AD_Academy.Header" xml:space="preserve">
+    <value>District / Region</value>
+  </data>
+  <data name="AD_Discipline.Header" xml:space="preserve">
+    <value>Subject / Grade taught</value>
+  </data>
+  <data name="AD_Discipline.PlaceholderText" xml:space="preserve">
+    <value>e.g. Elementary Teacher (4th/5th) or Mathematics</value>
+  </data>
+  <data name="AD_Email.Header" xml:space="preserve">
+    <value>Academic or personal email address</value>
+  </data>
+  <data name="AD_Email.PlaceholderText" xml:space="preserve">
+    <value>teacher@school.edu</value>
+  </data>
+  <data name="AD_Password.Header" xml:space="preserve">
+    <value>Password (min. 6 chars)</value>
+  </data>
+  <data name="AD_ConfirmPassword.Header" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="AD_SignInTitle.Text" xml:space="preserve">
+    <value>Teacher Sign In</value>
+  </data>
+  <data name="AD_SignInDesc.Text" xml:space="preserve">
+    <value>Sign in to access your cloud models and quotas.</value>
+  </data>
+  <data name="AD_SignInEmail.Header" xml:space="preserve">
+    <value>Email address</value>
+  </data>
+  <data name="AD_SignInPassword.Header" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="AD_BtnCreateAccount.Content" xml:space="preserve">
+    <value>Create teacher account</value>
+  </data>
+  <data name="AD_BtnHaveAccount.Content" xml:space="preserve">
+    <value>Already have an account? Sign in</value>
+  </data>
+  <data name="AD_BtnSignIn.Content" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="AD_BtnSubmitSignUp.Content" xml:space="preserve">
+    <value>Create my account</value>
+  </data>
+  <data name="Account_GuestMode" xml:space="preserve">
+    <value>Guest Mode (Local)</value>
+  </data>
+  <data name="Account_ActiveBadge" xml:space="preserve">
+    <value>Active Teacher Account</value>
+  </data>
+  <data name="Account_UnlimitedQuota" xml:space="preserve">
+    <value>Local Mode / Unlimited</value>
+  </data>
+  <data name="Account_QuotaFormat" xml:space="preserve">
+    <value>{0} generations / month</value>
+  </data>
+  <data name="Account_MissingEmailPassword" xml:space="preserve">
+    <value>Please enter your email address and password.</value>
+  </data>
+  <data name="Account_SigningIn" xml:space="preserve">
+    <value>Signing in…</value>
+  </data>
+  <data name="Account_SignInSuccess" xml:space="preserve">
+    <value>Successfully signed in!</value>
+  </data>
+  <data name="Account_MissingName" xml:space="preserve">
+    <value>Please enter your first and last name.</value>
+  </data>
+  <data name="Account_MissingSchool" xml:space="preserve">
+    <value>Please enter your school or institution.</value>
+  </data>
+  <data name="Account_InvalidEmail" xml:space="preserve">
+    <value>Please enter a valid email address.</value>
+  </data>
+  <data name="Account_PasswordTooShort" xml:space="preserve">
+    <value>Password must be at least 6 characters.</value>
+  </data>
+  <data name="Account_PasswordMismatch" xml:space="preserve">
+    <value>Passwords do not match.</value>
+  </data>
+  <data name="Account_CreatingAccount" xml:space="preserve">
+    <value>Creating and registering your teacher account…</value>
+  </data>
+  <data name="Account_ConfirmationSent" xml:space="preserve">
+    <value>A confirmation email was sent to {0}.
+Please click the link to verify your account, then sign in.</value>
+  </data>
+  <data name="Account_SignUpSuccess" xml:space="preserve">
+    <value>Teacher account created and activated successfully!</value>
+  </data>
+  <data name="Account_SignedOut" xml:space="preserve">
+    <value>Signed out.</value>
+  </data>
+  <data name="Shell_TeacherBadge_Active" xml:space="preserve">
+    <value>Active Teacher Account</value>
+  </data>
+  <data name="Shell_TeacherBadge_SignIn" xml:space="preserve">
+    <value>Sign in / Create account</value>
+  </data>
+  <data name="Shell_TeacherBadge_MyAccount" xml:space="preserve">
+    <value>My Account ({0})</value>
+  </data>
+  <data name="SP_AccountHeader.Text" xml:space="preserve">
+    <value>Account &amp; Teacher Access</value>
+  </data>
+  <data name="SP_AccountCard.Header" xml:space="preserve">
+    <value>My PROFstudio Teacher Account</value>
+  </data>
+  <data name="SP_AccountCard.Description" xml:space="preserve">
+    <value>Sign in with your teacher account to activate high-performance cloud models and track quotas.</value>
+  </data>
+  <data name="SP_AccountConnectBtn.Content" xml:space="preserve">
+    <value>Sign In / Create Account…</value>
+  </data>
+  <data name="SP_AccountProfileBtn.Content" xml:space="preserve">
+    <value>My Profile &amp; Quota…</value>
+  </data>
+  <data name="SP_ProfileHeader.Text" xml:space="preserve">
+    <value>Teacher Profile</value>
+  </data>
+  <data name="SP_TeacherName.Header" xml:space="preserve">
+    <value>Name / Identity</value>
+  </data>
+  <data name="SP_TeacherName.Description" xml:space="preserve">
+    <value>Displayed in the app header and on your handouts.</value>
+  </data>
+  <data name="SP_TeacherNameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. Mr. Smith / Ms. Davis</value>
+  </data>
+  <data name="SP_SchoolName.Header" xml:space="preserve">
+    <value>School / Institution</value>
+  </data>
+  <data name="SP_SchoolName.Description" xml:space="preserve">
+    <value>Institution name printed on generated documents.</value>
+  </data>
+  <data name="SP_SchoolNameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. Lincoln High School</value>
+  </data>
+  <data name="SP_UiHeader.Text" xml:space="preserve">
+    <value>Interface Customization</value>
+  </data>
+  <data name="SP_AppTheme.Header" xml:space="preserve">
+    <value>Application Theme</value>
+  </data>
+  <data name="SP_AppTheme.Description" xml:space="preserve">
+    <value>Applied immediately across all of PROFstudio.</value>
+  </data>
+  <data name="SP_AccentColor.Header" xml:space="preserve">
+    <value>Accent Color</value>
+  </data>
+  <data name="SP_AccentColor.Description" xml:space="preserve">
+    <value>PROFstudio brand tint — applied immediately across the entire UI.</value>
+  </data>
+  <data name="SP_Language.Header" xml:space="preserve">
+    <value>Interface Language</value>
+  </data>
+  <data name="SP_Language.Description" xml:space="preserve">
+    <value>Select the application language (Français, English, العربية).</value>
+  </data>
+  <data name="SP_Streaming.Header" xml:space="preserve">
+    <value>Live Text Streaming</value>
+  </data>
+  <data name="SP_Streaming.Description" xml:space="preserve">
+    <value>Displays the document progressively as it is drafted by the AI.</value>
+  </data>
+  <data name="SP_PedagogicalHeader.Text" xml:space="preserve">
+    <value>Pedagogical Preferences</value>
+  </data>
+  <data name="SP_DefaultLevel.Header" xml:space="preserve">
+    <value>Default Grade Level</value>
+  </data>
+  <data name="SP_DefaultLevel.Description" xml:space="preserve">
+    <value>Automatically preselected for every new document.</value>
+  </data>
+  <data name="SP_DefaultSubject.Header" xml:space="preserve">
+    <value>Default Subject</value>
+  </data>
+  <data name="SP_DefaultSubject.Description" xml:space="preserve">
+    <value>Free text field — choose from list or type your subject.</value>
+  </data>
+  <data name="SP_DefaultExportFolder.Header" xml:space="preserve">
+    <value>Default Export Folder</value>
+  </data>
+  <data name="SP_ManageFoldersBtn.Content" xml:space="preserve">
+    <value>Manage folders…</value>
+  </data>
+  <data name="SP_StartupHeader.Text" xml:space="preserve">
+    <value>Windows Startup</value>
+  </data>
+  <data name="SP_LaunchAtStartup.Header" xml:space="preserve">
+    <value>Launch PROFstudio on Windows startup</value>
+  </data>
+  <data name="SP_AboutHeader.Text" xml:space="preserve">
+    <value>About the Application</value>
+  </data>
+  <data name="SP_AboutCard.Header" xml:space="preserve">
+    <value>About PROFstudio</value>
+  </data>
+  <data name="SP_AboutCard.Description" xml:space="preserve">
+    <value>Version 1.4 — Designed for educators. Secure and local pedagogical drafting.</value>
+  </data>
+  <data name="SP_AboutBtn.Content" xml:space="preserve">
+    <value>Show information…</value>
+  </data>
+  <data name="SP_AiConfigMode.Header" xml:space="preserve">
+    <value>AI Configuration Mode</value>
+  </data>
+  <data name="SP_AiConfigMode.Description" xml:space="preserve">
+    <value>Toggle between zero-config included mode and advanced model management.</value>
+  </data>
+  <data name="SP_ExpertModeToggle.Content" xml:space="preserve">
+    <value>Expert Mode (Advanced)</value>
+  </data>
+  <data name="SP_CloudService.Header" xml:space="preserve">
+    <value>PROFstudio Cloud Service</value>
+  </data>
+  <data name="SP_CloudService.Description" xml:space="preserve">
+    <value>High-performance pedagogical generation included. Sign in with your teacher account to activate.</value>
+  </data>
+  <data name="SP_CloudActiveHeader.Header" xml:space="preserve">
+    <value>PROFstudio Cloud Service (Active)</value>
+  </data>
+  <data name="SP_ReadyCard.Title" xml:space="preserve">
+    <value>Ready for your classes</value>
+  </data>
+  <data name="SP_TaskRouting.Title" xml:space="preserve">
+    <value>Smart Task Routing</value>
+  </data>
+  <data name="SP_MainProvider.Header" xml:space="preserve">
+    <value>Main AI Provider</value>
+  </data>
+  <data name="SP_MainProvider.Description" xml:space="preserve">
+    <value>Used by default for all new drafting tasks and models.</value>
+  </data>
+  <data name="SP_ApiKeysHeader.Header" xml:space="preserve">
+    <value>API Keys — Windows Vault Secured</value>
+  </data>
+  <data name="SP_ApiKeysHeader.Description" xml:space="preserve">
+    <value>Your keys are encrypted and stored in the Windows Credential Locker.</value>
+  </data>
+  <data name="SP_VaultSecured.Text" xml:space="preserve">
+    <value>Windows Credential Locker</value>
+  </data>
+  <data name="SP_KeyConfigured.Text" xml:space="preserve">
+    <value>Key configured</value>
+  </data>
+  <data name="SP_GetKeyBtn.Content" xml:space="preserve">
+    <value>Get an API key ↗</value>
+  </data>
+  <data name="SP_TestBtn.Content" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="SP_ClearBtn.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="SP_GeminiPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>Paste your Google AI Studio API key…</value>
+  </data>
+  <data name="SP_OpenAiPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>sk-…</value>
+  </data>
+  <data name="SP_AnthropicPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>sk-ant-…</value>
+  </data>
+  <data name="SP_VercelPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>Vercel AI Gateway Key…</value>
+  </data>
+  <data name="SP_LocalServer.Text" xml:space="preserve">
+    <value>Local Server (Ollama, LM Studio…)</value>
+  </data>
+  <data name="SP_LocalServerZeroData.Text" xml:space="preserve">
+    <value>Zero data leaves this computer</value>
+  </data>
+  <data name="SP_LocalServerUrl.Header" xml:space="preserve">
+    <value>Server address (OpenAI compatible)</value>
+  </data>
+  <data name="SP_LocalServerModel.Header" xml:space="preserve">
+    <value>Model used (e.g., mistral)</value>
+  </data>
+  <data name="SP_LocalServerKey.Header" xml:space="preserve">
+    <value>API key (optional)</value>
+  </data>
+  <data name="SP_LocalServerLoadModels.Content" xml:space="preserve">
+    <value>Load available models</value>
+  </data>
+  <data name="SP_VertexHeader.Text" xml:space="preserve">
+    <value>Google Cloud Vertex AI (Enterprise)</value>
+  </data>
+  <data name="SP_VertexProject.Header" xml:space="preserve">
+    <value>Google Cloud Project ID</value>
+  </data>
+  <data name="SP_VertexRegion.Header" xml:space="preserve">
+    <value>Region</value>
+  </data>
+  <data name="SP_VercelHeader.Text" xml:space="preserve">
+    <value>Vercel AI Gateway — multi-model gateway</value>
+  </data>
+  <data name="SP_TestAllProviders.Content" xml:space="preserve">
+    <value>⚡ Test all providers</value>
+  </data>
+  <data name="SP_RoutingMatrix.Header" xml:space="preserve">
+    <value>Detailed Routing Matrix (Advanced Mode)</value>
+  </data>
+  <data name="SP_RoutingMatrix.Description" xml:space="preserve">
+    <value>Customize the specific model used for each task (drafting, quizzes, assistant, etc.).</value>
+  </data>
+  <data name="SP_MatrixColTask.Text" xml:space="preserve">
+    <value>TASK</value>
+  </data>
+  <data name="SP_MatrixColProvider.Text" xml:space="preserve">
+    <value>PROVIDER</value>
+  </data>
+  <data name="SP_MatrixColModel.Text" xml:space="preserve">
+    <value>MODEL (manually editable)</value>
+  </data>
+  <data name="SP_Creativity.Header" xml:space="preserve">
+    <value>Response Creativity</value>
+  </data>
+  <data name="SP_Creativity.Description" xml:space="preserve">
+    <value>Fine-tune creativity: 0 = factual &amp; faithful, 2 = highly creative.</value>
+  </data>
+  <data name="SP_TaskFiche.Text" xml:space="preserve">
+    <value>Lesson Plan Drafting</value>
+  </data>
+  <data name="SP_TaskIntent.Text" xml:space="preserve">
+    <value>Intent Classification</value>
+  </data>
+  <data name="SP_TaskAssistant.Text" xml:space="preserve">
+    <value>Conversational Assistant</value>
+  </data>
+  <data name="SP_StorageLocations.Text" xml:space="preserve">
+    <value>Storage Locations</value>
+  </data>
+  <data name="SP_GuidesFolder.Header" xml:space="preserve">
+    <value>Pedagogical Guides &amp; Textbooks (PDF)</value>
+  </data>
+  <data name="SP_GuidesFolder.Description" xml:space="preserve">
+    <value>Sources analyzed for table of contents and pedagogical context.</value>
+  </data>
+  <data name="SP_NoFolderSelected.PlaceholderText" xml:space="preserve">
+    <value>No folder selected</value>
+  </data>
+  <data name="SP_BrowseBtn.Content" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="SP_OpenBtn.Content" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="SP_PermanentAccess.Text" xml:space="preserve">
+    <value>Permanent access granted</value>
+  </data>
+  <data name="SP_ExportsFolder.Header" xml:space="preserve">
+    <value>Export Destination Folder (PDF, DOCX, RTF)</value>
+  </data>
+  <data name="SP_ExportsFolder.Description" xml:space="preserve">
+    <value>Default destination for all exported documents.</value>
+  </data>
+  <data name="SP_CacheMaintenance.Text" xml:space="preserve">
+    <value>Cache &amp; Maintenance</value>
+  </data>
+  <data name="SP_TocCache.Header" xml:space="preserve">
+    <value>Table of Contents Cache</value>
+  </data>
+  <data name="SP_ClearCacheBtn.Content" xml:space="preserve">
+    <value>Clear cache</value>
+  </data>
+  <data name="SP_AppLogs.Header" xml:space="preserve">
+    <value>Application Logs</value>
+  </data>
+  <data name="SP_AppLogs.Description" xml:space="preserve">
+    <value>Review local application logs if unexpected issues occur.</value>
+  </data>
+  <data name="SP_OpenLogsBtn.Content" xml:space="preserve">
+    <value>Open logs folder</value>
+  </data>
+  <data name="SP_GdprHeader.Text" xml:space="preserve">
+    <value>Privacy — Data Journey</value>
+  </data>
+  <data name="SP_GdprSubtitle.Text" xml:space="preserve">
+    <value>Total transparency on what data moves, where, and how it is protected.</value>
+  </data>
+  <data name="SP_GdprRequest.Text" xml:space="preserve">
+    <value>Your Request</value>
+  </data>
+  <data name="SP_GdprSentToAi.Text" xml:space="preserve">
+    <value>Sent to AI</value>
+  </data>
+  <data name="SP_GdprHttps.Text" xml:space="preserve">
+    <value>Encrypted HTTPS</value>
+  </data>
+  <data name="SP_GdprSecureConn.Text" xml:space="preserve">
+    <value>Secure Connection</value>
+  </data>
+  <data name="SP_GdprAiService.Text" xml:space="preserve">
+    <value>AI Service</value>
+  </data>
+  <data name="SP_GdprDrafting.Text" xml:space="preserve">
+    <value>Document Drafting</value>
+  </data>
+  <data name="SP_GdprYourDocs.Text" xml:space="preserve">
+    <value>Your Documents</value>
+  </data>
+  <data name="SP_GdprLocalOnly.Text" xml:space="preserve">
+    <value>Only on this PC</value>
+  </data>
+  <data name="SP_GdprBullet1.Text" xml:space="preserve">
+    <value>• No data is sold, shared, or used to train public AI models.</value>
+  </data>
+  <data name="SP_GdprBullet2.Text" xml:space="preserve">
+    <value>• Your API keys never leave the secure Windows Credential Locker.</value>
+  </data>
+  <data name="SP_GdprBullet3.Text" xml:space="preserve">
+    <value>• Recommendation: never enter student personally identifiable information into forms.</value>
+  </data>
+  <data name="SP_GdprBullet4.Text" xml:space="preserve">
+    <value>• 100% offline option available via « Local Server / Ollama » provider.</value>
+  </data>
+  <data name="SP_Telemetry.Header" xml:space="preserve">
+    <value>Anonymous Telemetry</value>
+  </data>
+  <data name="SP_Telemetry.Description" xml:space="preserve">
+    <value>Disabled by default. If enabled: aggregated usage statistics only, no lesson content.</value>
+  </data>
+  <data name="SP_TwoPass.Header" xml:space="preserve">
+    <value>Two-Pass Generation (Experimental)</value>
+  </data>
+  <data name="SP_TwoPass.Description" xml:space="preserve">
+    <value>Two drafting passes + automatic review for higher quality. Doubles generation time.</value>
+  </data>
+  <data name="SP_LogLevel.Header" xml:space="preserve">
+    <value>Logging Level (Diagnostics)</value>
+  </data>
+  <data name="SP_LogLevel.Description" xml:space="preserve">
+    <value>Local log verbosity. « Information » is recommended for daily use.</value>
+  </data>
+  <data name="SP_Retention.Header" xml:space="preserve">
+    <value>Document History Retention</value>
+  </data>
+  <data name="SP_Retention.Description" xml:space="preserve">
+    <value>Retention period in days. 0 = unlimited retention.</value>
+  </data>
+  <data name="SP_DiagMaintenance.Header" xml:space="preserve">
+    <value>Diagnostics &amp; Maintenance</value>
+  </data>
+  <data name="SP_DiagMaintenance.Description" xml:space="preserve">
+    <value>Export a complete diagnostic bundle for technical support.</value>
+  </data>
+  <data name="SP_DiagPackNote.Text" xml:space="preserve">
+    <value>The bundle (.zip) contains logs, configuration, and AI routing state. API keys are redacted.</value>
+  </data>
+  <data name="SP_ExportDiagBtn.Content" xml:space="preserve">
+    <value>Export diagnostic bundle (.zip)</value>
+  </data>
+  <data name="SP_DangerZone.Text" xml:space="preserve">
+    <value>Danger Zone</value>
+  </data>
+  <data name="SP_DangerZoneDesc.Text" xml:space="preserve">
+    <value>Resets all settings to defaults (theme, AI routing, styles, prompts). API keys and history are preserved.</value>
+  </data>
+  <data name="SP_ResetAllBtn.Content" xml:space="preserve">
+    <value>Reset all settings</value>
+  </data>
+  <data name="SP_PromptsHeader.Text" xml:space="preserve">
+    <value>Customizable Prompt Templates</value>
+  </data>
+  <data name="SP_ResetPromptBtn.Content" xml:space="preserve">
+    <value>↺ Reset this template</value>
+  </data>
+  <data name="SP_PromptSaveNote.Text" xml:space="preserve">
+    <value>Changes are saved using the « Save Settings » button below.</value>
+  </data>
+  <data name="SP_ShortcutsHeader.Text" xml:space="preserve">
+    <value>Keyboard Shortcuts</value>
+  </data>
+  <data name="SP_ShortcutEditor.Header" xml:space="preserve">
+    <value>Shortcut Editor</value>
+  </data>
+  <data name="SP_ShortcutEditor.Description" xml:space="preserve">
+    <value>Customize key combinations. Applied upon restarting PROFstudio.</value>
+  </data>
+  <data name="SP_ResetShortcutsBtn.Content" xml:space="preserve">
+    <value>↺ Reset All</value>
+  </data>
+  <data name="SP_ThemeGallery.Text" xml:space="preserve">
+    <value>Theme Gallery</value>
+  </data>
+  <data name="SP_ThemeGallerySubtitle.Text" xml:space="preserve">
+    <value>Choose a complete art direction or fine-tune details below.</value>
+  </data>
+  <data name="SP_DefaultStyleTitle.Title" xml:space="preserve">
+    <value>Default Style</value>
+  </data>
+  <data name="SP_StyleBuilder.Header" xml:space="preserve">
+    <value>StyleBuilder — Customization</value>
+  </data>
+  <data name="SP_StyleBuilder.Description" xml:space="preserve">
+    <value>Adjust colors, header layout, typography, and page margins.</value>
+  </data>
+  <data name="SP_ColorPalette.Text" xml:space="preserve">
+    <value>Color Palette</value>
+  </data>
+  <data name="SP_PrimaryColor.Text" xml:space="preserve">
+    <value>Primary Color</value>
+  </data>
+  <data name="SP_PrimaryLabel.Text" xml:space="preserve">
+    <value>Primary</value>
+  </data>
+  <data name="SP_SecondaryColor.Text" xml:space="preserve">
+    <value>Secondary Color</value>
+  </data>
+  <data name="SP_SecondaryLabel.Text" xml:space="preserve">
+    <value>Secondary</value>
+  </data>
+  <data name="SP_AccentColorLabel.Text" xml:space="preserve">
+    <value>Accent Color</value>
+  </data>
+  <data name="SP_AccentLabel.Text" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="SP_PaletteSuggestions.Text" xml:space="preserve">
+    <value>Palette suggestions:</value>
+  </data>
+  <data name="SP_PaletteOcean.Text" xml:space="preserve">
+    <value>Ocean</value>
+  </data>
+  <data name="SP_PaletteEmerald.Text" xml:space="preserve">
+    <value>Emerald</value>
+  </data>
+  <data name="SP_PalettePurple.Text" xml:space="preserve">
+    <value>Purple</value>
+  </data>
+  <data name="SP_PaletteTerracotta.Text" xml:space="preserve">
+    <value>Terracotta</value>
+  </data>
+  <data name="SP_PaletteSlate.Text" xml:space="preserve">
+    <value>Slate</value>
+  </data>
+  <data name="SP_PaletteRuby.Text" xml:space="preserve">
+    <value>Ruby</value>
+  </data>
+  <data name="SP_HeaderStyle.Text" xml:space="preserve">
+    <value>Header Style</value>
+  </data>
+  <data name="SP_TypographyBorders.Text" xml:space="preserve">
+    <value>Typography &amp; Frames</value>
+  </data>
+  <data name="SP_DocFont.Header" xml:space="preserve">
+    <value>Document Font</value>
+  </data>
+  <data name="SP_CornerRadius.Header" xml:space="preserve">
+    <value>Corner Radius (px)</value>
+  </data>
+  <data name="SP_PageMargins.Text" xml:space="preserve">
+    <value>Page Margins (mm)</value>
+  </data>
+  <data name="SP_MarginTop.Header" xml:space="preserve">
+    <value>Top</value>
+  </data>
+  <data name="SP_MarginBottom.Header" xml:space="preserve">
+    <value>Bottom</value>
+  </data>
+  <data name="SP_MarginLeft.Header" xml:space="preserve">
+    <value>Left</value>
+  </data>
+  <data name="SP_MarginRight.Header" xml:space="preserve">
+    <value>Right</value>
+  </data>
+  <data name="SP_CustomStyleNote.Text" xml:space="preserve">
+    <value>Any modification creates a « Custom » style saved with Ctrl+S.</value>
+  </data>
+  <data name="SP_InferStylePdf.Header" xml:space="preserve">
+    <value>Extract Style from PDF</value>
+  </data>
+  <data name="SP_InferStylePdf.Description" xml:space="preserve">
+    <value>PROFstudio analyzes a sample PDF and creates a tailored stylesheet.</value>
+  </data>
+  <data name="SP_InferStylePdfNote.Text" xml:space="preserve">
+    <value>Provide a sample PDF whose design you like to infer colors, fonts, and header styling.</value>
+  </data>
+  <data name="SP_AnalyzePdfBtn.Content" xml:space="preserve">
+    <value>Analyze reference PDF…</value>
+  </data>
+  <data name="SP_GeneratedStyleSheet.Header" xml:space="preserve">
+    <value>Generated Stylesheet</value>
+  </data>
+  <data name="SP_LivePreview.Text" xml:space="preserve">
+    <value>Live Preview</value>
+  </data>
+  <data name="SP_WebView2Required.Text" xml:space="preserve">
+    <value>WebView2 runtime required for live preview.</value>
+  </data>
+  <data name="SP_DownloadWebView2Btn.Content" xml:space="preserve">
+    <value>Download WebView2 runtime ↗</value>
+  </data>
+  <data name="Settings_Temp_Precise" xml:space="preserve">
+    <value>Precise and reliable</value>
+  </data>
+  <data name="Settings_Temp_Balanced" xml:space="preserve">
+    <value>Balanced</value>
+  </data>
+  <data name="Settings_Temp_Creative" xml:space="preserve">
+    <value>Creative</value>
+  </data>
+  <data name="Settings_Temp_VeryCreative" xml:space="preserve">
+    <value>Highly creative</value>
+  </data>
+  <data name="Settings_KeyCleared" xml:space="preserve">
+    <value>Key cleared — remember to save (Ctrl+S).</value>
+  </data>
+  <data name="Settings_NeverTested" xml:space="preserve">
+    <value>Never tested</value>
+  </data>
+  <data name="Settings_TestingInProgress" xml:space="preserve">
+    <value>Testing in progress…</value>
+  </data>
+  <data name="Settings_ConnectedLatency" xml:space="preserve">
+    <value>Connected at {0} ms</value>
+  </data>
+  <data name="Settings_MissingApiKey" xml:space="preserve">
+    <value>Missing API key — cannot test</value>
+  </data>
+  <data name="Settings_MissingServerUrl" xml:space="preserve">
+    <value>Server address required</value>
+  </data>
+  <data name="Settings_MissingVertexProject" xml:space="preserve">
+    <value>Google Cloud Project ID required</value>
+  </data>
+  <data name="Settings_TesterUnavailable" xml:space="preserve">
+    <value>Connection tester unavailable.</value>
+  </data>
+  <data name="Settings_CheckingStartup" xml:space="preserve">
+    <value>Checking startup status…</value>
+  </data>
+  <data name="Settings_StartupEnabled" xml:space="preserve">
+    <value>Enabled (starts automatically)</value>
+  </data>
+  <data name="Settings_StartupDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Settings_StartupDisabledByUser" xml:space="preserve">
+    <value>Disabled in Task Manager</value>
+  </data>
+  <data name="Settings_StartupDisabledByPolicy" xml:space="preserve">
+    <value>Disabled by group policy</value>
+  </data>
+  <data name="Result_StudentAction" xml:space="preserve">
+    <value>Student Handout</value>
+  </data>
+  <data name="Result_TeacherAction" xml:space="preserve">
+    <value>Teacher Key</value>
+  </data>
+  <data name="Result_DefaultPdfFilter" xml:space="preserve">
+    <value>PDF Document (*.pdf)</value>
+  </data>
+  <data name="Result_DefaultDocxFilter" xml:space="preserve">
+    <value>Word Document (*.docx)</value>
+  </data>
+  <data name="Result_DefaultRtfFilter" xml:space="preserve">
+    <value>RTF Document (*.rtf)</value>
+  </data>
+  <data name="PDZ_ChapterCombo.Header" xml:space="preserve">
+    <value>Guide Chapter (table of contents)</value>
+  </data>
+  <data name="PDZ_ChapterCombo.PlaceholderText" xml:space="preserve">
+    <value>Choose a chapter to prefill topic…</value>
+  </data>
+  <data name="PDZ_ChapterCombo.AutomationProperties.Name" xml:space="preserve">
+    <value>Pedagogical guide chapter</value>
+  </data>
+  <data name="PDZ_ChapterNote.Text" xml:space="preserve">
+    <value>From table of contents cache — selecting prefills the topic.</value>
+  </data>
+  <data name="AD_Password.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="AD_ConfirmPassword.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="AD_SignInEmail.PlaceholderText" xml:space="preserve">
+    <value>teacher@school.edu</value>
+  </data>
+  <data name="AD_SignInPassword.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="SP_RefreshPreviewBtn.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="AD_Dialog.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
 </root>

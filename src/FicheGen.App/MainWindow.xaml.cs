@@ -32,9 +32,9 @@ namespace FicheGen.App;
 
 public sealed partial class MainWindow : Window
 {
-    // ----- Géométrie de fenêtre -----
-    private const int MinWindowWidthDip = 1024;
-    private const int MinWindowHeightDip = 640;
+    // ----- Géométrie de fenêtre (F14 : support Windows Snap 50/50) -----
+    private const int MinWindowWidthDip = 680;
+    private const int MinWindowHeightDip = 560;
     private const int DefaultWindowWidthDip = 1280;
     private const int DefaultWindowHeightDip = 840;
     private const int PlacementSentinel = -32000;
@@ -53,9 +53,7 @@ public sealed partial class MainWindow : Window
     private WndProcDelegate? _wndProcDelegate;
     private IntPtr _oldWndProc;
     private RectInt32 _lastNormalBounds;
-    private bool _isPreviewVisible = true;
     private bool _wasOnSettings;
-    private readonly Windows.UI.ViewManagement.UISettings _uiSettings = new();
     private string? _lastExportedFilePath;
 
     public MainWindow()
@@ -105,14 +103,6 @@ public sealed partial class MainWindow : Window
         // ----- Thème (Clair / Sombre / Système) -----
         ApplyTheme(_shellState.Theme, persist: false);
         RootGrid.ActualThemeChanged += (_, _) => UpdateCaptionButtonColors();
-        try
-        {
-            _uiSettings.ColorValuesChanged += (_, _) => DispatcherQueue.TryEnqueue(UpdateCaptionButtonColors);
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Could not subscribe to high-contrast changes.");
-        }
 
         // ----- État initial de l'Assistant IA -----
         AssistantToggleButton.IsChecked = _shellState.IsAssistantVisible;
@@ -158,6 +148,7 @@ public sealed partial class MainWindow : Window
             DispatcherQueue.TryEnqueue(RefreshLocalizedStrings);
         };
 
+        RefreshLocalizedStrings();
         RefreshAiChip();
         RefreshTeacherBadge();
 
@@ -167,19 +158,34 @@ public sealed partial class MainWindow : Window
         var historyVm = App.Services.GetService<HistoryViewModel>();
         if (historyVm != null)
         {
-            historyVm.DocumentOpened += (s, item) =>
+            historyVm.DocumentOpened += async (s, item) =>
             {
                 var resultVm = App.Services.GetService<ResultViewModel>();
                 if (resultVm != null)
                 {
-                    if (!string.IsNullOrEmpty(item.Model.SourceJson))
+                    var fullModel = item.Model;
+                    if (string.IsNullOrEmpty(fullModel.SourceJson) && string.IsNullOrEmpty(fullModel.Html))
+                    {
+                        var repo = App.Services.GetService<IHistoryRepository>();
+                        if (repo != null)
+                        {
+                            var fetched = await repo.GetByIdAsync(item.Id);
+                            if (fetched != null) fullModel = fetched;
+                        }
+                    }
+
+                    GeneratedDocument? doc = null;
+                    if (!string.IsNullOrEmpty(fullModel.SourceJson))
                     {
                         try
                         {
-                            var doc = System.Text.Json.JsonSerializer.Deserialize<GeneratedDocument>(item.Model.SourceJson);
-                            if (doc != null)
+                            if (JsonCleaner.TryDeserializeDocument(fullModel.SourceJson, out var parsed) && parsed != null)
                             {
-                                resultVm.LoadDocument(doc, item.Html ?? string.Empty, item.StylePresetId);
+                                doc = parsed;
+                            }
+                            else
+                            {
+                                doc = System.Text.Json.JsonSerializer.Deserialize<GeneratedDocument>(fullModel.SourceJson);
                             }
                         }
                         catch (Exception ex)
@@ -187,9 +193,20 @@ public sealed partial class MainWindow : Window
                             Log.Warning(ex, "Désérialisation du document historique impossible (id {Id}).", item.Id);
                         }
                     }
-                    else if (string.IsNullOrEmpty(resultVm.CurrentHtml) && !string.IsNullOrEmpty(item.Html))
+
+                    var textForFallback = !string.IsNullOrEmpty(item.PlainText) ? item.PlainText : fullModel.PlainText;
+                    if (doc == null && !string.IsNullOrEmpty(textForFallback))
                     {
-                        resultVm.CurrentHtml = item.Html;
+                        doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(textForFallback, item.Title, includeWarningCallout: false);
+                    }
+
+                    if (doc != null)
+                    {
+                        resultVm.LoadDocument(doc, fullModel.Html ?? string.Empty, fullModel.StylePresetId);
+                    }
+                    else if (string.IsNullOrEmpty(resultVm.CurrentHtml) && !string.IsNullOrEmpty(fullModel.Html))
+                    {
+                        resultVm.CurrentHtml = fullModel.Html;
                     }
                 }
 
@@ -278,7 +295,7 @@ public sealed partial class MainWindow : Window
     }
 
     // ==========================================================================
-    //  Premier démarrage : WebView2 + expérience de première exécution (RGPD)
+    //  Premier démarrage : WebView2 + expérience de première exécution
     // ==========================================================================
     private async Task<XamlRoot?> EnsureXamlRootAsync()
     {
@@ -323,8 +340,12 @@ public sealed partial class MainWindow : Window
             var dialogService = App.Services.GetService<DialogService>();
             dialogService?.Initialize(xamlRoot);
 
-            // Première exécution & transparence RGPD (avant tout autre dialogue)
-            await RunFirstRunFlowAsync(xamlRoot);
+            // Première exécution & transparence des données (avant tout autre dialogue)
+            var ranFirstRun = await RunFirstRunFlowAsync(xamlRoot);
+            if (ranFirstRun)
+            {
+                await Task.Delay(150);
+            }
 
             // Vérification du composant WebView2 (non bloquant : bouton « Plus tard » par défaut)
             var checker = new WebView2RuntimeChecker();
@@ -356,11 +377,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task RunFirstRunFlowAsync(XamlRoot xamlRoot)
+    private async Task<bool> RunFirstRunFlowAsync(XamlRoot xamlRoot)
     {
         var settingsStore = App.Services.GetRequiredService<ISettingsStore>();
         var settings = settingsStore.GetSettings<AppSettings>();
-        if (settings.IsFirstRunCompleted) return;
+        if (settings.IsFirstRunCompleted) return false;
 
         var firstRunDlg = new FirstRunDialog
         {
@@ -389,17 +410,21 @@ public sealed partial class MainWindow : Window
                 };
                 credentialStore.Set(keyName, firstRunDlg.ApiKey);
             }
-        }
 
-        settings.IsFirstRunCompleted = true;
-        await settingsStore.SaveSettingsAsync(settings);
+            settings.IsFirstRunCompleted = true;
+            await settingsStore.SaveSettingsAsync(settings);
 
-        if (res == ContentDialogResult.Primary)
-        {
             ShowHint(Services.L10n.Get("Hint_Welcome_Title"),
                 Services.L10n.Get("Hint_Welcome_Message"));
         }
+        else
+        {
+            // If onboarding was canceled/skipped without accepting disclosure, do not mark completed
+            settings.IsFirstRunCompleted = false;
+            await settingsStore.SaveSettingsAsync(settings);
+        }
         RefreshAiChip();
+        return true;
     }
 
     private void OnMainWindowClosed(object sender, WindowEventArgs args)

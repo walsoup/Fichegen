@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using FicheGen.App.Models;
+using FicheGen.App.Services;
 using FicheGen.Core.Diff;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -172,7 +173,7 @@ public sealed partial class AssistantPane : UserControl
 
         PromptTextBox.IsEnabled = !IsStreaming;
 
-        if (IsStreaming && IsLoaded)
+        if (IsStreaming && IsLoaded && UiMotion.Enabled)
         {
             TypingDotsStoryboard.Begin();
         }
@@ -203,13 +204,7 @@ public sealed partial class AssistantPane : UserControl
         }
         else
         {
-            _selectedMode = ModeSegmented.SelectedIndex switch
-            {
-                1 => "Générer",
-                2 => "Modifier",
-                3 => "Question",
-                _ => "Auto"
-            };
+            _selectedMode = ModeSegmented.SelectedIndex == 1 ? "Question" : "Modifier";
         }
 
         UpdateModeCaption();
@@ -224,22 +219,6 @@ public sealed partial class AssistantPane : UserControl
 
         switch (_selectedMode)
         {
-            case "Générer":
-                ModeCaptionText.Text =
-                    Services.L10n.Get("AP_ModeGenerate_Caption");
-
-                PromptTextBox.PlaceholderText =
-                    Services.L10n.Get("AP_ModeGenerate_Prompt");
-                break;
-
-            case "Modifier":
-                ModeCaptionText.Text =
-                    Services.L10n.Get("AP_ModeEdit_Caption");
-
-                PromptTextBox.PlaceholderText =
-                    Services.L10n.Get("AP_ModeEdit_Prompt");
-                break;
-
             case "Question":
                 ModeCaptionText.Text =
                     Services.L10n.Get("AP_ModeQuestion_Caption");
@@ -248,12 +227,13 @@ public sealed partial class AssistantPane : UserControl
                     Services.L10n.Get("AP_ModeQuestion_Prompt");
                 break;
 
+            case "Modifier":
             default:
                 ModeCaptionText.Text =
-                    Services.L10n.Get("AP_ModeAuto_Caption");
+                    Services.L10n.Get("AP_ModeEdit_Caption");
 
                 PromptTextBox.PlaceholderText =
-                    "Demandez une modification ou posez une question…";
+                    Services.L10n.Get("AP_ModeEdit_Prompt");
                 break;
         }
     }
@@ -409,7 +389,7 @@ public sealed partial class AssistantPane : UserControl
 
     private void OnCaretLoaded(object sender, RoutedEventArgs e)
     {
-        if (sender is not UIElement caret)
+        if (sender is not UIElement caret || !UiMotion.Enabled)
         {
             return;
         }

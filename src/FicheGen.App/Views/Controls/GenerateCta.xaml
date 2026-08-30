@@ -21,7 +21,7 @@
                         HorizontalAlignment="Center" Padding="18,9">
                 <FontIcon Glyph="&#xE99A;" FontSize="15"/>
                 <TextBlock x:Uid="CTA_IdleLabel" Text="Générer avec l’IA" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <TextBlock Text="Ctrl+G" FontSize="11" FontWeight="SemiBold" Opacity="0.72"
+                <TextBlock x:Uid="CTA_ShortcutIdle" Text="Ctrl+G" FontSize="11" FontWeight="SemiBold" Opacity="0.72"
                            VerticalAlignment="Center"/>
             </StackPanel>
 

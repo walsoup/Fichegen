@@ -14,10 +14,15 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="14,12"
+                MinHeight="56"
                 AllowDrop="True"
+                IsTabStop="True"
+                Tapped="OnDropBorderTapped"
+                KeyDown="OnDropBorderKeyDown"
                 DragOver="OnDragOver"
                 DragLeave="OnDragLeave"
                 Drop="OnDrop"
+                x:Uid="PDZ_Zone"
                 AutomationProperties.Name="Zone de sélection du guide pédagogique PDF"
                 AutomationProperties.HelpText="Glissez-déposez un guide PDF ou cliquez pour en sélectionner un">
 
@@ -34,10 +39,10 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Glisser un guide PDF ou cliquer pour parcourir"
+                    <TextBlock x:Uid="PDZ_EmptyPrimary" Text="Glisser un guide PDF ou cliquer pour parcourir"
                                FontSize="12" FontWeight="Medium"
                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                    <TextBlock Text="Manuel scolaire, progression de cycle, etc. (optionnel)"
+                    <TextBlock x:Uid="PDZ_EmptySecondary" Text="Manuel scolaire, progression de cycle, etc. (optionnel)"
                                FontSize="12"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
                 </StackPanel>
@@ -48,7 +53,7 @@
                         Orientation="Horizontal" Spacing="10"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                 <FontIcon Glyph="&#xE898;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                <TextBlock Text="Déposez le fichier PDF ici" FontSize="13" FontWeight="SemiBold"
+                <TextBlock x:Uid="PDZ_DragOver" Text="Déposez le fichier PDF ici" FontSize="13" FontWeight="SemiBold"
                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
@@ -71,13 +76,14 @@
                                FontSize="12" FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                    <TextBlock x:Name="FileMetaText" Text="Guide PDF prêt pour l'ancrage pédagogique"
+                    <TextBlock x:Name="FileMetaText" x:Uid="PDZ_FileMeta" Text="Guide PDF prêt pour l'ancrage pédagogique"
                                FontSize="12"
                                Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="2" Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6" MinHeight="0" MinWidth="0"
                         Click="OnClearFileClicked"
+                        x:Uid="PDZ_RemoveFile"
                         ToolTipService.ToolTip="Retirer ce guide"
                         AutomationProperties.Name="Retirer le fichier PDF">
                     <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
@@ -99,16 +105,17 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="ErrorTitleText" Text="Format non supporté"
+                    <TextBlock x:Name="ErrorTitleText" x:Uid="PDZ_ErrorTitle" Text="Format non supporté"
                                FontSize="12" FontWeight="SemiBold"
                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                    <TextBlock x:Name="ErrorMessageText" Text="Seuls les fichiers .pdf sont acceptés."
+                    <TextBlock x:Name="ErrorMessageText" x:Uid="PDZ_ErrorMessage" Text="Seuls les fichiers .pdf sont acceptés."
                                FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="2" Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6" MinHeight="0" MinWidth="0"
                         Click="OnClearFileClicked"
+                        x:Uid="PDZ_ErrorClose"
                         ToolTipService.ToolTip="Fermer"
                         AutomationProperties.Name="Fermer l'erreur">
                     <FontIcon Glyph="&#xE711;" FontSize="12"/>
@@ -120,7 +127,7 @@
                         Orientation="Horizontal" Spacing="10"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressRing IsActive="True" Width="18" Height="18"/>
-                <TextBlock Text="Analyse du guide PDF en cours…" FontSize="12"
+                <TextBlock x:Uid="PDZ_Processing" Text="Analyse du guide PDF en cours…" FontSize="12"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
@@ -130,12 +137,13 @@
              du guide (aucun retraitement du PDF si le cache est présent). -->
         <StackPanel x:Name="ChapterPanel" Visibility="Collapsed" Spacing="4">
             <ComboBox x:Name="ChapterCombo"
+                      x:Uid="PDZ_ChapterCombo"
                       Header="Chapitre du guide (table des matières)"
                       HorizontalAlignment="Stretch"
                       PlaceholderText="Choisir un chapitre pour préremplir le sujet…"
                       SelectionChanged="OnChapterSelectionChanged"
                       AutomationProperties.Name="Chapitre du guide pédagogique"/>
-            <TextBlock Text="Issu du cache de la table des matières — la sélection préremplit le sujet."
+            <TextBlock x:Uid="PDZ_ChapterNote" Text="Issu du cache de la table des matières — la sélection préremplit le sujet."
                        FontSize="11"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                        TextWrapping="Wrap"/>

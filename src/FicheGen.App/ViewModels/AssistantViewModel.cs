@@ -39,6 +39,9 @@ public partial class ChatMessageItem : ObservableObject
     [ObservableProperty]
     public partial bool IsApplied { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsDiffResolved { get; set; }
+
     /// <summary><c>true</c> pendant que la réponse de ce message est en cours de diffusion.</summary>
     [ObservableProperty]
     public partial bool IsStreaming { get; set; }
@@ -90,6 +93,7 @@ public partial class AssistantViewModel : ObservableObject
     private readonly IAssistantService _assistantService;
     private readonly ISettingsStore _settingsStore;
     private readonly ICredentialStore? _credentialStore;
+    private readonly FicheGen.Core.Auth.IAuthService? _authService;
     private readonly ResultViewModel _resultViewModel;
 
     private readonly List<string> _promptHistory = new();
@@ -166,10 +170,8 @@ public partial class AssistantViewModel : ObservableObject
 
     public IReadOnlyList<AssistantModeOption> AvailableModes { get; } = new[]
     {
-        new AssistantModeOption("Auto", "Automatique", "L'assistant détecte votre intention."),
-        new AssistantModeOption("Générer", "Générer", "Produire du nouveau contenu pédagogique."),
-        new AssistantModeOption("Modifier", "Modifier", "Transformer le document ouvert."),
-        new AssistantModeOption("Question", "Question", "Interroger le document ouvert.")
+        new AssistantModeOption("Modifier", "Modifier", "Propose des modifications ciblées sur le document ouvert."),
+        new AssistantModeOption("Question", "Question", "Pose une question sur le document ouvert.")
     };
 
     public IReadOnlyList<ShortcutHint> ShortcutHints { get; } = new[]
@@ -188,16 +190,18 @@ public partial class AssistantViewModel : ObservableObject
         IAssistantService assistantService,
         ISettingsStore settingsStore,
         ResultViewModel resultViewModel,
-        ICredentialStore? credentialStore = null)
+        ICredentialStore? credentialStore = null,
+        FicheGen.Core.Auth.IAuthService? authService = null)
     {
         _assistantService = assistantService;
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
+        _authService = authService;
         _resultViewModel = resultViewModel;
 
-        SelectedMode = "Auto";
+        SelectedMode = "Modifier";
         PromptText = string.Empty;
-        StatusMessage = "Prêt à vous assister.";
+        StatusMessage = "Prêt à vous assister sur le document ouvert.";
         CurrentStatusSeverity = StatusSeverity.Info;
 
         Messages.CollectionChanged += (_, _) =>
@@ -225,6 +229,7 @@ public partial class AssistantViewModel : ObservableObject
                 case nameof(ResultViewModel.CurrentDocument):
                     OnPropertyChanged(nameof(IsDocumentAvailable));
                     OnPropertyChanged(nameof(DocumentContextText));
+                    SendMessageCommand.NotifyCanExecuteChanged();
                     break;
             }
         };
@@ -269,7 +274,14 @@ public partial class AssistantViewModel : ObservableObject
                 appSettings.Ai.Vertex.Project,
                 appSettings.Ai.Vertex.Region,
                 new Dictionary<string, double> { { "generation", appSettings.Ai.Temperatures.Generation }, { "intent", appSettings.Ai.Temperatures.Intent } },
-                (k, _) => ValueTask.FromResult(_credentialStore?.Get(k))
+                async (k, ct) =>
+                {
+                    if (k == "supabase_access_token" && _authService != null)
+                    {
+                        return await _authService.GetValidTokenAsync(ct).ConfigureAwait(false);
+                    }
+                    return _credentialStore?.Get(k);
+                }
             );
 
             var assistantMsg = new ChatMessageItem
@@ -289,6 +301,7 @@ public partial class AssistantViewModel : ObservableObject
                 _resultViewModel.PushSnapshot($"Avant : « {Truncate(userMessage, 40)} »");
 
                 SetStatus("L'assistant modifie le document…", StatusSeverity.Info);
+                assistantMsg.Content = "✍️ Rédaction des modifications pédagogiques en cours…";
 
                 var sb = new StringBuilder();
                 await foreach (var chunk in _assistantService.StreamEditAsync(_resultViewModel.CurrentDocument, userMessage, config, currentCts.Token))
@@ -318,7 +331,8 @@ public partial class AssistantViewModel : ObservableObject
                         {
                             editedDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(
                                 editedText,
-                                _resultViewModel.CurrentDocument?.Metadata.Title ?? "Document modifié");
+                                _resultViewModel.CurrentDocument?.Metadata.Title ?? "Document modifié",
+                                includeWarningCallout: false);
                         }
                         catch (OperationCanceledException) { throw; }
                         catch
@@ -335,6 +349,7 @@ public partial class AssistantViewModel : ObservableObject
                     }
                     else
                     {
+                        assistantMsg.Content = "Voici les modifications proposées pour votre document. Vérifiez les ajustements ci-dessous avant d'appliquer :";
                         assistantMsg.EditedDocument = editedDoc;
                         var originalPlainText = _resultViewModel.CurrentDocument!.ToPlainText();
                         var newPlainText = editedDoc.ToPlainText();
@@ -343,19 +358,21 @@ public partial class AssistantViewModel : ObservableObject
                     }
                 }
             }
-            else if (hasDocument && !string.Equals(SelectedMode, "Générer", StringComparison.OrdinalIgnoreCase))
+            else if (hasDocument)
             {
                 SetStatus("L'assistant analyse le document…", StatusSeverity.Info);
-                var response = await _assistantService.AskQuestionAsync(_resultViewModel.CurrentDocument!, userMessage, config, _cts.Token);
+                var response = await _assistantService.AskQuestionAsync(_resultViewModel.CurrentDocument!, userMessage, config, currentCts.Token);
                 assistantMsg.Content = response;
             }
             else
             {
-                assistantMsg.Content =
-                    "Aucun document n'est actuellement ouvert pour cette demande.\n\n" +
-                    "Générez d'abord une fiche, une évaluation ou un quiz via les onglets dédiés, " +
-                    "puis revenez ici : je peux modifier le document, le simplifier, l'enrichir " +
-                    "ou répondre à vos questions à son sujet.";
+                // General pedagogical question when no document is active
+                SetStatus("L'assistant répond à votre question…", StatusSeverity.Info);
+                var dummyDoc = new GeneratedDocument(new DocumentMetadata("Assistant Général", DocType: "assistant"), Array.Empty<Block>());
+                var response = await _assistantService.AskQuestionAsync(dummyDoc, userMessage, config, currentCts.Token);
+                assistantMsg.Content = !string.IsNullOrWhiteSpace(response)
+                    ? response
+                    : "Aucun document n'est actuellement ouvert.\n\nGénérez d'abord une fiche, une évaluation ou un quiz via les onglets dédiés, ou posez-moi vos questions pédagogiques.";
             }
 
             assistantMsg.IsStreaming = false;
@@ -421,17 +438,36 @@ public partial class AssistantViewModel : ObservableObject
         if (!_resultViewModel.ApplyEditedDocument(message.EditedDocument, label)) return;
 
         message.IsApplied = true;
+        message.IsDiffResolved = true;
         SetStatus("Modifications appliquées au document (Ctrl+Z pour annuler).", StatusSeverity.Success);
     }
 
+    /// <summary>Ignore la proposition de modification.</summary>
+    [RelayCommand]
+    public void RejectDiff(ChatMessageItem? message)
+    {
+        if (message is null) return;
+        message.IsApplied = false;
+        message.IsDiffResolved = true;
+        SetStatus("Proposition de modification ignorée.", StatusSeverity.Info);
+    }
+
     /// <summary>
-    /// Applique l'édition affichée à l'index donné du volet (les messages du volet
-    /// sont la copie 1:1 de <see cref="Messages"/>).
+    /// Applique l'édition affichée à l'index donné du volet.
     /// </summary>
     public void ApplyEditAtIndex(int index)
     {
         if (index < 0 || index >= Messages.Count) return;
         ApplyDiff(Messages[index]);
+    }
+
+    /// <summary>
+    /// Ignore l'édition affichée à l'index donné du volet.
+    /// </summary>
+    public void RejectEditAtIndex(int index)
+    {
+        if (index < 0 || index >= Messages.Count) return;
+        RejectDiff(Messages[index]);
     }
 
     /// <summary>Ctrl+Z — Annule la dernière modification du document.</summary>

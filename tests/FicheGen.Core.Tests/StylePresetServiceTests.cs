@@ -13,8 +13,8 @@ public sealed class StylePresetServiceTests
         var service = new StylePresetService();
         var presets = service.GetPresets();
 
-        presets.Should().HaveCount(5);
-        presets.Select(p => p.Id).Should().Contain(new[] { "modern", "classic", "minimal", "academic", "playful" });
+        presets.Should().HaveCount(6);
+        presets.Select(p => p.Id).Should().Contain(new[] { "modern", "classic", "minimal", "academic", "playful", "dyslexie" });
     }
 
     [Fact]
@@ -29,6 +29,7 @@ public sealed class StylePresetServiceTests
         presets.First(p => p.Id == "minimal").HeaderLayout.Should().Be(StylePreset.HeaderMinimal);
         presets.First(p => p.Id == "academic").HeaderLayout.Should().Be(StylePreset.HeaderCentered);
         presets.First(p => p.Id == "playful").HeaderLayout.Should().Be(StylePreset.HeaderBand);
+        presets.First(p => p.Id == "dyslexie").HeaderLayout.Should().Be(StylePreset.HeaderRule);
 
         presets.Select(p => p.AccentColor).Should().OnlyHaveUniqueItems();
     }

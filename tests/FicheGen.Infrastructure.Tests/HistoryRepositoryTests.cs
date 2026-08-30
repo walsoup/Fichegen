@@ -46,7 +46,9 @@ public sealed class HistoryRepositoryTests : IDisposable
             IsFavorite = false,
             PlainText = "Leçon sur les fractions en classe de CM2",
             Html = "<h1>Fractions</h1><p>Leçon sur les fractions</p>",
-            StylePresetId = "modern"
+            StylePresetId = "modern",
+            RawPrompt = "[SYSTEM]\nTu es un assistant\n\n[USER]\nCrée une fiche fractions",
+            RawResponse = "{\"metadata\":{\"title\":\"Fractions CM2\"}}"
         };
 
         await repo.SaveAsync(item);
@@ -58,6 +60,8 @@ public sealed class HistoryRepositoryTests : IDisposable
         retrieved.ClassLevel.Should().Be("CM2");
         retrieved.Subject.Should().Be("Mathématiques");
         retrieved.PlainText.Should().Be("Leçon sur les fractions en classe de CM2");
+        retrieved.RawPrompt.Should().Be("[SYSTEM]\nTu es un assistant\n\n[USER]\nCrée une fiche fractions");
+        retrieved.RawResponse.Should().Be("{\"metadata\":{\"title\":\"Fractions CM2\"}}");
     }
 
     [Fact]
@@ -215,5 +219,70 @@ public sealed class HistoryRepositoryTests : IDisposable
 
         var retrieved = await repo.GetByIdAsync(item.Id);
         retrieved!.Title.Should().Be("Nouveau Nom");
+    }
+
+    [Fact]
+    public async Task SaveAndSearchAndRestore_PreservesAllFieldsByteForByte_WhenHydratedAndRestored()
+    {
+        var repo = new HistoryRepository(_tempDbPath);
+        await repo.InitializeAsync();
+
+        var original = new HistoryItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = "fiche",
+            Title = "Le cycle de l'eau CM1",
+            ClassLevel = "CM1",
+            Subject = "Sciences",
+            CreatedUtc = DateTime.UtcNow,
+            IsFavorite = true,
+            PlainText = "Le cycle de l'eau comprend l'évaporation, la condensation et les précipitations.",
+            Html = "<article><h1>Le cycle de l'eau</h1><p>Evaporation, condensation, precipitations.</p></article>",
+            SourceJson = "{\"title\":\"Le cycle de l'eau\",\"sections\":[{\"heading\":\"Evaporation\"}]}",
+            StylePresetId = "dyslexie",
+            RawPrompt = "[SYSTEM] Expert enseignant\n[USER] Fiche cycle eau",
+            RawResponse = "{\"title\":\"Le cycle de l'eau\"}"
+        };
+
+        // 1. Save original
+        await repo.SaveAsync(original);
+
+        // 2. Search returns search rows with valid plain text and ID
+        var searchResults = await repo.SearchAsync("cycle");
+        searchResults.Should().HaveCount(1);
+        var found = searchResults[0];
+        found.Id.Should().Be(original.Id);
+        found.PlainText.Should().Be(original.PlainText);
+
+        // 3. Hydrate via GetByIdAsync
+        var hydrated = await repo.GetByIdAsync(found.Id);
+        hydrated.Should().NotBeNull();
+        hydrated!.Html.Should().Be(original.Html);
+        hydrated.SourceJson.Should().Be(original.SourceJson);
+        hydrated.RawPrompt.Should().Be(original.RawPrompt);
+        hydrated.RawResponse.Should().Be(original.RawResponse);
+        hydrated.StylePresetId.Should().Be(original.StylePresetId);
+
+        // 4. Simulate deletion
+        await repo.DeleteAsync(found.Id);
+        var afterDelete = await repo.GetByIdAsync(found.Id);
+        afterDelete.Should().BeNull();
+
+        // 5. Restore full hydrated model (undo flow)
+        await repo.SaveAsync(hydrated);
+        var restored = await repo.GetByIdAsync(found.Id);
+        restored.Should().NotBeNull();
+        restored!.Id.Should().Be(original.Id);
+        restored.Type.Should().Be(original.Type);
+        restored.Title.Should().Be(original.Title);
+        restored.ClassLevel.Should().Be(original.ClassLevel);
+        restored.Subject.Should().Be(original.Subject);
+        restored.IsFavorite.Should().Be(original.IsFavorite);
+        restored.PlainText.Should().Be(original.PlainText);
+        restored.Html.Should().Be(original.Html);
+        restored.SourceJson.Should().Be(original.SourceJson);
+        restored.StylePresetId.Should().Be(original.StylePresetId);
+        restored.RawPrompt.Should().Be(original.RawPrompt);
+        restored.RawResponse.Should().Be(original.RawResponse);
     }
 }

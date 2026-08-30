@@ -107,7 +107,7 @@
                     <FontIcon Glyph="&#xE72E;" FontSize="15"
                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                               VerticalAlignment="Center"/>
-                    <TextBlock x:Uid="FRD_LocalNote" Text="Rassurez-vous : vos documents restent sur votre ordinateur et aucun compte n'est à créer."
+                    <TextBlock x:Uid="FRD_LocalNote" Text="Confidentialité : Vos documents sont enregistrés localement sur votre ordinateur. Lors de la génération via l'IA en ligne, les invites et extraits pertinents sont transmis au fournisseur choisi (une alternative 100% locale est disponible avec Ollama)."
                                FontSize="12" TextWrapping="Wrap"
                                VerticalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -204,7 +204,7 @@
                                 <TextBlock x:Uid="FRD_GoogleName" Text="Google AI Studio (Personnel)" FontWeight="SemiBold"/>
                                 <Border Padding="7,1" CornerRadius="9"
                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <TextBlock Text="Gratuit" FontSize="10.5" FontWeight="SemiBold"
+                                    <TextBlock x:Uid="FRD_GoogleBadge" Text="Gratuit" FontSize="10.5" FontWeight="SemiBold"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </Border>
                             </StackPanel>
@@ -235,8 +235,33 @@
                 </RadioButton>
             </RadioButtons>
 
+            <!-- Section Compte Cloud PROFstudio (F03) -->
+            <StackPanel x:Name="CloudAccountSection" Spacing="8" Visibility="Visible">
+                <Border Padding="12" CornerRadius="8"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE77B;" FontSize="14"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Compte enseignant PROFstudio" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                        <TextBlock x:Name="CloudAccountStatusText"
+                                   Text="Le service en ligne nécessite une connexion à votre compte enseignant pour générer du contenu."
+                                   FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button x:Name="ConnectAccountButton"
+                                Content="Se connecter à mon compte enseignant…"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                Click="ConnectAccountButton_Click"
+                                AutomationProperties.Name="Se connecter au compte enseignant"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
             <!-- Clé d'API, expliquée sans jargon -->
-            <StackPanel x:Name="ApiKeySection" Spacing="8">
+            <StackPanel x:Name="ApiKeySection" Spacing="8" Visibility="Collapsed">
                 <Border Padding="12" CornerRadius="8"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -248,7 +273,7 @@
                             <TextBlock x:Uid="FRD_KeyQuestion" Text="Et la fameuse « clé d'accès » ?"
                                        FontWeight="SemiBold" FontSize="13"/>
                         </StackPanel>
-                        <TextBlock x:Uid="FRD_KeyExplain" Text="C'est simplement le code personnel qui relie PROFstudio au service choisi — un peu comme un mot de passe. Vous la collez une seule fois ci-dessous : elle est rangée dans le coffre sécurisé de Windows et ne quitte jamais cet ordinateur."
+                        <TextBlock x:Uid="FRD_KeyExplain" Text="C'est simplement le code personnel qui relie PROFstudio au service choisi — un peu comme un mot de passe. Vous la collez une seule fois ci-dessous : elle ne quitte jamais cet ordinateur."
                                    FontSize="12" TextWrapping="Wrap"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
@@ -267,7 +292,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <TextBlock x:Name="KeyOptionalNote" Text="Pressé·e ? Terminez sans clé : PROFstudio vous rappellera comment l'ajouter au bon moment."
+            <TextBlock x:Name="KeyOptionalNote" x:Uid="FRD_KeyOptionalNote" Text="Pressé·e ? Terminez sans clé : PROFstudio vous rappellera comment l'ajouter au bon moment."
                        Style="{ThemeResource CaptionTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                        TextWrapping="Wrap"/>

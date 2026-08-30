@@ -112,4 +112,35 @@ public sealed class GenerationCancellationTests : E2ETestBase
         driver.IsGenerating.Should().BeFalse();
         driver.CurrentDocument.Should().NotBeNull();
     }
+
+    [Fact]
+    public async Task Cancel_EvaluationAndQuizGeneration_ResetsIsGenerating()
+    {
+        // Arrange
+        Environment.LlmClient.SimulateDelay = true;
+        Environment.LlmClient.DelayMs = 2000;
+
+        Environment.EvaluationViewModel.ClassLevel = "CM1";
+        Environment.EvaluationViewModel.Subject = "Histoire";
+        Environment.EvaluationViewModel.Topics = "Le Moyen Âge";
+
+        // Act & Assert for Evaluation
+        var evalTask = Environment.EvaluationViewModel.GenerateEvaluationAsync();
+        await Task.Delay(50);
+        Environment.EvaluationViewModel.CancelGeneration();
+        await evalTask;
+        Environment.EvaluationViewModel.IsGenerating.Should().BeFalse();
+
+        // Arrange for Quiz
+        Environment.QuizViewModel.ClassLevel = "CM1";
+        Environment.QuizViewModel.Subject = "Histoire";
+        Environment.QuizViewModel.Topic = "Le Moyen Âge";
+
+        // Act & Assert for Quiz
+        var quizTask = Environment.QuizViewModel.GenerateQuizAsync();
+        await Task.Delay(50);
+        Environment.QuizViewModel.CancelGeneration();
+        await quizTask;
+        Environment.QuizViewModel.IsGenerating.Should().BeFalse();
+    }
 }

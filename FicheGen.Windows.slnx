@@ -2,24 +2,34 @@
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
+    <Platform Name="ARM64" />
   </Configurations>
   <Folder Name="/src/">
     <Project Path="src/FicheGen.App/FicheGen.App.csproj">
       <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
     <Project Path="src/FicheGen.Core/FicheGen.Core.csproj">
       <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
     <Project Path="src/FicheGen.Infrastructure/FicheGen.Infrastructure.csproj">
       <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FicheGen.Core.Tests/FicheGen.Core.Tests.csproj">
       <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
     <Project Path="tests/FicheGen.Infrastructure.Tests/FicheGen.Infrastructure.Tests.csproj">
       <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/FicheGen.E2E.Tests/FicheGen.E2E.Tests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
   </Folder>
 </Solution>

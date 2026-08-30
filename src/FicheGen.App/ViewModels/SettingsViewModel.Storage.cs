@@ -29,7 +29,7 @@ public partial class SettingsViewModel
     private static string LogsDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FicheGen", "Logs");
 
-    // ─────────────── Onglet 5 · Confidentialité & RGPD ───────────────
+    // ─────────────── Onglet 5 · Confidentialité ───────────────
 
     [ObservableProperty] public partial bool TelemetryEnabled { get; set; }
     [ObservableProperty] public partial bool ExpMultiPassGen { get; set; }
@@ -61,11 +61,18 @@ public partial class SettingsViewModel
 
     public ObservableCollection<KeyboardShortcutItem> Shortcuts { get; } = new()
     {
+        new KeyboardShortcutItem("Générer le document", "Ctrl+G"),
         new KeyboardShortcutItem("Nouvelle fiche", "Ctrl+N"),
-        new KeyboardShortcutItem("Générer la fiche", "Ctrl+Entrée"),
-        new KeyboardShortcutItem("Exporter en PDF", "Ctrl+E"),
-        new KeyboardShortcutItem("Ouvrir les paramètres", "Ctrl+,"),
-        new KeyboardShortcutItem("Basculer clair / sombre", "Ctrl+T"),
+        new KeyboardShortcutItem("Palette de commandes", "Ctrl+K"),
+        new KeyboardShortcutItem("Volet Assistant IA", "Ctrl+B"),
+        new KeyboardShortcutItem("Exporter en PDF", "Ctrl+Maj+E"),
+        new KeyboardShortcutItem("Exporter en Word (.docx)", "Ctrl+Maj+W"),
+        new KeyboardShortcutItem("Imprimer le document", "Ctrl+P"),
+        new KeyboardShortcutItem("Rechercher dans l'aperçu", "Ctrl+F"),
+        new KeyboardShortcutItem("Annuler la modification", "Ctrl+Z"),
+        new KeyboardShortcutItem("Réinitialiser le zoom", "Ctrl+0"),
+        new KeyboardShortcutItem("Navigation sections 1 à 4", "Ctrl+1…4"),
+        new KeyboardShortcutItem("Annuler / Fermer un volet", "Échap"),
     };
 
     // ─────────────── Dossiers (FutureAccessList WinRT) ───────────────

@@ -61,8 +61,19 @@ public sealed partial class MainWindow
         }
     }
 
-    private static Windows.UI.Color GetSystemColorResource(string key, Windows.UI.Color fallback) =>
-        Application.Current.Resources[key] is SolidColorBrush brush ? brush.Color : fallback;
+    private static Windows.UI.Color GetSystemColorResource(string key, Windows.UI.Color fallback)
+    {
+        try
+        {
+            if (Application.Current.Resources.TryGetValue(key, out var res))
+            {
+                if (res is SolidColorBrush brush) return brush.Color;
+                if (res is Windows.UI.Color color) return color;
+            }
+        }
+        catch { }
+        return fallback;
+    }
 
     private void UpdateTitleBarLayout()
     {
@@ -223,7 +234,7 @@ public sealed partial class MainWindow
                 X = (int)Math.Ceiling(MinWindowWidthDip * scale),
                 Y = (int)Math.Ceiling(MinWindowHeightDip * scale)
             };
-            Marshal.StructureToPtr(info, lParam, true);
+            Marshal.StructureToPtr(info, lParam, fDeleteOld: false);
         }
         return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
     }

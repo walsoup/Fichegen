@@ -9,10 +9,11 @@ using FicheGen.Core.Storage;
 
 namespace FicheGen.App.ViewModels;
 
-public partial class AccountViewModel : ObservableObject
+public partial class AccountViewModel : ObservableObject, IDisposable
 {
     private readonly IAuthService _authService;
     private readonly ISettingsStore _settingsStore;
+    private readonly EventHandler<UserProfile?> _authStateChangedHandler;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotAuthenticated))]
@@ -22,7 +23,12 @@ public partial class AccountViewModel : ObservableObject
 
     public bool IsNotAuthenticated => !IsAuthenticated;
 
-    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SignInCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SignUpCommand))]
+    public partial bool IsBusy { get; set; }
+
+    public bool CanSubmit => !IsBusy;
     [ObservableProperty] public partial string StatusMessage { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsSignUpMode { get; set; }
     [ObservableProperty] public partial bool EmailConfirmationSent { get; set; }
@@ -31,7 +37,6 @@ public partial class AccountViewModel : ObservableObject
     [ObservableProperty] public partial string Civilite { get; set; } = "Mme";
     [ObservableProperty] public partial string Nom { get; set; } = string.Empty;
     [ObservableProperty] public partial string Prenom { get; set; } = string.Empty;
-    [ObservableProperty] public partial DateTimeOffset? DateDeNaissance { get; set; } = new DateTimeOffset(1990, 1, 1, 0, 0, 0, TimeSpan.Zero);
     [ObservableProperty] public partial string SchoolName { get; set; } = string.Empty;
     [ObservableProperty] public partial string Academie { get; set; } = "Académie de Paris";
     [ObservableProperty] public partial string Discipline { get; set; } = "Professeur des écoles";
@@ -56,12 +61,12 @@ public partial class AccountViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(QuotaInfo))]
     public partial UserProfile? CurrentUser { get; set; }
 
-    public string UserDisplayName => CurrentUser?.DisplayName ?? "Enseignant·e";
+    public string UserDisplayName => CurrentUser?.DisplayName ?? Services.L10n.Get("Profile_DefaultName", "Enseignant·e");
     public string UserEmail => CurrentUser?.Email ?? "compte-local@profstudio.app";
-    public string UserSchool => CurrentUser?.SchoolName ?? "École / Établissement";
-    public string QuotaInfo => CurrentUser != null ? $"{CurrentUser.MonthlyQuotaRemaining} générations / mois" : "Mode local / Illimité";
+    public string UserSchool => CurrentUser?.SchoolName ?? Services.L10n.Get("Profile_DefaultSchool", "École / Établissement");
+    public string QuotaInfo => CurrentUser != null ? Services.L10n.Format("Account_QuotaFormat", CurrentUser.MonthlyQuotaRemaining) : Services.L10n.Get("Account_UnlimitedQuota", "Mode local / Illimité");
 
-    public string AccountStatusBadge => IsAuthenticated ? "Compte Enseignant Actif" : "Mode Invité (Local)";
+    public string AccountStatusBadge => IsAuthenticated ? Services.L10n.Get("Account_ActiveBadge", "Compte Enseignant Actif") : Services.L10n.Get("Account_GuestMode", "Mode Invité (Local)");
     public string AccountStatusColor => IsAuthenticated ? "#059669" : "#64748B";
 
     public AccountViewModel(IAuthService authService, ISettingsStore settingsStore)
@@ -72,7 +77,7 @@ public partial class AccountViewModel : ObservableObject
         CurrentUser = _authService.CurrentUser;
         IsAuthenticated = _authService.IsAuthenticated;
 
-        _authService.AuthStateChanged += (s, user) =>
+        _authStateChangedHandler = (s, user) =>
         {
             var dispatcher = App.CurrentMainWindow?.DispatcherQueue;
             if (dispatcher != null && !dispatcher.HasThreadAccess)
@@ -84,6 +89,13 @@ public partial class AccountViewModel : ObservableObject
                 ApplyUserUpdate(user);
             }
         };
+
+        _authService.AuthStateChanged += _authStateChangedHandler;
+    }
+
+    public void Dispose()
+    {
+        _authService.AuthStateChanged -= _authStateChangedHandler;
     }
 
     private void ApplyUserUpdate(UserProfile? user)
@@ -108,24 +120,24 @@ public partial class AccountViewModel : ObservableObject
         StatusMessage = string.Empty;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSubmit))]
     public async Task SignInAsync()
     {
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
         {
-            StatusMessage = "Veuillez saisir votre adresse e-mail et votre mot de passe.";
+            StatusMessage = Services.L10n.Get("Account_MissingEmailPassword", "Veuillez saisir votre adresse e-mail et votre mot de passe.");
             return;
         }
 
         IsBusy = true;
-        StatusMessage = "Connexion en cours…";
+        StatusMessage = Services.L10n.Get("Account_SigningIn", "Connexion en cours…");
 
         try
         {
             var result = await _authService.SignInAsync(Email, Password);
             if (result.Success)
             {
-                StatusMessage = "✅ Connexion réussie !";
+                StatusMessage = Services.L10n.Get("Account_SignInSuccess", "✅ Connexion réussie !");
                 Password = string.Empty;
 
                 if (result.User != null)
@@ -143,7 +155,7 @@ public partial class AccountViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Erreur : {ex.Message}";
+            StatusMessage = $"Erreur : {Services.ErrorMessageTranslator.ToUserFriendlyMessage(ex)}";
         }
         finally
         {
@@ -151,41 +163,41 @@ public partial class AccountViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSubmit))]
     public async Task SignUpAsync()
     {
         if (string.IsNullOrWhiteSpace(Nom) || string.IsNullOrWhiteSpace(Prenom))
         {
-            StatusMessage = "Veuillez renseigner votre nom et prénom.";
+            StatusMessage = Services.L10n.Get("Account_MissingName", "Veuillez renseigner votre nom et prénom.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(SchoolName))
         {
-            StatusMessage = "Veuillez renseigner votre établissement scolaire.";
+            StatusMessage = Services.L10n.Get("Account_MissingSchool", "Veuillez renseigner votre établissement scolaire.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Email) || !Email.Contains('@'))
         {
-            StatusMessage = "Veuillez renseigner une adresse e-mail valide.";
+            StatusMessage = Services.L10n.Get("Account_InvalidEmail", "Veuillez renseigner une adresse e-mail valide.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Password) || Password.Length < 6)
         {
-            StatusMessage = "Le mot de passe doit comporter au moins 6 caractères.";
+            StatusMessage = Services.L10n.Get("Account_PasswordTooShort", "Le mot de passe doit comporter au moins 6 caractères.");
             return;
         }
 
         if (Password != ConfirmPassword)
         {
-            StatusMessage = "Les deux mots de passe ne correspondent pas.";
+            StatusMessage = Services.L10n.Get("Account_PasswordMismatch", "Les deux mots de passe ne correspondent pas.");
             return;
         }
 
         IsBusy = true;
-        StatusMessage = "Création et enregistrement de votre compte enseignant…";
+        StatusMessage = Services.L10n.Get("Account_CreatingAccount", "Création et enregistrement de votre compte enseignant…");
 
         try
         {
@@ -195,7 +207,7 @@ public partial class AccountViewModel : ObservableObject
                 Nom: Nom,
                 Prenom: Prenom,
                 Civilite: Civilite,
-                DateDeNaissance: DateDeNaissance,
+                DateDeNaissance: null,
                 SchoolName: SchoolName,
                 Academie: Academie,
                 Discipline: Discipline);
@@ -206,11 +218,11 @@ public partial class AccountViewModel : ObservableObject
                 if (result.RequiresEmailConfirmation)
                 {
                     EmailConfirmationSent = true;
-                    StatusMessage = $"📧 Un e-mail de confirmation vous a été envoyé à {Email}.\nVeuillez cliquer sur le lien pour valider votre compte, puis connectez-vous.";
+                    StatusMessage = Services.L10n.Format("Account_ConfirmationSent", Email);
                 }
                 else
                 {
-                    StatusMessage = "✅ Compte enseignant créé et activé avec succès !";
+                    StatusMessage = Services.L10n.Get("Account_SignUpSuccess", "✅ Compte enseignant créé et activé avec succès !");
                     Password = string.Empty;
                     ConfirmPassword = string.Empty;
                     IsSignUpMode = false;
@@ -223,7 +235,7 @@ public partial class AccountViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Erreur : {ex.Message}";
+            StatusMessage = $"Erreur : {Services.ErrorMessageTranslator.ToUserFriendlyMessage(ex)}";
         }
         finally
         {
@@ -238,7 +250,7 @@ public partial class AccountViewModel : ObservableObject
         try
         {
             await _authService.SignOutAsync();
-            StatusMessage = "Déconnecté.";
+            StatusMessage = Services.L10n.Get("Account_SignedOut", "Déconnecté.");
         }
         finally
         {

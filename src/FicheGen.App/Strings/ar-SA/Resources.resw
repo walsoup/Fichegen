@@ -1,485 +1,2293 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- ═══════════ Shell (MainWindow) ═══════════ -->
-  <data name="Shell_TitleBar.AutomationProperties.Name" xml:space="preserve"><value>شريط عنوان PROFstudio</value></data>
-  <data name="Shell_AiChipText.Text" xml:space="preserve"><value>المساعد الذكي — جارٍ التحقق…</value></data>
-  <data name="Shell_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>إظهار أو إخفاء المساعد الذكي (Ctrl+B)</value></data>
-  <data name="Shell_AssistantToggle.AutomationProperties.Name" xml:space="preserve"><value>المساعد الذكي</value></data>
-  <data name="Shell_ThemeButton.ToolTipService.ToolTip" xml:space="preserve"><value>سمة العرض: فاتح، داكن أو نظام</value></data>
-  <data name="Shell_ThemeButton.AutomationProperties.Name" xml:space="preserve"><value>تغيير المظهر</value></data>
-  <data name="Shell_ThemeSystemItem.ToolTipService.ToolTip" xml:space="preserve"><value>مطابقة مظهر نظام Windows</value></data>
-  <data name="Shell_ThemeSystemItem.AutomationProperties.Name" xml:space="preserve"><value>سمة النظام</value></data>
-  <data name="Shell_ThemeLightItem.ToolTipService.ToolTip" xml:space="preserve"><value>واجهة فاتحة</value></data>
-  <data name="Shell_ThemeLightItem.AutomationProperties.Name" xml:space="preserve"><value>سمة فاتحة</value></data>
-  <data name="Shell_ThemeDarkItem.ToolTipService.ToolTip" xml:space="preserve"><value>واجهة داكنة</value></data>
-  <data name="Shell_ThemeDarkItem.AutomationProperties.Name" xml:space="preserve"><value>سمة داكنة</value></data>
-  <data name="Shell_ThemeOledItem.ToolTipService.ToolTip" xml:space="preserve"><value>واجهة سوداء نقية لشاشات OLED</value></data>
-  <data name="Shell_ThemeOledItem.AutomationProperties.Name" xml:space="preserve"><value>سمة السواد التام OLED</value></data>
-  <data name="Shell_ThemeOledItem.Text" xml:space="preserve"><value>داكن OLED</value></data>
-  <data name="Shell_SettingsButton.ToolTipService.ToolTip" xml:space="preserve"><value>الإعدادات (Ctrl+,)</value></data>
-  <data name="Shell_SettingsButton.AutomationProperties.Name" xml:space="preserve"><value>الإعدادات</value></data>
-  <data name="Shell_ProfileButton.ToolTipService.ToolTip" xml:space="preserve"><value>ملف المعلم</value></data>
-  <data name="Shell_ProfileButton.AutomationProperties.Name" xml:space="preserve"><value>ملف المعلم</value></data>
-  <data name="Shell_ProfileSettingsButton.AutomationProperties.Name" xml:space="preserve"><value>الإعدادات</value></data>
-  <data name="Shell_ProfileSettingsLabel.Text" xml:space="preserve"><value>إعدادات التطبيق</value></data>
-  <data name="Shell_ProfileShortcutsButton.AutomationProperties.Name" xml:space="preserve"><value>اختصارات لوحة المفاتيح</value></data>
-  <data name="Shell_ProfileShortcutsLabel.Text" xml:space="preserve"><value>اختصارات لوحة المفاتيح (F1)</value></data>
-  <data name="Shell_ProfileAboutButton.AutomationProperties.Name" xml:space="preserve"><value>حول التطبيق</value></data>
-  <data name="Shell_ProfileAboutLabel.Text" xml:space="preserve"><value>حول PROFstudio</value></data>
-  <data name="Shell_GlobalSearchBox.PlaceholderText" xml:space="preserve"><value>بحث في المستندات…</value></data>
-  <data name="Shell_GlobalSearchBox.ToolTipService.ToolTip" xml:space="preserve"><value>البحث في مستنداتي (Ctrl+F)</value></data>
-  <data name="Shell_GlobalSearchBox.AutomationProperties.Name" xml:space="preserve"><value>بحث عام</value></data>
-  <data name="Nav_FicheItem.Content" xml:space="preserve"><value>جذاذة بيداغوجية</value></data>
-  <data name="Nav_FicheItem.ToolTipService.ToolTip" xml:space="preserve"><value>إنشاء جذاذة درس (Ctrl+1)</value></data>
-  <data name="Nav_FicheItem.AutomationProperties.Name" xml:space="preserve"><value>جذاذة بيداغوجية</value></data>
-  <data name="Nav_EvaluationItem.Content" xml:space="preserve"><value>التقويمات والامتحانات</value></data>
-  <data name="Nav_EvaluationItem.ToolTipService.ToolTip" xml:space="preserve"><value>إنشاء تقويم مع سلم التنقيط (Ctrl+2)</value></data>
-  <data name="Nav_EvaluationItem.AutomationProperties.Name" xml:space="preserve"><value>التقويمات والامتحانات</value></data>
-  <data name="Nav_QuizItem.Content" xml:space="preserve"><value>اختبارات سريعة</value></data>
-  <data name="Nav_QuizItem.ToolTipService.ToolTip" xml:space="preserve"><value>إنشاء كويز أو أسئلة متعددة الخيارات (Ctrl+3)</value></data>
-  <data name="Nav_QuizItem.AutomationProperties.Name" xml:space="preserve"><value>اختبارات سريعة</value></data>
-  <data name="Nav_HistoryItem.Content" xml:space="preserve"><value>مستنداتي</value></data>
-  <data name="Nav_HistoryItem.ToolTipService.ToolTip" xml:space="preserve"><value>استعراض جميع المستندات المنشأة (Ctrl+4)</value></data>
-  <data name="Nav_HistoryItem.AutomationProperties.Name" xml:space="preserve"><value>مستنداتي</value></data>
-  <data name="Nav_HelpItem.Content" xml:space="preserve"><value>المساعدة والاختصارات</value></data>
-  <data name="Nav_HelpItem.ToolTipService.ToolTip" xml:space="preserve"><value>دليل المساعدة واختصارات المفاتيح (F1)</value></data>
-  <data name="Nav_HelpItem.AutomationProperties.Name" xml:space="preserve"><value>المساعدة والاختصارات</value></data>
-  <data name="Shell_StatusText.Text" xml:space="preserve"><value>جاهز لبدء جلسة جديدة</value></data>
-  <data name="Shell_NotificationAction.Content" xml:space="preserve"><value>تهيئة</value></data>
-  <data name="Shell_NotificationDismiss.AutomationProperties.Name" xml:space="preserve"><value>إغلاق الإشعار</value></data>
-
-  <!-- ═══════════ Shell — code-behind ═══════════ -->
-  <data name="Status_Ready" xml:space="preserve"><value>جاهز لبدء جلسة جديدة</value></data>
-  <data name="Status_Generating" xml:space="preserve"><value>⏳ ج��رٍ التوليد بالذكاء الاصطناعي…</value></data>
-  <data name="Status_Cancelled" xml:space="preserve"><value>✋ تم إلغاء التوليد</value></data>
-  <data name="Status_SearchHistory" xml:space="preserve"><value>🔍 البحث في السجل</value></data>
-  <data name="Status_NewFiche" xml:space="preserve"><value>📄 جذاذة جديدة</value></data>
-  <data name="Status_Exporting" xml:space="preserve"><value>📄 جارٍ تصدير المستند…</value></data>
-  <data name="Status_Printing" xml:space="preserve"><value>🖨️ جارٍ إعداد الطباعة…</value></data>
-  <data name="Status_Undone" xml:space="preserve"><value>↩️ تم التراجع عن الإجراء</value></data>
-  <data name="Status_Theme" xml:space="preserve"><value>🎨 المظهر: {0}</value></data>
-  <data name="Theme_Light" xml:space="preserve"><value>فاتح</value></data>
-  <data name="Theme_Dark" xml:space="preserve"><value>داكن</value></data>
-  <data name="Theme_Oled" xml:space="preserve"><value>أسود داكن (OLED)</value></data>
-  <data name="Theme_System" xml:space="preserve"><value>افتراضي النظام</value></data>
-  <data name="Section_Fiche" xml:space="preserve"><value>جذاذة تربوية</value></data>
-  <data name="Section_Evaluation" xml:space="preserve"><value>تقويمات وفروض</value></data>
-  <data name="Section_Quiz" xml:space="preserve"><value>اختبارات قصيرة</value></data>
-  <data name="Section_History" xml:space="preserve"><value>مستنداتي</value></data>
-  <data name="Section_Settings" xml:space="preserve"><value>الإعدادات</value></data>
-  <data name="Hint_OpenCreationPage_Title" xml:space="preserve"><value>التوليد</value></data>
-  <data name="Hint_OpenCreationPage_Message" xml:space="preserve"><value>افتح صفحة إنشاء أولاً (جذاذة، تقويم أو اختبار).</value></data>
-  <data name="Hint_Cancel_Title" xml:space="preserve"><value>الإلغاء</value></data>
-  <data name="Hint_Cancel_Message" xml:space="preserve"><value>تم إلغاء عملية التوليد الحالية.</value></data>
-  <data name="Hint_NewFiche_Title" xml:space="preserve"><value>جذاذة جديدة</value></data>
-  <data name="Hint_NewFiche_Message" xml:space="preserve"><value>النموذج جاهز — انطلق في الإعداد! ✨</value></data>
-  <data name="Hint_Export_Title" xml:space="preserve"><value>التصدير</value></data>
-  <data name="Hint_Export_Message" xml:space="preserve"><value>بدأ تصدير المستند… 📄</value></data>
-  <data name="Hint_Export_GenerateFirst" xml:space="preserve"><value>قم بتوليد مستند أولاً (Ctrl+G) لتتمكن من تصديره.</value></data>
-  <data name="Hint_NothingToExport" xml:space="preserve"><value>لا يوجد مستند للتصدير في هذه الصفحة.</value></data>
-  <data name="Hint_Preview_Title" xml:space="preserve"><value>المعاينة</value></data>
-  <data name="Hint_Preview_Shown" xml:space="preserve"><value>تم إظهار لوحة المعاينة.</value></data>
-  <data name="Hint_Preview_Hidden" xml:space="preserve"><value>تم إخفاء لوحة المعاينة.</value></data>
-  <data name="Hint_Preview_Unavailable" xml:space="preserve"><value>المعاينة غير متاحة في هذه الصفحة.</value></data>
-  <data name="Hint_Print_Title" xml:space="preserve"><value>الطباعة</value></data>
-  <data name="Hint_Print_Message" xml:space="preserve"><value>جارٍ إعداد الطباعة / ملف PDF… 🖨️</value></data>
-  <data name="Hint_Print_GenerateFirst" xml:space="preserve"><value>قم بتوليد مستند أولاً (Ctrl+G) لطباعته.</value></data>
-  <data name="Hint_NothingToPrint" xml:space="preserve"><value>لا يوجد ما يمكن طباعته في هذه الصفحة.</value></data>
-  <data name="Hint_Undo_Title" xml:space="preserve"><value>تراجع</value></data>
-  <data name="Hint_Undo_Message" xml:space="preserve"><value>تم التراج�� عن آخر إجراء. ↩️</value></data>
-  <data name="Hint_NothingToUndo" xml:space="preserve"><value>لا يوجد إجراء للتراجع عنه حالياً.</value></data>
-  <data name="Hint_Unavailable" xml:space="preserve"><value>غير متاح حالياً.</value></data>
-  <data name="Hint_PartialStart_Title" xml:space="preserve"><value>تشغيل جزئي</value></data>
-  <data name="Hint_PartialStart_Message" xml:space="preserve"><value>تعذر إتمام خطوة إعداد أولية. يمكنك تعديل ذلك من الإعدادات.</value></data>
-  <data name="Hint_Welcome_Title" xml:space="preserve"><value>مرحباً بك في PROFstudio 👋</value></data>
-  <data name="Hint_Welcome_Message" xml:space="preserve"><value>مساحة العمل جاهزة! اختر «جذاذة بيداغوجية» من القائمة لإنشاء أول مستند.</value></data>
-  <data name="Hint_FirstDoc_Title" xml:space="preserve"><value>🎉 جذاذتك الأولى جاهزة!</value></data>
-  <data name="Hint_FirstDoc_Message" xml:space="preserve"><value>تم حفظها تلقائياً في «مستنداتي». يمكن للمساعد الذكي تعديلها حسب رغبتك.</value></data>
-  <data name="Dialog_WebView2Missing_Title" xml:space="preserve"><value>مكون العرض مفقود</value></data>
-  <data name="Dialog_WebView2Missing_Message" xml:space="preserve"><value>يتطلب PROFstudio مكون WebView2 من Microsoft Edge لعرض وتصدير المستندات. يمكنك تثبيته الآن أو لاحقاً.</value></data>
-  <data name="Dialog_WebView2Missing_Primary" xml:space="preserve"><value>تثبيت الآن</value></data>
-  <data name="Dialog_WebView2Missing_Close" xml:space="preserve"><value>لاحقاً</value></data>
-  <data name="Dialog_Shortcuts_Title" xml:space="preserve"><value>اختصارات لوحة المفاتيح</value></data>
-  <data name="Dialog_Close" xml:space="preserve"><value>إغلاق</value></data>
-  <data name="Dialog_Cancel" xml:space="preserve"><value>إلغاء</value></data>
-  <data name="Dialog_About_Title" xml:space="preserve"><value>حول PROFstudio</value></data>
-  <data name="Dialog_About_Tagline" xml:space="preserve"><value>المولد الذكي للوثائق والجذاذات البيداغوجية</value></data>
-  <data name="Dialog_About_Version" xml:space="preserve"><value>الإصدار: {0}</value></data>
-  <data name="Dialog_About_Description" xml:space="preserve"><value>يساعد PROFstudio الأساتذة والمعلمين على إعداد الجذاذات، الامتحانات والاختبارات بسرعة فائقة بواسطة الذكاء الاصطناعي.</value></data>
-  <data name="Dialog_About_Copyright" xml:space="preserve"><value>© 2026 PROFstudio. جميع الحقوق محفوظة.</value></data>
-  <data name="Profile_DefaultName" xml:space="preserve"><value>الأستاذ(ة)</value></data>
-  <data name="Profile_DefaultSchool" xml:space="preserve"><value>حساب محلي — لا تتم مشاركة أي بيانات</value></data>
-
-  <!-- Palette de commandes -->
-  <data name="Palette_GotoFiche" xml:space="preserve"><value>الانتقال إلى: جذاذة بيداغوجية</value></data>
-  <data name="Palette_GotoFiche_Sub" xml:space="preserve"><value>إعداد خطة وجذاذة درس</value></data>
-  <data name="Palette_GotoEvaluation" xml:space="preserve"><value>الانتقال إلى: التقويمات والامتحانات</value></data>
-  <data name="Palette_GotoEvaluation_Sub" xml:space="preserve"><value>فروض وامتحانات مع عناصر الإجابة</value></data>
-  <data name="Palette_GotoQuiz" xml:space="preserve"><value>الانتقال إلى: اختبارات سريعة</value></data>
-  <data name="Palette_GotoQuiz_Sub" xml:space="preserve"><value>أسئلة متعددة الاختيارات قابلة للطباعة مع التصحيح</value></data>
-  <data name="Palette_GotoHistory" xml:space="preserve"><value>الانتقال إلى: مستنداتي</value></data>
-  <data name="Palette_GotoHistory_Sub" xml:space="preserve"><value>السجل والب��ث في الأرشيف</value></data>
-  <data name="Palette_NewFiche" xml:space="preserve"><value>جذاذة جديدة</value></data>
-  <data name="Palette_NewFiche_Sub" xml:space="preserve"><value>نموذج فارغ جاهز للملء</value></data>
-  <data name="Palette_ToggleAssistant" xml:space="preserve"><value>تبديل المساعد الذكي</value></data>
-  <data name="Palette_ToggleAssistant_Sub" xml:space="preserve"><value>إظهار أو إخفاء اللوحة الجانبية</value></data>
-  <data name="Palette_ChangeTheme" xml:space="preserve"><value>تغيير المظهر</value></data>
-  <data name="Palette_ChangeTheme_Sub" xml:space="preserve"><value>التبديل بين النظام ← فاتح ← داكن</value></data>
-  <data name="Palette_SearchDocs" xml:space="preserve"><value>البحث في مستنداتي</value></data>
-  <data name="Palette_SearchDocs_Sub" xml:space="preserve"><value>البحث حسب المادة أو الكلمة المفتاحية</value></data>
-  <data name="Palette_OpenSettings" xml:space="preserve"><value>فتح الإعدادات</value></data>
-  <data name="Palette_OpenSettings_Sub" xml:space="preserve"><value>المظهر، الذكاء الاصطناعي، المجلدات والخصوصية</value></data>
-  <data name="Palette_Shortcuts" xml:space="preserve"><value>اختصارات لوحة المفاتيح</value></data>
-  <data name="Palette_Shortcuts_Sub" xml:space="preserve"><value>القائمة الكاملة للاختصارات</value></data>
-  <data name="Palette_GenerateNow" xml:space="preserve"><value>توليد الآن</value></data>
-  <data name="Palette_GenerateNow_Sub" xml:space="preserve"><value>بدء كتابة وصياغة المستند الحالي</value></data>
-  <data name="Palette_StopGeneration" xml:space="preserve"><value>إيقاف التوليد</value></data>
-  <data name="Palette_StopGeneration_Sub" xml:space="preserve"><value>إيقاف عملية الصياغة الحالية</value></data>
-  <data name="Palette_ExportPdf" xml:space="preserve"><value>تصدير بصيغة PDF</value></data>
-  <data name="Palette_ExportPdf_Sub" xml:space="preserve"><value>مستند جاهز للطباعة والتوزيع</value></data>
-  <data name="Palette_ExportWord" xml:space="preserve"><value>تصدير بصيغة Word (.docx)</value></data>
-  <data name="Palette_ExportWord_Sub" xml:space="preserve"><value>ملف قابل للتعديل في Microsoft Word</value></data>
-  <data name="Palette_PrintDoc" xml:space="preserve"><value>طباعة المستند</value></data>
-  <data name="Palette_PrintDoc_Sub" xml:space="preserve"><value>فتح نافذة الطباعة</value></data>
-  <data name="Palette_ShowTeacherVersion" xml:space="preserve"><value>عرض نسخة الأستاذ (مع الحلول)</value></data>
-  <data name="Palette_ShowStudentVersion" xml:space="preserve"><value>عرض نسخة التلميذ</value></data>
-  <data name="Palette_ToggleView_Sub" xml:space="preserve"><value>التب��يل بين نسخة الحلول ونسخة التلميذ</value></data>
-
-  <!-- Raccourcis (dialogue F1) -->
-  <data name="Shortcut_Palette" xml:space="preserve"><value>لوحة الأوامر — ابحث ونفذ أي إجراء فوراً</value></data>
-  <data name="Shortcut_Generate" xml:space="preserve"><value>توليد الجذاذة أو الفرض أو الاختبار</value></data>
-  <data name="Shortcut_WheelZoom" xml:space="preserve"><value>تكبير وتصغير معاينة المستند</value></data>
-  <data name="Shortcut_ResetZoom" xml:space="preserve"><value>إعادة ضبط نسبة المعاينة</value></data>
-  <data name="Shortcut_Escape" xml:space="preserve"><value>إلغاء التوليد الجاري</value></data>
-  <data name="Shortcut_Assistant" xml:space="preserve"><value>إظهار أو إخفاء المساعد الذكي</value></data>
-  <data name="Shortcut_NewFiche" xml:space="preserve"><value>إنشاء جذاذة جديدة</value></data>
-  <data name="Shortcut_Export" xml:space="preserve"><value>تصدير المستند (Word، PDF…)</value></data>
-  <data name="Shortcut_TogglePreview" xml:space="preserve"><value>إظهار أو إخفاء لوحة المعاينة</value></data>
-  <data name="Shortcut_Print" xml:space="preserve"><value>طباعة أو تصدير PDF</value></data>
-  <data name="Shortcut_Search" xml:space="preserve"><value>البحث في السجل</value></data>
-  <data name="Shortcut_Undo" xml:space="preserve"><value>التراجع عن آخر إجراء</value></data>
-  <data name="Shortcut_NextSection" xml:space="preserve"><value>الانتقال إلى القسم التالي</value></data>
-  <data name="Shortcut_PreviousSection" xml:space="preserve"><value>الرجوع إلى القسم السابق</value></data>
-  <data name="Shortcut_GotoSection" xml:space="preserve"><value>الوصول المباشر إلى قسم محدد</value></data>
-  <data name="Shortcut_Settings" xml:space="preserve"><value>فتح الإعدادات</value></data>
-  <data name="Shortcut_Help" xml:space="preserve"><value>عرض شاشة المساعدة</value></data>
-
-  <!-- ═══════════ CommandPalette ═══════════ -->
-  <data name="CP_Panel.AutomationProperties.Name" xml:space="preserve"><value>لوحة الأوامر</value></data>
-  <data name="CP_QueryBox.PlaceholderText" xml:space="preserve"><value>ابحث عن إجراء… (مثال: « اختبار »، « pdf »، « مظهر »)</value></data>
-  <data name="CP_QueryBox.AutomationProperties.Name" xml:space="preserve"><value>البحث في الأوامر</value></data>
-  <data name="CP_CloseBadge.ToolTipService.ToolTip" xml:space="preserve"><value>إغلاق (Esc)</value></data>
-  <data name="CP_NavHint.Text" xml:space="preserve"><value>↑↓ للتنقل</value></data>
-  <data name="CP_RunHint.Text" xml:space="preserve"><value>Enter للتنفيذ</value></data>
-  <data name="CP_EscapeHint.Text" xml:space="preserve"><value>Esc للإغلاق</value></data>
-
-  <!-- ═══════════ GenerateCta ═══════════ -->
-  <data name="CTA_IdleLabel.Text" xml:space="preserve"><value>توليد بالذكاء الاصطناعي</value></data>
-  <data name="CTA_ShortcutIdle.Text" xml:space="preserve"><value>Ctrl+G</value></data>
-  <data name="CTA_BusyLabel.Text" xml:space="preserve"><value>إيقاف التوليد</value></data>
-  <data name="CTA_ShortcutBusy.Text" xml:space="preserve"><value>Esc</value></data>
-  <data name="CTA_Name_Idle" xml:space="preserve"><value>توليد بالذكاء الاصطناعي</value></data>
-  <data name="CTA_Name_Busy" xml:space="preserve"><value>إيقاف التوليد</value></data>
-  <data name="CTA_Tooltip_Idle" xml:space="preserve"><value>يبدأ صياغة المستند بواسطة المساعد الذكي (Ctrl+G)</value></data>
-  <data name="CTA_Tooltip_Busy" xml:space="preserve"><value>إيقاف عملية الصياغة الحالية (Esc)</value></data>
-
-  <!-- ═══════════ PreviewHost ═══════════ -->
-  <data name="PH_Toolbar.AutomationProperties.Name" xml:space="preserve"><value>شريط أدوات المستند</value></data>
-  <data name="PH_StyleCombo.ToolTipService.ToolTip" xml:space="preserve"><value>النمط الجمالي للوثيقة</value></data>
-  <data name="PH_StyleCombo.AutomationProperties.Name" xml:space="preserve"><value>نمط المستند البصري</value></data>
-  <data name="PH_StyleModern.Content" xml:space="preserve"><value>عصري</value></data>
-  <data name="PH_StyleClassic.Content" xml:space="preserve"><value>كلاسيكي</value></data>
-  <data name="PH_StyleMinimal.Content" xml:space="preserve"><value>بسيط (Minimal)</value></data>
-  <data name="PH_StyleAcademic.Content" xml:space="preserve"><value>أكاديمي</value></data>
-  <data name="PH_StylePlayful.Content" xml:space="preserve"><value>تفاعلي ومرح</value></data>
-  <data name="PH_StudentButton.ToolTipService.ToolTip" xml:space="preserve"><value>التبديل بين نسخة الأستاذ (مع عناصر الإجابة) ونسخة التلميذ (Ctrl+Shift+V)</value></data>
-  <data name="PH_StudentButton.AutomationProperties.Name" xml:space="preserve"><value>تبديل نسخة التلميذ أو الحلول</value></data>
-  <data name="PH_StudentLabel.Text" xml:space="preserve"><value>تلميذ / أستاذ</value></data>
-  <data name="PH_ZoomOut.ToolTipService.ToolTip" xml:space="preserve"><value>تصغير المعاينة</value></data>
-  <data name="PH_ZoomOut.AutomationProperties.Name" xml:space="preserve"><value>تصغير</value></data>
-  <data name="PH_ZoomLevel.AutomationProperties.Name" xml:space="preserve"><value>مستوى التكبير</value></data>
-  <data name="PH_ZoomIn.ToolTipService.ToolTip" xml:space="preserve"><value>تكبير المعاينة</value></data>
-  <data name="PH_ZoomIn.AutomationProperties.Name" xml:space="preserve"><value>تكبير</value></data>
-  <data name="PH_ZoomReset.ToolTipService.ToolTip" xml:space="preserve"><value>إعادة الضبط إلى 100% (Ctrl+0)</value></data>
-  <data name="PH_ZoomReset.AutomationProperties.Name" xml:space="preserve"><value>إعادة ضبط التكبير</value></data>
-  <data name="PH_ExportWord.ToolTipService.ToolTip" xml:space="preserve"><value>تصدير كمستند Word قابل للتعديل (Ctrl+Shift+W)</value></data>
-  <data name="PH_ExportWord.AutomationProperties.Name" xml:space="preserve"><value>تصدير Word</value></data>
-  <data name="PH_WordLabel.Text" xml:space="preserve"><value>Word</value></data>
-  <data name="PH_ExportPdf.ToolTipService.ToolTip" xml:space="preserve"><value>تصدير كمستند PDF عالي الجودة للطباعة (Ctrl+Shift+E)</value></data>
-  <data name="PH_ExportPdf.AutomationProperties.Name" xml:space="preserve"><value>تصدير PDF</value></data>
-  <data name="PH_PdfLabel.Text" xml:space="preserve"><value>PDF</value></data>
-  <data name="PH_PrintButton.ToolTipService.ToolTip" xml:space="preserve"><value>طباعة المستند (Ctrl+P)</value></data>
-  <data name="PH_PrintButton.AutomationProperties.Name" xml:space="preserve"><value>طباعة المستند</value></data>
-  <data name="PH_PrintLabel.Text" xml:space="preserve"><value>طباعة</value></data>
-  <data name="PH_EditButton.ToolTipService.ToolTip" xml:space="preserve"><value>تعديل نصوص وتوجيهات المستند</value></data>
-  <data name="PH_EditButton.AutomationProperties.Name" xml:space="preserve"><value>تعديل المستند</value></data>
-  <data name="PH_EditLabel.Text" xml:space="preserve"><value>تعديل</value></data>
-  <data name="PH_MoreActions.ToolTipService.ToolTip" xml:space="preserve"><value>خيارات إضافية</value></data>
-  <data name="PH_MoreActions.AutomationProperties.Name" xml:space="preserve"><value>المزيد من خيارات التصدير والقراءة</value></data>
-  <data name="PH_MenuEdit.Text" xml:space="preserve"><value>✏️ تعديل المستند</value></data>
-  <data name="PH_MenuRtf.Text" xml:space="preserve"><value>📄 تصدير RTF</value></data>
-  <data name="PH_MenuCopyText.Text" xml:space="preserve"><value>📋 نسخ النص بالكامل</value></data>
-  <data name="PH_MenuFind.Text" xml:space="preserve"><value>🔎 بحث داخل المستند</value></data>
-  <data name="PH_MenuOpenFolder.Text" xml:space="preserve"><value>📂 فتح مجلد التصدير</value></data>
-  <data name="PH_MenuReadAloud.Text" xml:space="preserve"><value>🔊 قراءة صوتية</value></data>
-  <data name="PH_ReadAloudStop" xml:space="preserve"><value>⏹ إيقاف القراءة</value></data>
-  <data name="PH_ExportBanner.Title" xml:space="preserve"><value>تم تصدير المستند بن��اح</value></data>
-  <data name="PH_OpenExportedFile.Content" xml:space="preserve"><value>فتح الملف</value></data>
-  <data name="PH_OpenExportedFile.AutomationProperties.Name" xml:space="preserve"><value>فتح الملف المصدر</value></data>
-  <data name="PH_OpenExportedFolder.Content" xml:space="preserve"><value>فتح المجلد</value></data>
-  <data name="PH_OpenExportedFolder.AutomationProperties.Name" xml:space="preserve"><value>فتح المجلد في مستكشف Windows</value></data>
-  <data name="PH_CopiedToast" xml:space="preserve"><value>✓ تم نسخ النص كاملاً إلى الحافظة</value></data>
-  <data name="PH_StreamingBanner.AutomationProperties.Name" xml:space="preserve"><value>جارٍ توليد وعرض المستند تدريجياً</value></data>
-  <data name="PH_EmptyState.AutomationProperties.Name" xml:space="preserve"><value>لا يوجد مستند معروض</value></data>
-  <data name="PH_EmptyTitle.Text" xml:space="preserve"><value>أنشئ أول ��ذاذة أو وثيقة بيداغوجية</value></data>
-  <data name="PH_EmptyBody.Text" xml:space="preserve"><value>حدد الأهداف والمستوى والمادة ثم اضغط على «توليد». ستظهر المعاينة التفاعلية هنا فوراً.</value></data>
-  <data name="PH_PaletteButton.AutomationProperties.Name" xml:space="preserve"><value>استكشاف الأوامر (Ctrl+K)</value></data>
-  <data name="PH_PaletteButton.ToolTipService.ToolTip" xml:space="preserve"><value>فتح لوحة الأوامر السريعة</value></data>
-  <data name="PH_PaletteLabel.Text" xml:space="preserve"><value>ما الذي يمكنني فعله؟</value></data>
-  <data name="PH_HistoryButton.AutomationProperties.Name" xml:space="preserve"><value>فتح مستنداتي</value></data>
-  <data name="PH_HistoryLabel.Text" xml:space="preserve"><value>مستنداتي</value></data>
-  <data name="PH_TipsTitle.Text" xml:space="preserve"><value>نصائح سريعة</value></data>
-  <data name="PH_Tip1.Text" xml:space="preserve"><value>حدد المستوى الدراسي والأهداف بوضوح للحصول على محتوى ملائم ودقيق.</value></data>
-  <data name="PH_Tip2.Text" xml:space="preserve"><value>بعد التوليد، يمكنك طلب تحسينات وتعديلات محددة من المساعد الذكي في اللوحة الجانبية.</value></data>
-  <data name="PH_Tip3.Text" xml:space="preserve"><value>اختصارات مفيدة: Ctrl+G للتوليد • Ctrl+P للطباعة • Ctrl+Shift+E لتصدير PDF.</value></data>
-  <data name="PH_Skeleton.AutomationProperties.Name" xml:space="preserve"><value>جارٍ توليد المستند…</value></data>
-  <data name="PH_WebView.AutomationProperties.Name" xml:space="preserve"><value>معاينة تفاعلية عبر WebView2</value></data>
-  <data name="PH_ErrorPanel.AutomationProperties.Name" xml:space="preserve"><value>المعاينة غير متاحة: المكون مفقود</value></data>
-  <data name="PH_ErrorTitle.Text" xml:space="preserve"><value>تعذر عرض المعاينة</value></data>
-  <data name="PH_ErrorBody.Text" xml:space="preserve"><value>يتطلب التطبيق تثبيت Microsoft Edge WebView2 لعرض المستندات وتصديرها.</value></data>
-  <data name="PH_InstallButton.Content" xml:space="preserve"><value>تثبيت المكون ↗</value></data>
-  <data name="PH_InstallButton.AutomationProperties.Name" xml:space="preserve"><value>تثبيت مكون WebView2</value></data>
-  <data name="PH_CopyLinkButton.Content" xml:space="preserve"><value>نسخ الرابط لمسؤول النظام</value></data>
-  <data name="PH_CopyLinkButton.AutomationProperties.Name" xml:space="preserve"><value>نسخ رابط التنزيل</value></data>
-  <data name="PH_LinkCopied.Text" xml:space="preserve"><value>✓ تم نسخ الرابط إلى الحافظة</value></data>
-  <data name="Preview_Generating" xml:space="preserve"><value>جارٍ كتابة المستند بواسطة الذكاء الاصطناعي…</value></data>
-  <data name="Preview_StatusDefault" xml:space="preserve"><value>جارٍ تجهيز المعاينة…</value></data>
-
-  <!-- ═══════════ AssistantPane ═══════════ -->
-  <data name="AP_Title.Text" xml:space="preserve"><value>المساعد الذكي</value></data>
-  <data name="AP_NewConversation.ToolTipService.ToolTip" xml:space="preserve"><value>بدء محادثة جديدة</value></data>
-  <data name="AP_NewConversation.AutomationProperties.Name" xml:space="preserve"><value>محادثة جديدة</value></data>
-  <data name="AP_NewLabel.Text" xml:space="preserve"><value>جديد</value></data>
-  <data name="AP_ModeSegmented.AutomationProperties.Name" xml:space="preserve"><value>نمط المساعد</value></data>
-  <data name="AP_ModeAuto.Content" xml:space="preserve"><value>تلقائي</value></data>
-  <data name="AP_ModeGenerate.Content" xml:space="preserve"><value>توليد</value></data>
-  <data name="AP_ModeEdit.Content" xml:space="preserve"><value>تعديل</value></data>
-  <data name="AP_ModeQuestion.Content" xml:space="preserve"><value>سؤال</value></data>
-  <data name="AP_DiffHeader.Text" xml:space="preserve"><value>اقتراح التعديل</value></data>
-  <data name="AP_ApplyButton.ToolTipService.ToolTip" xml:space="preserve"><value>تطبيق هذا التعديل على المستند (يمكن التراجع بـ Ctrl+Z)</value></data>
-  <data name="AP_ApplyButton.AutomationProperties.Name" xml:space="preserve"><value>تطبيق التعديل</value></data>
-  <data name="AP_ApplyLabel.Text" xml:space="preserve"><value>تطبيق التعديل</value></data>
-  <data name="AP_RejectButton.ToolTipService.ToolTip" xml:space="preserve"><value>تجاهل هذا الاقتراح</value></data>
-  <data name="AP_RejectButton.AutomationProperties.Name" xml:space="preserve"><value>تجاهل الاقتراح</value></data>
-  <data name="AP_IgnoreLabel.Text" xml:space="preserve"><value>تجاهل</value></data>
-  <data name="AP_CopyButton.ToolTipService.ToolTip" xml:space="preserve"><value>نسخ النص</value></data>
-  <data name="AP_CopyButton.AutomationProperties.Name" xml:space="preserve"><value>نسخ النص</value></data>
-  <data name="AP_CopyLabel.Text" xml:space="preserve"><value>نسخ</value></data>
-  <data name="AP_UndoableNote.Text" xml:space="preserve"><value>قابل للتراجع (Ctrl+Z)</value></data>
-  <data name="AP_Typing.Text" xml:space="preserve"><value>المساعد يكتب الآن…</value></data>
-  <data name="AP_SuggestionsLabel.Text" xml:space="preserve"><value>اقتراحات سريعة:</value></data>
-  <data name="AP_Chip1.AutomationProperties.Name" xml:space="preserve"><value>اقتراح: تبسيط المفردات</value></data>
-  <data name="AP_Chip1Label.Text" xml:space="preserve"><value>تبسيط المفردات</value></data>
-  <data name="AP_Chip2.AutomationProperties.Name" xml:space="preserve"><value>اقتراح: إضافة 3 أسئلة فهم</value></data>
-  <data name="AP_Chip2Label.Text" xml:space="preserve"><value>إضافة 3 أسئلة للفهم</value></data>
-  <data name="AP_Chip3.AutomationProperties.Name" xml:space="preserve"><value>اقتراح: الترجمة إلى الإنجليزية</value></data>
-  <data name="AP_Chip3Label.Text" xml:space="preserve"><value>الترجمة إلى الإنجليزية</value></data>
-  <data name="AP_Chip4.AutomationProperties.Name" xml:space="preserve"><value>اقتراح: تلخيص في 5 نقاط</value></data>
-  <data name="AP_Chip4Label.Text" xml:space="preserve"><value>تلخيص في 5 نقاط</value></data>
-  <data name="AP_Chip5.AutomationProperties.Name" xml:space="preserve"><value>اقتراح: مراعاة الفروق الفردية</value></data>
-  <data name="AP_Chip5Label.Text" xml:space="preserve"><value>أنشطة تمايز بيداغوجي</value></data>
-  <data name="AP_PromptBox.PlaceholderText" xml:space="preserve"><value>اطلب تعديلاً أو اطرح سؤالاً بيداغوجياً…</value></data>
-  <data name="AP_PromptBox.AutomationProperties.Name" xml:space="preserve"><value>رسالة للمساعد</value></data>
-  <data name="AP_SendButton.ToolTipService.ToolTip" xml:space="preserve"><value>إرسال (Enter)</value></data>
-  <data name="AP_SendButton.AutomationProperties.Name" xml:space="preserve"><value>إرسال الرسالة</value></data>
-  <data name="AP_StopButton.ToolTipService.ToolTip" xml:space="preserve"><value>إيقاف الرد</value></data>
-  <data name="AP_StopButton.AutomationProperties.Name" xml:space="preserve"><value>إيقاف الرد</value></data>
-  <data name="AP_ModelBadge.Text" xml:space="preserve"><value>نموذج تلقائي</value></data>
-  <data name="AP_KeyHints.Text" xml:space="preserve"><value>Enter: إرسال • Shift+Enter: سطر جديد</value></data>
-  <data name="AP_ModeGenerate_Caption" xml:space="preserve"><value>ينشئ جذاذة جديدة كلياً بناءً على طلبك.</value></data>
-  <data name="AP_ModeGenerate_Prompt" xml:space="preserve"><value>صف محتوى الوثيقة المراد توليدها…</value></data>
-  <data name="AP_ModeEdit_Caption" xml:space="preserve"><value>يقترح تعديلات دقيقة ومستهدفة على المستند الحالي.</value></data>
-  <data name="AP_ModeEdit_Prompt" xml:space="preserve"><value>صف التعديلات المطلوبة على المستند…</value></data>
-  <data name="AP_ModeQuestion_Caption" xml:space="preserve"><value>يجيب عن الاستفسارات التعليمية دون تعديل المستند.</value></data>
-  <data name="AP_ModeQuestion_Prompt" xml:space="preserve"><value>اطرح سؤالاً تعليمياً أو تربوياً…</value></data>
-  <data name="AP_ModeAuto_Caption" xml:space="preserve"><value>يحدد تلقائياً إن كان الطلب توليداً أو تعديلاً أو ��جابة.</value></data>
-
-  <!-- ═══════════ PdfDropZone ═══════════ -->
-  <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve"><value>منطقة اختيار دليل الأستاذ أو الكتاب المدرسي PDF</value></data>
-  <data name="PDZ_Zone.AutomationProperties.HelpText" xml:space="preserve"><value>اسحب وأفلت دليل PDF أو انقر لاختياره</value></data>
-  <data name="PDZ_EmptyPrimary.Text" xml:space="preserve"><value>اسحب دليل PDF أو انقر للتصفح</value></data>
-  <data name="PDZ_EmptySecondary.Text" xml:space="preserve"><value>كتاب مدرسي، توزيع دوري، منهاج رسمي… (اختياري)</value></data>
-  <data name="PDZ_DragOver.Text" xml:space="preserve"><value>أفلت ملف PDF هنا</value></data>
-  <data name="PDZ_FileMeta.Text" xml:space="preserve"><value>دليل PDF جاهز للاستناد البيداغوجي</value></data>
-  <data name="PDZ_MetaMb" xml:space="preserve"><value>{0:F1} ميغاب��يت · جاهز للاستناد البيداغوجي</value></data>
-  <data name="PDZ_MetaKb" xml:space="preserve"><value>{0} كيلوبايت · جاهز للاستناد البيداغوجي</value></data>
-  <data name="PDZ_FileSelected" xml:space="preserve"><value>تم تحديد دليل PDF</value></data>
-  <data name="PDZ_RemoveFile.ToolTipService.ToolTip" xml:space="preserve"><value>إزالة هذا الدليل</value></data>
-  <data name="PDZ_RemoveFile.AutomationProperties.Name" xml:space="preserve"><value>إزالة ملف PDF</value></data>
-  <data name="PDZ_ErrorTitle.Text" xml:space="preserve"><value>صيغة غير مدعومة</value></data>
-  <data name="PDZ_ErrorMessage.Text" xml:space="preserve"><value>يتم قبول ملفات .pdf فقط.</value></data>
-  <data name="PDZ_ErrorPdfOnly" xml:space="preserve"><value>يتم قبول ملفات PDF (.pdf) فقط للدلائل البيداغوجية.</value></data>
-  <data name="PDZ_ErrorReadTitle" xml:space="preserve"><value>تعذرت القراءة</value></data>
-  <data name="PDZ_ErrorReadMessage" xml:space="preserve"><value>تعذر فتح الملف. تأكد من أنه غير مفتوح أو مقفل في برنامج آخر.</value></data>
-  <data name="PDZ_ErrorClose.ToolTipService.ToolTip" xml:space="preserve"><value>إغلاق</value></data>
-  <data name="PDZ_ErrorClose.AutomationProperties.Name" xml:space="preserve"><value>إغلاق الخطأ</value></data>
-  <data name="PDZ_Processing.Text" xml:space="preserve"><value>جارٍ تحليل دليل PDF…</value></data>
-
-  <!-- ═══════════ CreationWorkspace ═══════════ -->
-  <data name="CW_Splitter.AutomationProperties.Name" xml:space="preserve"><value>تغيير حجم اللوحات</value></data>
-  <data name="CW_Fab.AutomationProperties.Name" xml:space="preserve"><value>فتح المساعد التربوي</value></data>
-  <data name="CW_Fab.ToolTipService.ToolTip" xml:space="preserve"><value>طرح سؤال على المساعد الذكي</value></data>
-  <data name="CW_FabLabel.Text" xml:space="preserve"><value>المساعد</value></data>
-  <data name="CW_OverlayTitle.Text" xml:space="preserve"><value>المساعد التربوي</value></data>
-  <data name="CW_CloseOverlay.AutomationProperties.Name" xml:space="preserve"><value>إغلاق المساعد</value></data>
-  <data name="CW_CloseOverlay.ToolTipService.ToolTip" xml:space="preserve"><value>إغلاق</value></data>
-
-  <!-- ═══════════ Pages de création : titres & validation ═══════════ -->
-  <data name="FP_Title.Text" xml:space="preserve"><value>جذاذة بيداغوجية جديدة</value></data>
-  <data name="FP_Subtitle.Text" xml:space="preserve"><value>أعدّ خطة درس محكمة وجاهزة للطباعة والتصدير.</value></data>
-  <data name="EP_Title.Text" xml:space="preserve"><value>تقويم / امتحان جديد</value></data>
-  <data name="EP_Subtitle.Text" xml:space="preserve"><value>أنشئ فرضاً مع تمارين متدرجة وسلم تنقيط مفصل.</value></data>
-  <data name="QP_Title.Text" xml:space="preserve"><value>اختبار سريع جديد</value></data>
-  <data name="QP_Subtitle.Text" xml:space="preserve"><value>ولّد استبياناً واختباراً قابلاً للطباعة مع عناصر الإجابة.</value></data>
-  <data name="FP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>إظهار أو إخفاء المساعد الجانبي</value></data>
-  <data name="EP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>إظهار أو إخفاء المساعد الجانبي</value></data>
-  <data name="QP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve"><value>إظهار أو إخفاء المساعد الجانبي</value></data>
-  <data name="FP_AssistantLabel.Text" xml:space="preserve"><value>المساعد</value></data>
-  <data name="EP_AssistantLabel.Text" xml:space="preserve"><value>المساعد</value></data>
-  <data name="QP_AssistantLabel.Text" xml:space="preserve"><value>المساعد</value></data>
-  <data name="Validation_Title" xml:space="preserve"><value>أوشكنا على الانتهاء!</value></data>
-  <data name="Validation_MissingLevel" xml:space="preserve"><value>المستوى الدراسي</value></data>
-  <data name="Validation_MissingSubject" xml:space="preserve"><value>المادة التعليمية</value></data>
-  <data name="Validation_MissingTopic" xml:space="preserve"><value>عنوان أو موضوع الدرس</value></data>
-  <data name="Validation_MissingTopics" xml:space="preserve"><value>مفهوم واحد على الأقل للتقويم</value></data>
-  <data name="FP_MissingFields_Message" xml:space="preserve"><value>لتوليد الجذاذة، يرجى تحديد: {0}.</value></data>
-  <data name="EP_MissingFields_Message" xml:space="preserve"><value>لتوليد التقويم، يرجى تحديد: {0}.</value></data>
-  <data name="QP_MissingFields_Message" xml:space="preserve"><value>لتوليد الاختبار، يرجى تحديد: {0}.</value></data>
-
-  <!-- ═══════════ HistoryPage ═══════════ -->
-  <data name="HP_Title.Text" xml:space="preserve"><value>مستنداتي</value></data>
-  <data name="HP_Subtitle.Text" xml:space="preserve"><value>استعرض كل الجذاذات والفروض والاختبارات المحفوظة محلياً على جهازك.</value></data>
-  <data name="HP_SearchBox.PlaceholderText" xml:space="preserve"><value>بحث بالعنوان، المادة، المستوى أو الكلمة المفتاحية…</value></data>
-  <data name="HP_FilterAll.Content" xml:space="preserve"><value>الكل</value></data>
-  <data name="HP_FilterFiches.Content" xml:space="preserve"><value>الجذاذات</value></data>
-  <data name="HP_FilterEvals.Content" xml:space="preserve"><value>التقويمات</value></data>
-  <data name="HP_FilterQuiz.Content" xml:space="preserve"><value>الاختبارات</value></data>
-  <data name="HP_FilterFavorites.Content" xml:space="preserve"><value>المفضلة</value></data>
-  <data name="HP_EmptyState.AutomationProperties.Name" xml:space="preserve"><value>المكتبة فارغة</value></data>
-  <data name="HP_Tip1.Text" xml:space="preserve"><value>يتم حفظ كل جذاذة أو تقويم أو اختبار يتم توليده تلقائياً هنا.</value></data>
-  <data name="HP_Tip2.Text" xml:space="preserve"><value>استخدم البحث للوصول السريع إلى أي مستند بحسب المادة أو المستوى.</value></data>
-  <data name="HP_OptionsButton.ToolTipService.ToolTip" xml:space="preserve"><value>خيارات المستند (⋯)</value></data>
-  <data name="HP_OptionsButton.AutomationProperties.Name" xml:space="preserve"><value>خيارات المستند</value></data>
-  <data name="HP_MenuOpen.Text" xml:space="preserve"><value>فتح المستند</value></data>
-  <data name="HP_MenuExportWord.Text" xml:space="preserve"><value>تصدير Word (.docx)</value></data>
-  <data name="HP_MenuExportPdf.Text" xml:space="preserve"><value>تصدير PDF</value></data>
-  <data name="HP_MenuDelete.Text" xml:space="preserve"><value>حذف المستند</value></data>
-  <data name="HP_UndoToastDefault.Text" xml:space="preserve"><value>تم حذف المستند</value></data>
-  <data name="HP_UndoToast" xml:space="preserve"><value>تم حذف « {0} ».</value></data>
-  <data name="HP_UndoButton.Content" xml:space="preserve"><value>تراجع</value></data>
-  <data name="HP_DeleteTitle" xml:space="preserve"><value>هل تريد حذف هذا المستند؟</value></data>
-  <data name="HP_DeleteContent" xml:space="preserve"><value>سيتم حذف « {0} » نهائياً من مستنداتك المحفوظة.</value></data>
-  <data name="HP_DeleteConfirm" xml:space="preserve"><value>حذف</value></data>
-
-  <!-- ═══════════ SettingsPage (titre & onglets) ═══════════ -->
-  <data name="SP_Title.Text" xml:space="preserve"><value>الإعدادات</value></data>
-  <data name="SP_Subtitle.Text" xml:space="preserve"><value>تخصيص PROFstudio: المظهر، الذكاء الاصطناعي، تنسيقات الوثائق والخصوصية.</value></data>
-  <data name="SP_TabGeneral.Text" xml:space="preserve"><value>عام</value></data>
-  <data name="SP_TabAi.Text" xml:space="preserve"><value>الذكاء الاصطناعي</value></data>
-  <data name="SP_TabFolders.Text" xml:space="preserve"><value>المجلدات</value></data>
-  <data name="SP_TabStyles.Text" xml:space="preserve"><value>الأنماط والتنسيق</value></data>
-  <data name="SP_TabPrivacy.Text" xml:space="preserve"><value>الخصوصية</value></data>
-  <data name="SP_TabPrompts.Text" xml:space="preserve"><value>القوالب والاختصارات</value></data>
-  <data name="SP_SaveButton.ToolTipService.ToolTip" xml:space="preserve"><value>حفظ (Ctrl+S)</value></data>
-  <data name="SP_SaveLabel.Text" xml:space="preserve"><value>حفظ الإعدادات</value></data>
-
-  <!-- ═══════════ FirstRunDialog ═══════════ -->
-  <data name="FRD_Dialog.Title" xml:space="preserve"><value>مرحباً بك في PROFstudio</value></data>
-  <data name="FRD_Dialog.PrimaryButtonText" xml:space="preserve"><value>ابدأ الآن</value></data>
-  <data name="FRD_Dialog.CloseButtonText" xml:space="preserve"><value>تخطي حالياً</value></data>
-  <data name="FRD_StepIndicator.Text" xml:space="preserve"><value>الخطوة 1 من 3</value></data>
-  <data name="FRD_StepFormat" xml:space="preserve"><value>الخطوة {0} من {1}</value></data>
-  <data name="FRD_HeroTitle.Text" xml:space="preserve"><value>مساعدك الذكي لإعداد الدروس والوثائق</value></data>
-  <data name="FRD_HeroSubtitle.Text" xml:space="preserve"><value>وقت أقل في التحضير المكتبي، وتفاعل أكثر مع تلاميذك.</value></data>
-  <data name="FRD_Intro.Text" xml:space="preserve"><value>يساعدك PROFstudio على إعداد وثائقك اليومية بدقة واحترافية دون أن يحل محلك. أنت من تراجع وتعدل وتقرر.</value></data>
-  <data name="FRD_CardFicheTitle.Text" xml:space="preserve"><value>جذاذة درس</value></data>
-  <data name="FRD_CardFicheDesc.Text" xml:space="preserve"><value>محكمة البناء، جاهزة للطباعة أو التصدير.</value></data>
-  <data name="FRD_CardEvalTitle.Text" xml:space="preserve"><value>تقويم / امتحان</value></data>
-  <data name="FRD_CardEvalDesc.Text" xml:space="preserve"><value>تمارين متدرجة مع سلم التنقيط.</value></data>
-  <data name="FRD_CardQuizTitle.Text" xml:space="preserve"><value>اختبار سريع</value></data>
-  <data name="FRD_CardQuizDesc.Text" xml:space="preserve"><value>أسئلة اختيار من متعدد مع عناصر الإجابة.</value></data>
-  <data name="FRD_LocalNote.Text" xml:space="preserve"><value>اطمئن: تبقى جميع وثائقك مخزنة على حاسوبك الشخصي دون الحاجة لإنشاء أي حساب.</value></data>
-  <data name="FRD_GuidesHeader.Text" xml:space="preserve"><value>وثائقك ومراجعك البيداغوجية</value></data>
-  <data name="FRD_OptionalBadge.Text" xml:space="preserve"><value>اختياري</value></data>
-  <data name="FRD_GuidesIntro.Text" xml:space="preserve"><value>هل تعتمد في تحضيرك على كتاب مدرسي أو مقرر PDF؟ حدد المجلد هنا ليقوم التطبيق بمواءمة الوثائق مع منهاجك.</value></data>
-  <data name="FRD_DropHint.Text" xml:space="preserve"><value>اسحب وأفلت المجلد هنا</value></data>
-  <data name="FRD_Or.Text" xml:space="preserve"><value>أو</value></data>
-  <data name="FRD_PickFolder.Content" xml:space="preserve"><value>اختيار مجلد…</value></data>
-  <data name="FRD_PickFolder.AutomationProperties.Name" xml:space="preserve"><value>اختيار مجلد الوثائق</value></data>
-  <data name="FRD_FolderBox.PlaceholderText" xml:space="preserve"><value>لم يتم اختيار مجلد — يمكنك تحديده لاحقاً</value></data>
-  <data name="FRD_FolderHint.Text" xml:space="preserve"><value>غير متأكد؟ انتقل للخطوة التالية: يمكنك دائماً ضبط المجلدات من الإعدادات ▸ المجلدات.</value></data>
-  <data name="FRD_ProviderHeader.Text" xml:space="preserve"><value>اختر مزود الذكاء الاصطناعي</value></data>
-  <data name="FRD_ProviderSub.Text" xml:space="preserve"><value>هو من يقوم بصياغة المسودة الأولى، والقرار الأخير لك دائماً.</value></data>
-  <data name="FRD_ProviderSelector.AutomationProperties.Name" xml:space="preserve"><value>مزود الذكاء الاصطناعي</value></data>
-  <data name="FRD_ProviderGoogle.AutomationProperties.Name" xml:space="preserve"><value>Google AI Studio، مجاني وموصى به</value></data>
-  <data name="FRD_GoogleName.Text" xml:space="preserve"><value>Google AI Studio</value></data>
-  <data name="FRD_GoogleBadge.Text" xml:space="preserve"><value>مجاني · موصى به</value></data>
-  <data name="FRD_GoogleDesc.Text" xml:space="preserve"><value>الأسهل للبدء: يحتاج فقط لحساب Google عادي.</value></data>
-  <data name="FRD_ProviderOpenAi.AutomationProperties.Name" xml:space="preserve"><value>OpenAI GPT</value></data>
-  <data name="FRD_OpenAiName.Text" xml:space="preserve"><value>OpenAI (ChatGPT)</value></data>
-  <data name="FRD_OpenAiDesc.Text" xml:space="preserve"><value>لمن يمتلك مفتاح API خاصاً من OpenAI.</value></data>
-  <data name="FRD_ProviderLocal.AutomationProperties.Name" xml:space="preserve"><value>خادم محلي (متقدم)</value></data>
-  <data name="FRD_LocalName.Text" xml:space="preserve"><value>خادم محلي — متقدم</value></data>
-  <data name="FRD_LocalDesc.Text" xml:space="preserve"><value>100% دون إنترنت، لا تغادر أي معلومة حاسوبك. يتطلب تثبيت Ollama محلياً.</value></data>
-  <data name="FRD_KeyQuestion.Text" xml:space="preserve"><value>ما هو «مفتاح الوصول» (API Key)؟</value></data>
-  <data name="FRD_KeyExplain.Text" xml:space="preserve"><value>هو رمزك الشخصي لربط التطبيق بخدمة الذكاء الاصطناعي (مثل كلمة المرور). الصقه مرة واحدة فقط: يتم حفظه مشفراً في خزنة Windows الآمنة ولا يغادر جهازك أبداً.</value></data>
-  <data name="FRD_KeyBox.PlaceholderText" xml:space="preserve"><value>الصق مفتاحك هنا (Ctrl+V)</value></data>
-  <data name="FRD_KeyBoxName.AutomationProperties.Name" xml:space="preserve"><value>مفتاح خدمة الذكاء الاصطناعي</value></data>
-  <data name="FRD_GetKeyLink.Content" xml:space="preserve"><value>أين أجد مفتاحي المجاني؟ ↗</value></data>
-  <data name="FRD_GetKeyLinkOpenAi" xml:space="preserve"><value>أين أجد مفتاح OpenAI؟ ↗</value></data>
-  <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve"><value>فتح صفحة الحصول على المفتاح</value></data>
-  <data name="FRD_LocalKeyNote" xml:space="preserve"><value>مع الخادم المحلي، تظل بياناتك بالكامل في مؤسستك التعليمية.</value></data>
-  <data name="FRD_KeyOptionalNote.Text" xml:space="preserve"><value>في عجلة من أمرك؟ يمكنك المتابعة بدون مفتاح وسيذكرك التطبيق عند الحاجة.</value></data>
-  <data name="FRD_CloudName.Text" xml:space="preserve"><value>خدمة PROFstudio السحابية</value></data>
-  <data name="FRD_CloudBadge.Text" xml:space="preserve"><value>شامل · جاهز للاستخدام</value></data>
-  <data name="FRD_CloudDesc.Text" xml:space="preserve"><value>جاهز فوراً: لا يتطلب أي مفتاح API أو إعدادات معقدة.</value></data>
-  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve"><value>حساب المعلم</value></data>
-  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve"><value>حسابي كمعلم</value></data>
-  <data name="Nav_Help" xml:space="preserve"><value>المساعدة والاختصارات</value></data>
-  <data name="Shell_AssistantToggle_Label" xml:space="preserve"><value>المساعد</value></data>
-  <data name="FP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
-  <data name="FP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
-  <data name="FP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
-  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
-  <data name="FP_Step2_Header.Text" xml:space="preserve"><value>2. موضوع الدرس</value></data>
-  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve"><value>مثال: الكسور العشرية، الثورة الفرنسية...</value></data>
-  <data name="FP_Step3_Header.Text" xml:space="preserve"><value>3. الإطار والمدة</value></data>
-  <data name="FP_DurationBox.Header" xml:space="preserve"><value>مدة الحصة (بالدقائق)</value></data>
-  <data name="FP_InstructionsBox.Header" xml:space="preserve"><value>تعليمات إضافية (اختياري)</value></data>
-  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve"><value>حدد سياقاً أو احتياجات خاصة أو عملاً جماعياً...</value></data>
-  <data name="FP_Step4_Header.Text" xml:space="preserve"><value>4. المرجع التوجيهي PDF (اختياري)</value></data>
-  <data name="EP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
-  <data name="EP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
-  <data name="EP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
-  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
-  <data name="EP_Step2_Header.Text" xml:space="preserve"><value>2. المفاهيم المراد تقييمها</value></data>
-  <data name="EP_Step2_Sub.Text" xml:space="preserve"><value>اختر مفهوماً أو أكثر أو أضف موضوعك الخاص:</value></data>
-  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve"><value>مفهوم آخر... (مثال: حساب الزوايا)</value></data>
-  <data name="EP_AddTagButton.Content" xml:space="preserve"><value>إضافة</value></data>
-  <data name="EP_Step3_Header.Text" xml:space="preserve"><value>3. الشكل وسلّم التنقيط</value></data>
-  <data name="EP_EvalTypeCombo.Header" xml:space="preserve"><value>النوع</value></data>
-  <data name="EP_TotalPointsBox.Header" xml:space="preserve"><value>مجموع النقاط</value></data>
-  <data name="QP_Step1_Header.Text" xml:space="preserve"><value>1. الصف والمادة</value></data>
-  <data name="QP_LevelCombo.Header" xml:space="preserve"><value>المستوى الدراسي</value></data>
-  <data name="QP_SubjectCombo.Header" xml:space="preserve"><value>المادة</value></data>
-  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve"><value>اختر أو اكتب</value></data>
-  <data name="QP_Step2_Header.Text" xml:space="preserve"><value>2. موضوع الاختبار</value></data>
-  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve"><value>مثال: جداول الضرب، دورة الماء...</value></data>
-  <data name="QP_Step3_Header.Text" xml:space="preserve"><value>3. التنسيق والخيارات</value></data>
-  <data name="QP_QuestionCountBox.Header" xml:space="preserve"><value>الأسئلة (3-30)</value></data>
-  <data name="QP_QuizDurationBox.Header" xml:space="preserve"><value>المدة (دقائق)</value></data>
-  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve"><value>أنواع الأسئلة:</value></data>
-  <data name="QP_QcmCheck.Content" xml:space="preserve"><value>اختيار من متعدد</value></data>
-  <data name="QP_TfCheck.Content" xml:space="preserve"><value>صح / خطأ</value></data>
-  <data name="QP_ShortCheck.Content" xml:space="preserve"><value>إجابة قصيرة</value></data>
+  <data name="Shell_TitleBar.AutomationProperties.Name" xml:space="preserve">
+    <value>شريط عنوان PROFstudio</value>
+  </data>
+  <data name="Shell_AiChipText.Text" xml:space="preserve">
+    <value>المساعد الذكي — جارٍ التحقق…</value>
+  </data>
+  <data name="Shell_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إظهار أو إخفاء المساعد الذكي (Ctrl+B)</value>
+  </data>
+  <data name="Shell_AssistantToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>المساعد الذكي</value>
+  </data>
+  <data name="Shell_ThemeButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>سمة العرض: فاتح، داكن أو نظام</value>
+  </data>
+  <data name="Shell_ThemeButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تغيير المظهر</value>
+  </data>
+  <data name="Shell_ThemeSystemItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>مطابقة مظهر نظام Windows</value>
+  </data>
+  <data name="Shell_ThemeSystemItem.AutomationProperties.Name" xml:space="preserve">
+    <value>سمة النظام</value>
+  </data>
+  <data name="Shell_ThemeLightItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>واجهة فاتحة</value>
+  </data>
+  <data name="Shell_ThemeLightItem.AutomationProperties.Name" xml:space="preserve">
+    <value>سمة فاتحة</value>
+  </data>
+  <data name="Shell_ThemeDarkItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>واجهة داكنة</value>
+  </data>
+  <data name="Shell_ThemeDarkItem.AutomationProperties.Name" xml:space="preserve">
+    <value>سمة داكنة</value>
+  </data>
+  <data name="Shell_ThemeOledItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>واجهة سوداء نقية لشاشات OLED</value>
+  </data>
+  <data name="Shell_ThemeOledItem.AutomationProperties.Name" xml:space="preserve">
+    <value>سمة السواد التام OLED</value>
+  </data>
+  <data name="Shell_ThemeOledItem.Text" xml:space="preserve">
+    <value>داكن OLED</value>
+  </data>
+  <data name="Shell_SettingsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>الإعدادات (Ctrl+,)</value>
+  </data>
+  <data name="Shell_SettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="Shell_ProfileButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>ملف المعلم</value>
+  </data>
+  <data name="Shell_ProfileButton.AutomationProperties.Name" xml:space="preserve">
+    <value>ملف المعلم</value>
+  </data>
+  <data name="Shell_ProfileSettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="Shell_ProfileSettingsLabel.Text" xml:space="preserve">
+    <value>إعدادات التطبيق</value>
+  </data>
+  <data name="Shell_ProfileShortcutsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>اختصارات لوحة المفاتيح</value>
+  </data>
+  <data name="Shell_ProfileShortcutsLabel.Text" xml:space="preserve">
+    <value>اختصارات لوحة المفاتيح (F1)</value>
+  </data>
+  <data name="Shell_ProfileAboutButton.AutomationProperties.Name" xml:space="preserve">
+    <value>حول التطبيق</value>
+  </data>
+  <data name="Shell_ProfileAboutLabel.Text" xml:space="preserve">
+    <value>حول PROFstudio</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.PlaceholderText" xml:space="preserve">
+    <value>بحث في المستندات…</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.ToolTipService.ToolTip" xml:space="preserve">
+    <value>البحث في مستنداتي (Ctrl+F)</value>
+  </data>
+  <data name="Shell_GlobalSearchBox.AutomationProperties.Name" xml:space="preserve">
+    <value>بحث عام</value>
+  </data>
+  <data name="Nav_FicheItem.Content" xml:space="preserve">
+    <value>جذاذة بيداغوجية</value>
+  </data>
+  <data name="Nav_FicheItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إنشاء جذاذة درس (Ctrl+1)</value>
+  </data>
+  <data name="Nav_FicheItem.AutomationProperties.Name" xml:space="preserve">
+    <value>جذاذة بيداغوجية</value>
+  </data>
+  <data name="Nav_EvaluationItem.Content" xml:space="preserve">
+    <value>التقويمات والامتحانات</value>
+  </data>
+  <data name="Nav_EvaluationItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إنشاء تقويم مع سلم التنقيط (Ctrl+2)</value>
+  </data>
+  <data name="Nav_EvaluationItem.AutomationProperties.Name" xml:space="preserve">
+    <value>التقويمات والامتحانات</value>
+  </data>
+  <data name="Nav_QuizItem.Content" xml:space="preserve">
+    <value>اختبارات سريعة</value>
+  </data>
+  <data name="Nav_QuizItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إنشاء كويز أو أسئلة متعددة الخيارات (Ctrl+3)</value>
+  </data>
+  <data name="Nav_QuizItem.AutomationProperties.Name" xml:space="preserve">
+    <value>اختبارات سريعة</value>
+  </data>
+  <data name="Nav_HistoryItem.Content" xml:space="preserve">
+    <value>مستنداتي</value>
+  </data>
+  <data name="Nav_HistoryItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>استعراض جميع المستندات المنشأة (Ctrl+4)</value>
+  </data>
+  <data name="Nav_HistoryItem.AutomationProperties.Name" xml:space="preserve">
+    <value>مستنداتي</value>
+  </data>
+  <data name="Nav_HelpItem.Content" xml:space="preserve">
+    <value>المساعدة والاختصارات</value>
+  </data>
+  <data name="Nav_HelpItem.ToolTipService.ToolTip" xml:space="preserve">
+    <value>دليل المساعدة واختصارات المفاتيح (F1)</value>
+  </data>
+  <data name="Nav_HelpItem.AutomationProperties.Name" xml:space="preserve">
+    <value>المساعدة والاختصارات</value>
+  </data>
+  <data name="Shell_StatusText.Text" xml:space="preserve">
+    <value>جاهز لبدء جلسة جديدة</value>
+  </data>
+  <data name="Shell_NotificationAction.Content" xml:space="preserve">
+    <value>تهيئة</value>
+  </data>
+  <data name="Shell_NotificationDismiss.AutomationProperties.Name" xml:space="preserve">
+    <value>إغلاق الإشعار</value>
+  </data>
+  <data name="Status_Ready" xml:space="preserve">
+    <value>جاهز لبدء جلسة جديدة</value>
+  </data>
+  <data name="Status_Generating" xml:space="preserve">
+    <value>جارٍ التوليد بواسطة الذكاء الاصطناعي…</value>
+  </data>
+  <data name="Status_Cancelled" xml:space="preserve">
+    <value>تم إلغاء التوليد</value>
+  </data>
+  <data name="Status_SearchHistory" xml:space="preserve">
+    <value>البحث في السجل</value>
+  </data>
+  <data name="Status_NewFiche" xml:space="preserve">
+    <value>جذاذة جديدة</value>
+  </data>
+  <data name="Status_Exporting" xml:space="preserve">
+    <value>جارٍ تصدير المستند…</value>
+  </data>
+  <data name="Status_Printing" xml:space="preserve">
+    <value>جارٍ إعداد الطباعة…</value>
+  </data>
+  <data name="Status_Undone" xml:space="preserve">
+    <value>تم التراجع عن الإجراء</value>
+  </data>
+  <data name="Status_Theme" xml:space="preserve">
+    <value>السمة: {0}</value>
+  </data>
+  <data name="Theme_Light" xml:space="preserve">
+    <value>فاتح</value>
+  </data>
+  <data name="Theme_Dark" xml:space="preserve">
+    <value>داكن</value>
+  </data>
+  <data name="Theme_Oled" xml:space="preserve">
+    <value>أسود داكن (OLED)</value>
+  </data>
+  <data name="Theme_System" xml:space="preserve">
+    <value>افتراضي النظام</value>
+  </data>
+  <data name="Section_Fiche" xml:space="preserve">
+    <value>جذاذة تربوية</value>
+  </data>
+  <data name="Section_Evaluation" xml:space="preserve">
+    <value>تقويمات وفروض</value>
+  </data>
+  <data name="Section_Quiz" xml:space="preserve">
+    <value>اختبارات قصيرة</value>
+  </data>
+  <data name="Section_History" xml:space="preserve">
+    <value>مستنداتي</value>
+  </data>
+  <data name="Section_Settings" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="Hint_OpenCreationPage_Title" xml:space="preserve">
+    <value>التوليد</value>
+  </data>
+  <data name="Hint_OpenCreationPage_Message" xml:space="preserve">
+    <value>افتح إحدى صفحات الإنشاء (جذاذة، تقويم أو مسابقة).</value>
+  </data>
+  <data name="Hint_Cancel_Title" xml:space="preserve">
+    <value>الإلغاء</value>
+  </data>
+  <data name="Hint_Cancel_Message" xml:space="preserve">
+    <value>تم إلغاء عملية التوليد الحالية.</value>
+  </data>
+  <data name="Hint_NewFiche_Title" xml:space="preserve">
+    <value>جذاذة جديدة</value>
+  </data>
+  <data name="Hint_NewFiche_Message" xml:space="preserve">
+    <value>النموذج جاهز — ابدأ الآن!</value>
+  </data>
+  <data name="Hint_Export_Title" xml:space="preserve">
+    <value>التصدير</value>
+  </data>
+  <data name="Hint_Export_Message" xml:space="preserve">
+    <value>بدأ تصدير المستند…</value>
+  </data>
+  <data name="Hint_Export_GenerateFirst" xml:space="preserve">
+    <value>قم بتوليد مستند أولاً (Ctrl+G) لتتمكن من تصديره.</value>
+  </data>
+  <data name="Hint_NothingToExport" xml:space="preserve">
+    <value>لا يوجد مستند للتصدير في هذه الصفحة.</value>
+  </data>
+  <data name="Hint_Preview_Title" xml:space="preserve">
+    <value>المعاينة</value>
+  </data>
+  <data name="Hint_Preview_Shown" xml:space="preserve">
+    <value>تم إظهار لوحة المعاينة.</value>
+  </data>
+  <data name="Hint_Preview_Hidden" xml:space="preserve">
+    <value>تم إخفاء لوحة المعاينة.</value>
+  </data>
+  <data name="Hint_Preview_Unavailable" xml:space="preserve">
+    <value>المعاينة غير متاحة في هذه الصفحة.</value>
+  </data>
+  <data name="Hint_Print_Title" xml:space="preserve">
+    <value>الطباعة</value>
+  </data>
+  <data name="Hint_Print_Message" xml:space="preserve">
+    <value>جارٍ إعداد الطباعة / ملف PDF…</value>
+  </data>
+  <data name="Hint_Print_GenerateFirst" xml:space="preserve">
+    <value>قم بتوليد مستند أولاً (Ctrl+G) لطباعته.</value>
+  </data>
+  <data name="Hint_NothingToPrint" xml:space="preserve">
+    <value>لا يوجد ما يمكن طباعته في هذه الصفحة.</value>
+  </data>
+  <data name="Hint_Undo_Title" xml:space="preserve">
+    <value>تراجع</value>
+  </data>
+  <data name="Hint_Undo_Message" xml:space="preserve">
+    <value>تم التراجع عن آخر إجراء.</value>
+  </data>
+  <data name="Hint_NothingToUndo" xml:space="preserve">
+    <value>لا يوجد إجراء للتراجع عنه حالياً.</value>
+  </data>
+  <data name="Hint_Unavailable" xml:space="preserve">
+    <value>غير متاح حالياً.</value>
+  </data>
+  <data name="Hint_PartialStart_Title" xml:space="preserve">
+    <value>تشغيل جزئي</value>
+  </data>
+  <data name="Hint_PartialStart_Message" xml:space="preserve">
+    <value>تعذر إتمام خطوة إعداد أولية. يمكنك تعديل ذلك من الإعدادات.</value>
+  </data>
+  <data name="Hint_Welcome_Title" xml:space="preserve">
+    <value>مرحبًا بك في PROFstudio</value>
+  </data>
+  <data name="Hint_Welcome_Message" xml:space="preserve">
+    <value>مساحة العمل جاهزة! اختر «جذاذة بيداغوجية» من القائمة لإنشاء أول مستند.</value>
+  </data>
+  <data name="Hint_FirstDoc_Title" xml:space="preserve">
+    <value>جذاذتك الأولى جاهزة!</value>
+  </data>
+  <data name="Hint_FirstDoc_Message" xml:space="preserve">
+    <value>تم حفظها تلقائياً في «مستنداتي». يمكن للمساعد الذكي تعديلها حسب رغبتك.</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Title" xml:space="preserve">
+    <value>مكون العرض مفقود</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Message" xml:space="preserve">
+    <value>يتطلب PROFstudio مكون WebView2 من Microsoft Edge لعرض وتصدير المستندات. يمكنك تثبيته الآن أو لاحقاً.</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Primary" xml:space="preserve">
+    <value>تثبيت الآن</value>
+  </data>
+  <data name="Dialog_WebView2Missing_Close" xml:space="preserve">
+    <value>لاحقاً</value>
+  </data>
+  <data name="Dialog_Shortcuts_Title" xml:space="preserve">
+    <value>اختصارات لوحة المفاتيح</value>
+  </data>
+  <data name="Dialog_Close" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="Dialog_About_Title" xml:space="preserve">
+    <value>حول PROFstudio</value>
+  </data>
+  <data name="Dialog_About_Tagline" xml:space="preserve">
+    <value>المولد الذكي للوثائق والجذاذات البيداغوجية</value>
+  </data>
+  <data name="Dialog_About_Version" xml:space="preserve">
+    <value>الإصدار: {0}</value>
+  </data>
+  <data name="Dialog_About_Description" xml:space="preserve">
+    <value>تطبيق PROFstudio لمساعدة المعلمين على إعداد الجذاذات، التقويمات والمسابقات التعليمية بدقة وبفضل الذكاء الاصطناعي.</value>
+  </data>
+  <data name="Dialog_About_Copyright" xml:space="preserve">
+    <value>© 2026 PROFstudio. جميع الحقوق محفوظة.</value>
+  </data>
+  <data name="Profile_DefaultName" xml:space="preserve">
+    <value>الأستاذ(ة)</value>
+  </data>
+  <data name="Profile_DefaultSchool" xml:space="preserve">
+    <value>حساب محلي — لا تتم مشاركة أي بيانات</value>
+  </data>
+  <data name="Palette_GotoFiche" xml:space="preserve">
+    <value>الانتقال إلى: جذاذة بيداغوجية</value>
+  </data>
+  <data name="Palette_GotoFiche_Sub" xml:space="preserve">
+    <value>إعداد خطة وجذاذة درس</value>
+  </data>
+  <data name="Palette_GotoEvaluation" xml:space="preserve">
+    <value>الانتقال إلى: التقويمات والامتحانات</value>
+  </data>
+  <data name="Palette_GotoEvaluation_Sub" xml:space="preserve">
+    <value>فروض وامتحانات مع عناصر الإجابة</value>
+  </data>
+  <data name="Palette_GotoQuiz" xml:space="preserve">
+    <value>الانتقال إلى: اختبارات سريعة</value>
+  </data>
+  <data name="Palette_GotoQuiz_Sub" xml:space="preserve">
+    <value>أسئلة متعددة الاختيارات قابلة للطباعة مع التصحيح</value>
+  </data>
+  <data name="Palette_GotoHistory" xml:space="preserve">
+    <value>الانتقال إلى: مستنداتي</value>
+  </data>
+  <data name="Palette_GotoHistory_Sub" xml:space="preserve">
+    <value>البحث في المستندات السابقة</value>
+  </data>
+  <data name="Palette_NewFiche" xml:space="preserve">
+    <value>جذاذة جديدة</value>
+  </data>
+  <data name="Palette_NewFiche_Sub" xml:space="preserve">
+    <value>نموذج فارغ جاهز للملء</value>
+  </data>
+  <data name="Palette_ToggleAssistant" xml:space="preserve">
+    <value>تبديل المساعد الذكي</value>
+  </data>
+  <data name="Palette_ToggleAssistant_Sub" xml:space="preserve">
+    <value>إظهار أو إخفاء اللوحة الجانبية</value>
+  </data>
+  <data name="Palette_ChangeTheme" xml:space="preserve">
+    <value>تغيير المظهر</value>
+  </data>
+  <data name="Palette_ChangeTheme_Sub" xml:space="preserve">
+    <value>التبديل بين النظام ← فاتح ← داكن</value>
+  </data>
+  <data name="Palette_SearchDocs" xml:space="preserve">
+    <value>البحث في مستنداتي</value>
+  </data>
+  <data name="Palette_SearchDocs_Sub" xml:space="preserve">
+    <value>البحث حسب المادة أو الكلمة المفتاحية</value>
+  </data>
+  <data name="Palette_OpenSettings" xml:space="preserve">
+    <value>فتح الإعدادات</value>
+  </data>
+  <data name="Palette_OpenSettings_Sub" xml:space="preserve">
+    <value>السمات، مفاتيح الذكاء الاصطناعي، التصدير والمجلدات</value>
+  </data>
+  <data name="Palette_Shortcuts" xml:space="preserve">
+    <value>اختصارات لوحة المفاتيح</value>
+  </data>
+  <data name="Palette_Shortcuts_Sub" xml:space="preserve">
+    <value>القائمة الكاملة للاختصارات</value>
+  </data>
+  <data name="Palette_GenerateNow" xml:space="preserve">
+    <value>توليد الآن</value>
+  </data>
+  <data name="Palette_GenerateNow_Sub" xml:space="preserve">
+    <value>بدء كتابة وصياغة المستند الحالي</value>
+  </data>
+  <data name="Palette_StopGeneration" xml:space="preserve">
+    <value>إيقاف التوليد</value>
+  </data>
+  <data name="Palette_StopGeneration_Sub" xml:space="preserve">
+    <value>إيقاف عملية الصياغة الحالية</value>
+  </data>
+  <data name="Palette_ExportPdf" xml:space="preserve">
+    <value>تصدير بصيغة PDF</value>
+  </data>
+  <data name="Palette_ExportPdf_Sub" xml:space="preserve">
+    <value>مستند جاهز للطباعة والتوزيع</value>
+  </data>
+  <data name="Palette_ExportWord" xml:space="preserve">
+    <value>تصدير بصيغة Word (.docx)</value>
+  </data>
+  <data name="Palette_ExportWord_Sub" xml:space="preserve">
+    <value>ملف قابل للتعديل في Microsoft Word</value>
+  </data>
+  <data name="Palette_PrintDoc" xml:space="preserve">
+    <value>طباعة المستند</value>
+  </data>
+  <data name="Palette_PrintDoc_Sub" xml:space="preserve">
+    <value>فتح نافذة الطباعة</value>
+  </data>
+  <data name="Palette_ShowTeacherVersion" xml:space="preserve">
+    <value>عرض نسخة الأستاذ (مع الحلول)</value>
+  </data>
+  <data name="Palette_ShowStudentVersion" xml:space="preserve">
+    <value>عرض نسخة التلميذ</value>
+  </data>
+  <data name="Palette_ToggleView_Sub" xml:space="preserve">
+    <value>التبديل بين نسخة الأستاذ ونسخة التلميذ</value>
+  </data>
+  <data name="Shortcut_Palette" xml:space="preserve">
+    <value>لوحة الأوامر — ابحث ونفذ أي إجراء فوراً</value>
+  </data>
+  <data name="Shortcut_Generate" xml:space="preserve">
+    <value>توليد الجذاذة أو الفرض أو الاختبار</value>
+  </data>
+  <data name="Shortcut_WheelZoom" xml:space="preserve">
+    <value>تكبير وتصغير معاينة المستند</value>
+  </data>
+  <data name="Shortcut_ResetZoom" xml:space="preserve">
+    <value>إعادة ضبط نسبة المعاينة</value>
+  </data>
+  <data name="Shortcut_Escape" xml:space="preserve">
+    <value>إلغاء التوليد الجاري</value>
+  </data>
+  <data name="Shortcut_Assistant" xml:space="preserve">
+    <value>إظهار أو إخفاء المساعد الذكي</value>
+  </data>
+  <data name="Shortcut_NewFiche" xml:space="preserve">
+    <value>إنشاء جذاذة جديدة</value>
+  </data>
+  <data name="Shortcut_Export" xml:space="preserve">
+    <value>تصدير المستند (Word، PDF…)</value>
+  </data>
+  <data name="Shortcut_TogglePreview" xml:space="preserve">
+    <value>إظهار أو إخفاء لوحة المعاينة</value>
+  </data>
+  <data name="Shortcut_Print" xml:space="preserve">
+    <value>طباعة أو تصدير PDF</value>
+  </data>
+  <data name="Shortcut_Search" xml:space="preserve">
+    <value>البحث في السجل</value>
+  </data>
+  <data name="Shortcut_Undo" xml:space="preserve">
+    <value>التراجع عن آخر إجراء</value>
+  </data>
+  <data name="Shortcut_NextSection" xml:space="preserve">
+    <value>الانتقال إلى القسم التالي</value>
+  </data>
+  <data name="Shortcut_PreviousSection" xml:space="preserve">
+    <value>الرجوع إلى القسم السابق</value>
+  </data>
+  <data name="Shortcut_GotoSection" xml:space="preserve">
+    <value>الوصول المباشر إلى قسم محدد</value>
+  </data>
+  <data name="Shortcut_Settings" xml:space="preserve">
+    <value>فتح الإعدادات</value>
+  </data>
+  <data name="Shortcut_Help" xml:space="preserve">
+    <value>عرض شاشة المساعدة</value>
+  </data>
+  <data name="CP_Panel.AutomationProperties.Name" xml:space="preserve">
+    <value>لوحة الأوامر</value>
+  </data>
+  <data name="CP_QueryBox.PlaceholderText" xml:space="preserve">
+    <value>ماذا تريد أن تفعل؟ (مثال: إنشاء جذاذة، تصدير pdf، تغيير السمة)</value>
+  </data>
+  <data name="CP_QueryBox.AutomationProperties.Name" xml:space="preserve">
+    <value>البحث في الأوامر</value>
+  </data>
+  <data name="CP_CloseBadge.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إغلاق (Esc)</value>
+  </data>
+  <data name="CP_NavHint.Text" xml:space="preserve">
+    <value>↑↓ للتنقل</value>
+  </data>
+  <data name="CP_RunHint.Text" xml:space="preserve">
+    <value>Enter للتنفيذ</value>
+  </data>
+  <data name="CP_EscapeHint.Text" xml:space="preserve">
+    <value>Esc للإغلاق</value>
+  </data>
+  <data name="CTA_IdleLabel.Text" xml:space="preserve">
+    <value>توليد بالذكاء الاصطناعي</value>
+  </data>
+  <data name="CTA_ShortcutIdle.Text" xml:space="preserve">
+    <value>Ctrl+G</value>
+  </data>
+  <data name="CTA_BusyLabel.Text" xml:space="preserve">
+    <value>إيقاف التوليد</value>
+  </data>
+  <data name="CTA_ShortcutBusy.Text" xml:space="preserve">
+    <value>Esc</value>
+  </data>
+  <data name="CTA_Name_Idle" xml:space="preserve">
+    <value>توليد بالذكاء الاصطناعي</value>
+  </data>
+  <data name="CTA_Name_Busy" xml:space="preserve">
+    <value>إيقاف التوليد</value>
+  </data>
+  <data name="CTA_Tooltip_Idle" xml:space="preserve">
+    <value>يبدأ صياغة المستند بواسطة المساعد الذكي (Ctrl+G)</value>
+  </data>
+  <data name="CTA_Tooltip_Busy" xml:space="preserve">
+    <value>إيقاف عملية الصياغة الحالية (Esc)</value>
+  </data>
+  <data name="PH_Toolbar.AutomationProperties.Name" xml:space="preserve">
+    <value>شريط أدوات المستند</value>
+  </data>
+  <data name="PH_StyleCombo.ToolTipService.ToolTip" xml:space="preserve">
+    <value>النمط الجمالي للوثيقة</value>
+  </data>
+  <data name="PH_StyleCombo.AutomationProperties.Name" xml:space="preserve">
+    <value>نمط المستند البصري</value>
+  </data>
+  <data name="PH_StyleModern.Content" xml:space="preserve">
+    <value>عصري</value>
+  </data>
+  <data name="PH_StyleClassic.Content" xml:space="preserve">
+    <value>كلاسيكي</value>
+  </data>
+  <data name="PH_StyleMinimal.Content" xml:space="preserve">
+    <value>بسيط (Minimal)</value>
+  </data>
+  <data name="PH_StyleAcademic.Content" xml:space="preserve">
+    <value>أكاديمي</value>
+  </data>
+  <data name="PH_StylePlayful.Content" xml:space="preserve">
+    <value>تفاعلي ومرح</value>
+  </data>
+  <data name="PH_StyleDyslexie.Content" xml:space="preserve">
+    <value>ملائم لعسر القراءة</value>
+  </data>
+  <data name="PH_StudentButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>التبديل بين نسخة الأستاذ (مع عناصر الإجابة) ونسخة التلميذ (Ctrl+Shift+V)</value>
+  </data>
+  <data name="PH_StudentButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تبديل نسخة التلميذ أو الحلول</value>
+  </data>
+  <data name="PH_StudentLabel.Text" xml:space="preserve">
+    <value>تلميذ / أستاذ</value>
+  </data>
+  <data name="PH_ZoomOut.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تصغير المعاينة</value>
+  </data>
+  <data name="PH_ZoomOut.AutomationProperties.Name" xml:space="preserve">
+    <value>تصغير</value>
+  </data>
+  <data name="PH_ZoomLevel.AutomationProperties.Name" xml:space="preserve">
+    <value>مستوى التكبير</value>
+  </data>
+  <data name="PH_ZoomIn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تكبير المعاينة</value>
+  </data>
+  <data name="PH_ZoomIn.AutomationProperties.Name" xml:space="preserve">
+    <value>تكبير</value>
+  </data>
+  <data name="PH_ZoomReset.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إعادة الضبط إلى 100% (Ctrl+0)</value>
+  </data>
+  <data name="PH_ZoomReset.AutomationProperties.Name" xml:space="preserve">
+    <value>إعادة ضبط التكبير</value>
+  </data>
+  <data name="PH_ExportWord.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تصدير كمستند Word قابل للتعديل (Ctrl+Shift+W)</value>
+  </data>
+  <data name="PH_ExportWord.AutomationProperties.Name" xml:space="preserve">
+    <value>تصدير Word</value>
+  </data>
+  <data name="PH_WordLabel.Text" xml:space="preserve">
+    <value>Word</value>
+  </data>
+  <data name="PH_ExportPdf.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تصدير كمستند PDF عالي الجودة للطباعة (Ctrl+Shift+E)</value>
+  </data>
+  <data name="PH_ExportPdf.AutomationProperties.Name" xml:space="preserve">
+    <value>تصدير PDF</value>
+  </data>
+  <data name="PH_PdfLabel.Text" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="PH_PrintButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>طباعة المستند (Ctrl+P)</value>
+  </data>
+  <data name="PH_PrintButton.AutomationProperties.Name" xml:space="preserve">
+    <value>طباعة المستند</value>
+  </data>
+  <data name="PH_PrintLabel.Text" xml:space="preserve">
+    <value>طباعة</value>
+  </data>
+  <data name="PH_EditButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تعديل نصوص وتوجيهات المستند</value>
+  </data>
+  <data name="PH_EditButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تعديل المستند</value>
+  </data>
+  <data name="PH_EditLabel.Text" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="PH_MoreActions.ToolTipService.ToolTip" xml:space="preserve">
+    <value>خيارات إضافية</value>
+  </data>
+  <data name="PH_MoreActions.AutomationProperties.Name" xml:space="preserve">
+    <value>المزيد من خيارات التصدير والقراءة</value>
+  </data>
+  <data name="PH_MenuEdit.Text" xml:space="preserve">
+    <value>تعديل المستند</value>
+  </data>
+  <data name="PH_MenuRtf.Text" xml:space="preserve">
+    <value>تصدير RTF</value>
+  </data>
+  <data name="PH_MenuCopyText.Text" xml:space="preserve">
+    <value>نسخ النص بالكامل</value>
+  </data>
+  <data name="PH_MenuFind.Text" xml:space="preserve">
+    <value>بحث داخل المستند</value>
+  </data>
+  <data name="PH_MenuOpenFolder.Text" xml:space="preserve">
+    <value>فتح مجلد التصدير</value>
+  </data>
+  <data name="PH_MenuReadAloud.Text" xml:space="preserve">
+    <value>قراءة صوتية</value>
+  </data>
+  <data name="PH_ReadAloudStop" xml:space="preserve">
+    <value>⏹ إيقاف القراءة</value>
+  </data>
+  <data name="PH_ExportBanner.Title" xml:space="preserve">
+    <value>تم تصدير المستند بنجاح</value>
+  </data>
+  <data name="PH_OpenExportedFile.Content" xml:space="preserve">
+    <value>فتح الملف</value>
+  </data>
+  <data name="PH_OpenExportedFile.AutomationProperties.Name" xml:space="preserve">
+    <value>فتح الملف المصدر</value>
+  </data>
+  <data name="PH_OpenExportedFolder.Content" xml:space="preserve">
+    <value>فتح المجلد</value>
+  </data>
+  <data name="PH_OpenExportedFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>فتح المجلد في مستكشف Windows</value>
+  </data>
+  <data name="PH_CopiedToast" xml:space="preserve">
+    <value>تم نسخ النص بالكامل إلى الحافظة</value>
+  </data>
+  <data name="PH_StreamingBanner.AutomationProperties.Name" xml:space="preserve">
+    <value>جارٍ توليد وعرض المستند تدريجياً</value>
+  </data>
+  <data name="PH_EmptyState.AutomationProperties.Name" xml:space="preserve">
+    <value>لا يوجد مستند معروض</value>
+  </data>
+  <data name="PH_EmptyTitle.Text" xml:space="preserve">
+    <value>لا يوجد مستند قيد المعاينة حاليًا</value>
+  </data>
+  <data name="PH_EmptyBody.Text" xml:space="preserve">
+    <value>حدد الأهداف والمستوى والمادة ثم اضغط على «توليد». ستظهر المعاينة التفاعلية هنا فوراً.</value>
+  </data>
+  <data name="PH_PaletteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>استكشاف الأوامر (Ctrl+K)</value>
+  </data>
+  <data name="PH_PaletteButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>فتح لوحة الأوامر السريعة</value>
+  </data>
+  <data name="PH_PaletteLabel.Text" xml:space="preserve">
+    <value>لوحة الألوان المخصصة</value>
+  </data>
+  <data name="PH_HistoryButton.AutomationProperties.Name" xml:space="preserve">
+    <value>فتح مستنداتي</value>
+  </data>
+  <data name="PH_HistoryLabel.Text" xml:space="preserve">
+    <value>مستنداتي</value>
+  </data>
+  <data name="PH_TipsTitle.Text" xml:space="preserve">
+    <value>نصائح سريعة</value>
+  </data>
+  <data name="PH_Tip1.Text" xml:space="preserve">
+    <value>حدد المستوى الدراسي والأهداف بوضوح للحصول على محتوى ملائم ودقيق.</value>
+  </data>
+  <data name="PH_Tip2.Text" xml:space="preserve">
+    <value>بعد التوليد، يمكنك تعديل المستند أو تصديره مباشرة من الشريط العلوي.</value>
+  </data>
+  <data name="PH_Tip3.Text" xml:space="preserve">
+    <value>اختصارات مفيدة: Ctrl+G للتوليد • Ctrl+P للطباعة • Ctrl+Shift+E لتصدير PDF.</value>
+  </data>
+  <data name="PH_Skeleton.AutomationProperties.Name" xml:space="preserve">
+    <value>جارٍ توليد المستند…</value>
+  </data>
+  <data name="PH_WebView.AutomationProperties.Name" xml:space="preserve">
+    <value>معاينة تفاعلية عبر WebView2</value>
+  </data>
+  <data name="PH_ErrorPanel.AutomationProperties.Name" xml:space="preserve">
+    <value>المعاينة غير متاحة: المكون مفقود</value>
+  </data>
+  <data name="PH_ErrorTitle.Text" xml:space="preserve">
+    <value>تعذر عرض المعاينة</value>
+  </data>
+  <data name="PH_ErrorBody.Text" xml:space="preserve">
+    <value>يتطلب التطبيق تثبيت Microsoft Edge WebView2 لعرض المستندات وتصديرها.</value>
+  </data>
+  <data name="PH_InstallButton.Content" xml:space="preserve">
+    <value>تثبيت المكون ↗</value>
+  </data>
+  <data name="PH_InstallButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تثبيت مكون WebView2</value>
+  </data>
+  <data name="PH_CopyLinkButton.Content" xml:space="preserve">
+    <value>نسخ الرابط لمسؤول النظام</value>
+  </data>
+  <data name="PH_CopyLinkButton.AutomationProperties.Name" xml:space="preserve">
+    <value>نسخ رابط التنزيل</value>
+  </data>
+  <data name="PH_LinkCopied.Text" xml:space="preserve">
+    <value>تم نسخ الرابط إلى الحافظة</value>
+  </data>
+  <data name="Preview_Generating" xml:space="preserve">
+    <value>جارٍ كتابة المستند بواسطة الذكاء الاصطناعي…</value>
+  </data>
+  <data name="Preview_StatusDefault" xml:space="preserve">
+    <value>جارٍ تجهيز المعاينة…</value>
+  </data>
+  <data name="AP_Title.Text" xml:space="preserve">
+    <value>المساعد الذكي</value>
+  </data>
+  <data name="AP_NewConversation.ToolTipService.ToolTip" xml:space="preserve">
+    <value>بدء محادثة جديدة</value>
+  </data>
+  <data name="AP_NewConversation.AutomationProperties.Name" xml:space="preserve">
+    <value>محادثة جديدة</value>
+  </data>
+  <data name="AP_NewLabel.Text" xml:space="preserve">
+    <value>جديد</value>
+  </data>
+  <data name="AP_ModeSegmented.AutomationProperties.Name" xml:space="preserve">
+    <value>نمط المساعد</value>
+  </data>
+  <data name="AP_ModeAuto.Content" xml:space="preserve">
+    <value>تلقائي</value>
+  </data>
+  <data name="AP_ModeGenerate.Content" xml:space="preserve">
+    <value>توليد</value>
+  </data>
+  <data name="AP_ModeEdit.Content" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="AP_ModeQuestion.Content" xml:space="preserve">
+    <value>سؤال</value>
+  </data>
+  <data name="AP_DiffHeader.Text" xml:space="preserve">
+    <value>اقتراح التعديل</value>
+  </data>
+  <data name="AP_ApplyButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تطبيق هذا التعديل على المستند (يمكن التراجع بـ Ctrl+Z)</value>
+  </data>
+  <data name="AP_ApplyButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تطبيق التعديل</value>
+  </data>
+  <data name="AP_ApplyLabel.Text" xml:space="preserve">
+    <value>تطبيق التعديل</value>
+  </data>
+  <data name="AP_RejectButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>تجاهل هذا الاقتراح</value>
+  </data>
+  <data name="AP_RejectButton.AutomationProperties.Name" xml:space="preserve">
+    <value>تجاهل الاقتراح</value>
+  </data>
+  <data name="AP_IgnoreLabel.Text" xml:space="preserve">
+    <value>تجاهل</value>
+  </data>
+  <data name="AP_CopyButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>نسخ النص</value>
+  </data>
+  <data name="AP_CopyButton.AutomationProperties.Name" xml:space="preserve">
+    <value>نسخ النص</value>
+  </data>
+  <data name="AP_CopyLabel.Text" xml:space="preserve">
+    <value>نسخ</value>
+  </data>
+  <data name="AP_UndoableNote.Text" xml:space="preserve">
+    <value>قابل للتراجع (Ctrl+Z)</value>
+  </data>
+  <data name="AP_Typing.Text" xml:space="preserve">
+    <value>المساعد يكتب الآن…</value>
+  </data>
+  <data name="AP_SuggestionsLabel.Text" xml:space="preserve">
+    <value>اقتراحات سريعة:</value>
+  </data>
+  <data name="AP_Chip1.AutomationProperties.Name" xml:space="preserve">
+    <value>اقتراح: تبسيط المفردات</value>
+  </data>
+  <data name="AP_Chip1Label.Text" xml:space="preserve">
+    <value>تبسيط المفردات</value>
+  </data>
+  <data name="AP_Chip2.AutomationProperties.Name" xml:space="preserve">
+    <value>اقتراح: إضافة 3 أسئلة فهم</value>
+  </data>
+  <data name="AP_Chip2Label.Text" xml:space="preserve">
+    <value>إضافة 3 أسئلة للفهم</value>
+  </data>
+  <data name="AP_Chip3.AutomationProperties.Name" xml:space="preserve">
+    <value>اقتراح: الترجمة إلى الإنجليزية</value>
+  </data>
+  <data name="AP_Chip3Label.Text" xml:space="preserve">
+    <value>الترجمة إلى الإنجليزية</value>
+  </data>
+  <data name="AP_Chip4.AutomationProperties.Name" xml:space="preserve">
+    <value>اقتراح: تلخيص في 5 نقاط</value>
+  </data>
+  <data name="AP_Chip4Label.Text" xml:space="preserve">
+    <value>تلخيص في 5 نقاط</value>
+  </data>
+  <data name="AP_Chip5.AutomationProperties.Name" xml:space="preserve">
+    <value>اقتراح: مراعاة الفروق الفردية</value>
+  </data>
+  <data name="AP_Chip5Label.Text" xml:space="preserve">
+    <value>أنشطة تمايز بيداغوجي</value>
+  </data>
+  <data name="AP_PromptBox.PlaceholderText" xml:space="preserve">
+    <value>اطلب تعديلاً أو اطرح سؤالاً بيداغوجياً…</value>
+  </data>
+  <data name="AP_PromptBox.AutomationProperties.Name" xml:space="preserve">
+    <value>رسالة للمساعد</value>
+  </data>
+  <data name="AP_SendButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إرسال (Enter)</value>
+  </data>
+  <data name="AP_SendButton.AutomationProperties.Name" xml:space="preserve">
+    <value>إرسال الرسالة</value>
+  </data>
+  <data name="AP_StopButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إيقاف الرد</value>
+  </data>
+  <data name="AP_StopButton.AutomationProperties.Name" xml:space="preserve">
+    <value>إيقاف الرد</value>
+  </data>
+  <data name="AP_ModelBadge.Text" xml:space="preserve">
+    <value>نموذج تلقائي</value>
+  </data>
+  <data name="AP_KeyHints.Text" xml:space="preserve">
+    <value>Enter: إرسال • Shift+Enter: سطر جديد</value>
+  </data>
+  <data name="AP_ModeGenerate_Caption" xml:space="preserve">
+    <value>ينشئ جذاذة جديدة كلياً بناءً على طلبك.</value>
+  </data>
+  <data name="AP_ModeGenerate_Prompt" xml:space="preserve">
+    <value>صف محتوى الوثيقة المراد توليدها…</value>
+  </data>
+  <data name="AP_ModeEdit_Caption" xml:space="preserve">
+    <value>يقترح تعديلات دقيقة ومستهدفة على المستند الحالي.</value>
+  </data>
+  <data name="AP_ModeEdit_Prompt" xml:space="preserve">
+    <value>صف التعديلات المطلوبة على المستند…</value>
+  </data>
+  <data name="AP_ModeQuestion_Caption" xml:space="preserve">
+    <value>يجيب عن الاستفسارات التعليمية دون تعديل المستند.</value>
+  </data>
+  <data name="AP_ModeQuestion_Prompt" xml:space="preserve">
+    <value>اطرح سؤالاً تعليمياً أو تربوياً…</value>
+  </data>
+  <data name="AP_ModeAuto_Caption" xml:space="preserve">
+    <value>يتكيف المساعد تلقائيًا مع سياق عملك الحالي.</value>
+  </data>
+  <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve">
+    <value>منطقة اختيار دليل الأستاذ أو الكتاب المدرسي PDF</value>
+  </data>
+  <data name="PDZ_Zone.AutomationProperties.HelpText" xml:space="preserve">
+    <value>اسحب وأفلت دليل PDF أو انقر لاختياره</value>
+  </data>
+  <data name="PDZ_EmptyPrimary.Text" xml:space="preserve">
+    <value>اسحب دليل PDF أو انقر للتصفح</value>
+  </data>
+  <data name="PDZ_EmptySecondary.Text" xml:space="preserve">
+    <value>اسحب ملف دليل الأستاذ هنا أو اضغط للاختيار (اختياري)</value>
+  </data>
+  <data name="PDZ_DragOver.Text" xml:space="preserve">
+    <value>أفلت ملف PDF هنا</value>
+  </data>
+  <data name="PDZ_FileMeta.Text" xml:space="preserve">
+    <value>دليل PDF جاهز للاستناد البيداغوجي</value>
+  </data>
+  <data name="PDZ_MetaMb" xml:space="preserve">
+    <value>{0:F1} ميغابايت · جاهز للتحليل التربوي</value>
+  </data>
+  <data name="PDZ_MetaKb" xml:space="preserve">
+    <value>{0} كيلوبايت · جاهز للاستناد البيداغوجي</value>
+  </data>
+  <data name="PDZ_FileSelected" xml:space="preserve">
+    <value>تم تحديد دليل PDF</value>
+  </data>
+  <data name="PDZ_RemoveFile.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إزالة هذا الدليل</value>
+  </data>
+  <data name="PDZ_RemoveFile.AutomationProperties.Name" xml:space="preserve">
+    <value>إزالة ملف PDF</value>
+  </data>
+  <data name="PDZ_ErrorTitle.Text" xml:space="preserve">
+    <value>صيغة غير مدعومة</value>
+  </data>
+  <data name="PDZ_ErrorMessage.Text" xml:space="preserve">
+    <value>يتم قبول ملفات .pdf فقط.</value>
+  </data>
+  <data name="PDZ_ErrorPdfOnly" xml:space="preserve">
+    <value>يتم قبول ملفات PDF (.pdf) فقط للدلائل البيداغوجية.</value>
+  </data>
+  <data name="PDZ_ErrorReadTitle" xml:space="preserve">
+    <value>تعذرت القراءة</value>
+  </data>
+  <data name="PDZ_ErrorReadMessage" xml:space="preserve">
+    <value>تعذر فتح الملف. تأكد من أنه غير مفتوح أو مقفل في برنامج آخر.</value>
+  </data>
+  <data name="PDZ_ErrorClose.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="PDZ_ErrorClose.AutomationProperties.Name" xml:space="preserve">
+    <value>إغلاق الخطأ</value>
+  </data>
+  <data name="PDZ_Processing.Text" xml:space="preserve">
+    <value>جارٍ تحليل دليل PDF…</value>
+  </data>
+  <data name="CW_Splitter.AutomationProperties.Name" xml:space="preserve">
+    <value>تغيير حجم اللوحات</value>
+  </data>
+  <data name="CW_Fab.AutomationProperties.Name" xml:space="preserve">
+    <value>فتح المساعد التربوي</value>
+  </data>
+  <data name="CW_Fab.ToolTipService.ToolTip" xml:space="preserve">
+    <value>طرح سؤال على المساعد الذكي</value>
+  </data>
+  <data name="CW_FabLabel.Text" xml:space="preserve">
+    <value>المساعد</value>
+  </data>
+  <data name="CW_OverlayTitle.Text" xml:space="preserve">
+    <value>المساعد التربوي</value>
+  </data>
+  <data name="CW_CloseOverlay.AutomationProperties.Name" xml:space="preserve">
+    <value>إغلاق المساعد</value>
+  </data>
+  <data name="CW_CloseOverlay.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="FP_Title.Text" xml:space="preserve">
+    <value>جذاذة بيداغوجية جديدة</value>
+  </data>
+  <data name="FP_Subtitle.Text" xml:space="preserve">
+    <value>أعدّ خطة درس محكمة وجاهزة للطباعة والتصدير.</value>
+  </data>
+  <data name="EP_Title.Text" xml:space="preserve">
+    <value>تقويم / امتحان جديد</value>
+  </data>
+  <data name="EP_Subtitle.Text" xml:space="preserve">
+    <value>أنشئ فرضاً مع تمارين متدرجة وسلم تنقيط مفصل.</value>
+  </data>
+  <data name="QP_Title.Text" xml:space="preserve">
+    <value>اختبار سريع جديد</value>
+  </data>
+  <data name="QP_Subtitle.Text" xml:space="preserve">
+    <value>ولّد استبياناً واختباراً قابلاً للطباعة مع عناصر الإجابة.</value>
+  </data>
+  <data name="FP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إظهار أو إخفاء المساعد الجانبي</value>
+  </data>
+  <data name="EP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إظهار أو إخفاء المساعد الجانبي</value>
+  </data>
+  <data name="QP_AssistantToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إظهار أو إخفاء المساعد الجانبي</value>
+  </data>
+  <data name="FP_AssistantLabel.Text" xml:space="preserve">
+    <value>المساعد</value>
+  </data>
+  <data name="EP_AssistantLabel.Text" xml:space="preserve">
+    <value>المساعد</value>
+  </data>
+  <data name="QP_AssistantLabel.Text" xml:space="preserve">
+    <value>المساعد</value>
+  </data>
+  <data name="Validation_Title" xml:space="preserve">
+    <value>أوشكنا على الانتهاء!</value>
+  </data>
+  <data name="Validation_MissingLevel" xml:space="preserve">
+    <value>المستوى الدراسي</value>
+  </data>
+  <data name="Validation_MissingSubject" xml:space="preserve">
+    <value>المادة التعليمية</value>
+  </data>
+  <data name="Validation_MissingTopic" xml:space="preserve">
+    <value>عنوان أو موضوع الدرس</value>
+  </data>
+  <data name="Validation_MissingTopics" xml:space="preserve">
+    <value>مفهوم واحد على الأقل للتقويم</value>
+  </data>
+  <data name="FP_MissingFields_Message" xml:space="preserve">
+    <value>يرجى ملء الحقول المطلوبة: {0}.</value>
+  </data>
+  <data name="EP_MissingFields_Message" xml:space="preserve">
+    <value>يرجى ملء الحقول المطلوبة: {0}.</value>
+  </data>
+  <data name="QP_MissingFields_Message" xml:space="preserve">
+    <value>يرجى ملء الحقول المطلوبة: {0}.</value>
+  </data>
+  <data name="HP_Title.Text" xml:space="preserve">
+    <value>مستنداتي</value>
+  </data>
+  <data name="HP_Subtitle.Text" xml:space="preserve">
+    <value>استعرض كل الجذاذات والفروض والاختبارات المحفوظة محلياً على جهازك.</value>
+  </data>
+  <data name="HP_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>بحث بالمستوى، المادة، الموضوع أو الكلمات المفتاحية…</value>
+  </data>
+  <data name="HP_FilterAll.Content" xml:space="preserve">
+    <value>الكل</value>
+  </data>
+  <data name="HP_FilterFiches.Content" xml:space="preserve">
+    <value>الجذاذات</value>
+  </data>
+  <data name="HP_FilterEvals.Content" xml:space="preserve">
+    <value>التقويمات</value>
+  </data>
+  <data name="HP_FilterQuiz.Content" xml:space="preserve">
+    <value>الاختبارات</value>
+  </data>
+  <data name="HP_FilterFavorites.Content" xml:space="preserve">
+    <value>المفضلة</value>
+  </data>
+  <data name="HP_EmptyState.AutomationProperties.Name" xml:space="preserve">
+    <value>المكتبة فارغة</value>
+  </data>
+  <data name="HP_Tip1.Text" xml:space="preserve">
+    <value>يتم حفظ كل جذاذة أو تقويم أو اختبار يتم توليده تلقائياً هنا.</value>
+  </data>
+  <data name="HP_Tip2.Text" xml:space="preserve">
+    <value>استخدم البحث للوصول السريع إلى أي مستند بحسب المادة أو المستوى.</value>
+  </data>
+  <data name="HP_OptionsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>خيارات المستند (⋯)</value>
+  </data>
+  <data name="HP_OptionsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>خيارات المستند</value>
+  </data>
+  <data name="HP_MenuOpen.Text" xml:space="preserve">
+    <value>فتح المستند</value>
+  </data>
+  <data name="HP_MenuRename.Text" xml:space="preserve">
+    <value>إعادة تسمية</value>
+  </data>
+  <data name="HP_RenameTitle" xml:space="preserve">
+    <value>إعادة تسمية المستند</value>
+  </data>
+  <data name="HP_RenameConfirm" xml:space="preserve">
+    <value>إعادة تسمية</value>
+  </data>
+  <data name="HP_MenuExportWord.Text" xml:space="preserve">
+    <value>تصدير Word (.docx)</value>
+  </data>
+  <data name="HP_MenuExportPdf.Text" xml:space="preserve">
+    <value>تصدير PDF</value>
+  </data>
+  <data name="HP_MenuDelete.Text" xml:space="preserve">
+    <value>حذف المستند</value>
+  </data>
+  <data name="HP_UndoToastDefault.Text" xml:space="preserve">
+    <value>تم حذف المستند</value>
+  </data>
+  <data name="HP_UndoToast" xml:space="preserve">
+    <value>تم حذف « {0} ».</value>
+  </data>
+  <data name="HP_UndoButton.Content" xml:space="preserve">
+    <value>تراجع</value>
+  </data>
+  <data name="HP_DeleteTitle" xml:space="preserve">
+    <value>هل أنت متأكد من حذف هذا المستند؟</value>
+  </data>
+  <data name="HP_DeleteContent" xml:space="preserve">
+    <value>سيتم حذف « {0} » نهائياً من مستنداتك المحفوظة.</value>
+  </data>
+  <data name="HP_DeleteConfirm" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="SP_Title.Text" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="SP_Subtitle.Text" xml:space="preserve">
+    <value>إعدادات PROFstudio: السمات، مفاتيح الذكاء الاصطناعي، مجلدات الحفظ والتخصيص.</value>
+  </data>
+  <data name="SP_TabGeneral.Text" xml:space="preserve">
+    <value>عام</value>
+  </data>
+  <data name="SP_TabAi.Text" xml:space="preserve">
+    <value>الذكاء الاصطناعي</value>
+  </data>
+  <data name="SP_TabFolders.Text" xml:space="preserve">
+    <value>المجلدات</value>
+  </data>
+  <data name="SP_TabStyles.Text" xml:space="preserve">
+    <value>الأنماط والتنسيق</value>
+  </data>
+  <data name="SP_TabPrivacy.Text" xml:space="preserve">
+    <value>الخصوصية</value>
+  </data>
+  <data name="SP_TabPrompts.Text" xml:space="preserve">
+    <value>القوالب والاختصارات</value>
+  </data>
+  <data name="SP_SaveButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>حفظ (Ctrl+S)</value>
+  </data>
+  <data name="SP_SaveLabel.Text" xml:space="preserve">
+    <value>حفظ الإعدادات</value>
+  </data>
+  <data name="FRD_Dialog.Title" xml:space="preserve">
+    <value>مرحباً بك في PROFstudio</value>
+  </data>
+  <data name="FRD_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>ابدأ الآن</value>
+  </data>
+  <data name="FRD_Dialog.CloseButtonText" xml:space="preserve">
+    <value>تخطي حالياً</value>
+  </data>
+  <data name="FRD_StepIndicator.Text" xml:space="preserve">
+    <value>الخطوة 1 من 3</value>
+  </data>
+  <data name="FRD_StepFormat" xml:space="preserve">
+    <value>الخطوة {0} من {1}</value>
+  </data>
+  <data name="FRD_HeroTitle.Text" xml:space="preserve">
+    <value>مساعدك الذكي لإعداد الدروس والوثائق</value>
+  </data>
+  <data name="FRD_HeroSubtitle.Text" xml:space="preserve">
+    <value>مساعدك الذكي لإعداد الوثائق التربوية في ثوانٍ.</value>
+  </data>
+  <data name="FRD_Intro.Text" xml:space="preserve">
+    <value>يساعدك PROFstudio على إعداد وثائقك اليومية بدقة واحترافية دون أن يحل محلك. أنت من تراجع وتعدل وتقرر.</value>
+  </data>
+  <data name="FRD_CardFicheTitle.Text" xml:space="preserve">
+    <value>جذاذة درس</value>
+  </data>
+  <data name="FRD_CardFicheDesc.Text" xml:space="preserve">
+    <value>جذاذات دروس مفصلة ومطابقة للمنهاج التربوي.</value>
+  </data>
+  <data name="FRD_CardEvalTitle.Text" xml:space="preserve">
+    <value>تقويم / امتحان</value>
+  </data>
+  <data name="FRD_CardEvalDesc.Text" xml:space="preserve">
+    <value>تمارين متدرجة مع سلم التنقيط.</value>
+  </data>
+  <data name="FRD_CardQuizTitle.Text" xml:space="preserve">
+    <value>اختبار سريع</value>
+  </data>
+  <data name="FRD_CardQuizDesc.Text" xml:space="preserve">
+    <value>أسئلة اختيار من متعدد مع عناصر الإجابة.</value>
+  </data>
+  <data name="FRD_LocalNote.Text" xml:space="preserve">
+    <value>اطمئن: تبقى جميع وثائقك مخزنة على حاسوبك الشخصي دون الحاجة لإنشاء أي حساب.</value>
+  </data>
+  <data name="FRD_GuidesHeader.Text" xml:space="preserve">
+    <value>وثائقك ومراجعك البيداغوجية</value>
+  </data>
+  <data name="FRD_OptionalBadge.Text" xml:space="preserve">
+    <value>اختياري</value>
+  </data>
+  <data name="FRD_GuidesIntro.Text" xml:space="preserve">
+    <value>يمكنك إضافة دلائل الأستاذ بصيغة PDF للاستئناس بها أثناء التوليد.</value>
+  </data>
+  <data name="FRD_DropHint.Text" xml:space="preserve">
+    <value>اسحب وأفلت المجلد هنا</value>
+  </data>
+  <data name="FRD_Or.Text" xml:space="preserve">
+    <value>أو</value>
+  </data>
+  <data name="FRD_PickFolder.Content" xml:space="preserve">
+    <value>اختيار مجلد…</value>
+  </data>
+  <data name="FRD_PickFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>اختيار مجلد الوثائق</value>
+  </data>
+  <data name="FRD_FolderBox.PlaceholderText" xml:space="preserve">
+    <value>لم يتم اختيار مجلد — يمكنك تحديده لاحقاً</value>
+  </data>
+  <data name="FRD_FolderHint.Text" xml:space="preserve">
+    <value>مجلد الحفظ: يمكنك تحديد المجلد الذي ستُحفظ فيه المستندات المُصدرة.</value>
+  </data>
+  <data name="FRD_ProviderHeader.Text" xml:space="preserve">
+    <value>اختر مزود الذكاء الاصطناعي</value>
+  </data>
+  <data name="FRD_ProviderSub.Text" xml:space="preserve">
+    <value>اختر المزود الافتراضي لتوليد الوثائق.</value>
+  </data>
+  <data name="FRD_ProviderSelector.AutomationProperties.Name" xml:space="preserve">
+    <value>مزود الذكاء الاصطناعي</value>
+  </data>
+  <data name="FRD_ProviderGoogle.AutomationProperties.Name" xml:space="preserve">
+    <value>Google AI Studio، مجاني وسريع جدًا</value>
+  </data>
+  <data name="FRD_GoogleName.Text" xml:space="preserve">
+    <value>Google AI Studio</value>
+  </data>
+  <data name="FRD_GoogleBadge.Text" xml:space="preserve">
+    <value>مجاني · موصى به</value>
+  </data>
+  <data name="FRD_GoogleDesc.Text" xml:space="preserve">
+    <value>الأسهل للبدء: يحتاج فقط لحساب Google عادي.</value>
+  </data>
+  <data name="FRD_ProviderOpenAi.AutomationProperties.Name" xml:space="preserve">
+    <value>OpenAI GPT</value>
+  </data>
+  <data name="FRD_OpenAiName.Text" xml:space="preserve">
+    <value>OpenAI (ChatGPT)</value>
+  </data>
+  <data name="FRD_OpenAiDesc.Text" xml:space="preserve">
+    <value>لمن يمتلك مفتاح API خاصاً من OpenAI.</value>
+  </data>
+  <data name="FRD_ProviderLocal.AutomationProperties.Name" xml:space="preserve">
+    <value>خادم محلي (متقدم)</value>
+  </data>
+  <data name="FRD_LocalName.Text" xml:space="preserve">
+    <value>خادم محلي — متقدم</value>
+  </data>
+  <data name="FRD_LocalDesc.Text" xml:space="preserve">
+    <value>100% محلي وخاص، لا يتطلب اتصالاً بالإنترنت (يتطلب تثبيت Ollama).</value>
+  </data>
+  <data name="FRD_KeyQuestion.Text" xml:space="preserve">
+    <value>أدخل مفتاح الربط البرمجي (API Key)</value>
+  </data>
+  <data name="FRD_KeyExplain.Text" xml:space="preserve">
+    <value>هو رمزك الشخصي لربط التطبيق بخدمة الذكاء الاصطناعي (مثل كلمة المرور). الصقه مرة واحدة فقط: يتم حفظه مشفراً في خزنة Windows الآمنة ولا يغادر جهازك أبداً.</value>
+  </data>
+  <data name="FRD_KeyBox.PlaceholderText" xml:space="preserve">
+    <value>الصق مفتاحك هنا (Ctrl+V)</value>
+  </data>
+  <data name="FRD_KeyBoxName.AutomationProperties.Name" xml:space="preserve">
+    <value>مفتاح خدمة الذكاء الاصطناعي</value>
+  </data>
+  <data name="FRD_GetKeyLink.Content" xml:space="preserve">
+    <value>الحصول على مفتاح مجاني ←</value>
+  </data>
+  <data name="FRD_GetKeyLinkOpenAi" xml:space="preserve">
+    <value>الحصول على مفتاح OpenAI ←</value>
+  </data>
+  <data name="FRD_GetKeyLink.AutomationProperties.Name" xml:space="preserve">
+    <value>فتح صفحة الحصول على المفتاح</value>
+  </data>
+  <data name="FRD_LocalKeyNote" xml:space="preserve">
+    <value>لا يتطلب المزود المحلي أي مفتاح ربط.</value>
+  </data>
+  <data name="FRD_KeyOptionalNote.Text" xml:space="preserve">
+    <value>يمكنك إعداد المفاتيح لاحقًا من الإعدادات.</value>
+  </data>
+  <data name="FRD_CloudName.Text" xml:space="preserve">
+    <value>خدمة PROFstudio السحابية</value>
+  </data>
+  <data name="FRD_CloudBadge.Text" xml:space="preserve">
+    <value>حساب المعلم · متضمن</value>
+  </data>
+  <data name="FRD_CloudDesc.Text" xml:space="preserve">
+    <value>خدمة سحابية للمعلمين. يتطلب تسجيل الدخول للحساب.</value>
+  </data>
+  <data name="Shell_ProfileAccountButton.AutomationProperties.Name" xml:space="preserve">
+    <value>حساب المعلم</value>
+  </data>
+  <data name="Shell_ProfileAccountLabel.Text" xml:space="preserve">
+    <value>حسابي كمعلم</value>
+  </data>
+  <data name="Nav_Help" xml:space="preserve">
+    <value>المساعدة والاختصارات</value>
+  </data>
+  <data name="Shell_AssistantToggle_Label" xml:space="preserve">
+    <value>المساعد</value>
+  </data>
+  <data name="FP_Step1_Header.Text" xml:space="preserve">
+    <value>1. الصف والمادة</value>
+  </data>
+  <data name="FP_LevelCombo.Header" xml:space="preserve">
+    <value>المستوى الدراسي</value>
+  </data>
+  <data name="FP_SubjectCombo.Header" xml:space="preserve">
+    <value>المادة</value>
+  </data>
+  <data name="FP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>اختر أو اكتب</value>
+  </data>
+  <data name="FP_Step2_Header.Text" xml:space="preserve">
+    <value>2. موضوع الدرس</value>
+  </data>
+  <data name="FP_TopicBox.PlaceholderText" xml:space="preserve">
+    <value>مثال: الجمع والطرح للأعداد العشرية...</value>
+  </data>
+  <data name="FP_Step3_Header.Text" xml:space="preserve">
+    <value>3. الإطار والمدة</value>
+  </data>
+  <data name="FP_DurationBox.Header" xml:space="preserve">
+    <value>مدة الحصة (بالدقائق)</value>
+  </data>
+  <data name="FP_InstructionsBox.Header" xml:space="preserve">
+    <value>تعليمات إضافية (اختياري)</value>
+  </data>
+  <data name="FP_InstructionsBox.PlaceholderText" xml:space="preserve">
+    <value>حدد سياقاً أو احتياجات خاصة أو عملاً جماعياً...</value>
+  </data>
+  <data name="FP_Step4_Header.Text" xml:space="preserve">
+    <value>4. المرجع التوجيهي PDF (اختياري)</value>
+  </data>
+  <data name="EP_Step1_Header.Text" xml:space="preserve">
+    <value>1. الصف والمادة</value>
+  </data>
+  <data name="EP_LevelCombo.Header" xml:space="preserve">
+    <value>المستوى الدراسي</value>
+  </data>
+  <data name="EP_SubjectCombo.Header" xml:space="preserve">
+    <value>المادة</value>
+  </data>
+  <data name="EP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>اختر أو اكتب</value>
+  </data>
+  <data name="EP_Step2_Header.Text" xml:space="preserve">
+    <value>2. المفاهيم المراد تقييمها</value>
+  </data>
+  <data name="EP_Step2_Sub.Text" xml:space="preserve">
+    <value>اختر مفهوماً أو أكثر أو أضف موضوعك الخاص:</value>
+  </data>
+  <data name="EP_NewTagBox.PlaceholderText" xml:space="preserve">
+    <value>مفهوم آخر... (مثال: حساب الزوايا)</value>
+  </data>
+  <data name="EP_AddTagButton.Content" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="EP_Step3_Header.Text" xml:space="preserve">
+    <value>3. الشكل وسلّم التنقيط</value>
+  </data>
+  <data name="EP_EvalTypeCombo.Header" xml:space="preserve">
+    <value>النوع</value>
+  </data>
+  <data name="EP_TotalPointsBox.Header" xml:space="preserve">
+    <value>مجموع النقاط</value>
+  </data>
+  <data name="QP_Step1_Header.Text" xml:space="preserve">
+    <value>1. الصف والمادة</value>
+  </data>
+  <data name="QP_LevelCombo.Header" xml:space="preserve">
+    <value>المستوى الدراسي</value>
+  </data>
+  <data name="QP_SubjectCombo.Header" xml:space="preserve">
+    <value>المادة</value>
+  </data>
+  <data name="QP_SubjectCombo.PlaceholderText" xml:space="preserve">
+    <value>اختر أو اكتب</value>
+  </data>
+  <data name="QP_Step2_Header.Text" xml:space="preserve">
+    <value>2. موضوع الاختبار</value>
+  </data>
+  <data name="QP_TopicBox.PlaceholderText" xml:space="preserve">
+    <value>مثال: الجهاز الهضمي، الحرب العالمية الأولى...</value>
+  </data>
+  <data name="QP_Step3_Header.Text" xml:space="preserve">
+    <value>3. التنسيق والخيارات</value>
+  </data>
+  <data name="QP_QuestionCountBox.Header" xml:space="preserve">
+    <value>الأسئلة (3-30)</value>
+  </data>
+  <data name="QP_QuizDurationBox.Header" xml:space="preserve">
+    <value>المدة (دقائق)</value>
+  </data>
+  <data name="QP_QuestionTypesHeader.Text" xml:space="preserve">
+    <value>أنواع الأسئلة:</value>
+  </data>
+  <data name="QP_QcmCheck.Content" xml:space="preserve">
+    <value>اختيار من متعدد</value>
+  </data>
+  <data name="QP_TfCheck.Content" xml:space="preserve">
+    <value>صح / خطأ</value>
+  </data>
+  <data name="QP_ShortCheck.Content" xml:space="preserve">
+    <value>إجابة قصيرة</value>
+  </data>
+  <data name="History_NoResultsTitle" xml:space="preserve">
+    <value>لم يتم العثور على نتائج</value>
+  </data>
+  <data name="History_EmptyLibraryTitle" xml:space="preserve">
+    <value>مكتبتك فارغة حالياً</value>
+  </data>
+  <data name="History_Loading" xml:space="preserve">
+    <value>جارٍ تحميل السجل…</value>
+  </data>
+  <data name="History_Searching" xml:space="preserve">
+    <value>جارٍ البحث عن « {0} »…</value>
+  </data>
+  <data name="History_NoResultsMatching" xml:space="preserve">
+    <value>لا توجد مستندات تطابق المعايير.</value>
+  </data>
+  <data name="History_OneResultFound" xml:space="preserve">
+    <value>تم العثور على نتيجة واحدة.</value>
+  </data>
+  <data name="History_MultipleResultsFound" xml:space="preserve">
+    <value>تم العثور على {0} مستندات.</value>
+  </data>
+  <data name="History_LoadError" xml:space="preserve">
+    <value>خطأ أثناء تحميل السجل: {0}</value>
+  </data>
+  <data name="History_SelectionSummary" xml:space="preserve">
+    <value>تم تحديد {0} مستند(ات)</value>
+  </data>
+  <data name="History_StatsTotal" xml:space="preserve">
+    <value>{0} مستند(ات)</value>
+  </data>
+  <data name="History_StatsMonthEmpty" xml:space="preserve">
+    <value>لا توجد مستندات منشأة هذا الشهر</value>
+  </data>
+  <data name="History_StatsMonthCount" xml:space="preserve">
+    <value>{0} وثيقة أنشئت هذا الشهر</value>
+  </data>
+  <data name="History_StatsFavorites" xml:space="preserve">
+    <value>{0} في المفضلة</value>
+  </data>
+  <data name="History_GroupToday" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="History_GroupYesterday" xml:space="preserve">
+    <value>أمس</value>
+  </data>
+  <data name="History_GroupThisWeek" xml:space="preserve">
+    <value>هذا الأسبوع</value>
+  </data>
+  <data name="History_GroupOlder" xml:space="preserve">
+    <value>أقدم</value>
+  </data>
+  <data name="History_GroupCount" xml:space="preserve">
+    <value>{0} مستند(ات)</value>
+  </data>
+  <data name="History_Untitled" xml:space="preserve">
+    <value>بدون عنوان</value>
+  </data>
+  <data name="History_TypeEvaluation" xml:space="preserve">
+    <value>تقويم</value>
+  </data>
+  <data name="History_TypeQuiz" xml:space="preserve">
+    <value>اختبار سريع</value>
+  </data>
+  <data name="History_TypeFiche" xml:space="preserve">
+    <value>جذاذة</value>
+  </data>
+  <data name="History_FavoriteRemove" xml:space="preserve">
+    <value>إزالة من المفضلة</value>
+  </data>
+  <data name="History_FavoriteAdd" xml:space="preserve">
+    <value>إضافة إلى المفضلة</value>
+  </data>
+  <data name="History_FavoriteMark" xml:space="preserve">
+    <value>تمييز كمفضل</value>
+  </data>
+  <data name="History_FavoriteSuffix" xml:space="preserve">
+    <value>، مفضل</value>
+  </data>
+  <data name="History_AutomationItem" xml:space="preserve">
+    <value>{0} في {1}، تم الإنشاء في {2}{3}</value>
+  </data>
+  <data name="History_AutomationSelect" xml:space="preserve">
+    <value>تحديد المستند « {0} »</value>
+  </data>
+  <data name="History_AutomationMore" xml:space="preserve">
+    <value>المزيد من الإجراءات لـ « {0} »</value>
+  </data>
+  <data name="EP_Step4_Header.Text" xml:space="preserve">
+    <value>4. دليل الأستاذ أو المرجع PDF (اختياري)</value>
+  </data>
+  <data name="EP_DifficultyHeader.Text" xml:space="preserve">
+    <value>مستوى الصعوبة</value>
+  </data>
+  <data name="EP_Difficulty_Discovery" xml:space="preserve">
+    <value>استكشافي</value>
+  </data>
+  <data name="EP_Difficulty_Easy" xml:space="preserve">
+    <value>سهل</value>
+  </data>
+  <data name="EP_Difficulty_Intermediate" xml:space="preserve">
+    <value>متوسط</value>
+  </data>
+  <data name="EP_Difficulty_Demanding" xml:space="preserve">
+    <value>متقدم</value>
+  </data>
+  <data name="EP_Difficulty_Expert" xml:space="preserve">
+    <value>خبير</value>
+  </data>
+  <data name="EP_Type_Formative.Content" xml:space="preserve">
+    <value>تكويني (تقويم مرحلي)</value>
+  </data>
+  <data name="EP_Type_Diagnostic.Content" xml:space="preserve">
+    <value>تشخيصي</value>
+  </data>
+  <data name="EP_Type_Summative.Content" xml:space="preserve">
+    <value>إجمالي (امتحان/فرض)</value>
+  </data>
+  <data name="QP_AnswerKeyCheck.Content" xml:space="preserve">
+    <value>تضمين عناصر الإجابة للأستاذ</value>
+  </data>
+  <data name="QP_DyslexiaFontCheck.Content" xml:space="preserve">
+    <value>ملاءمة القراءة (خط مخصص لعسر القراءة)</value>
+  </data>
+  <data name="QP_Step4_Header.Text" xml:space="preserve">
+    <value>4. دليل الأستاذ أو المرجع PDF (اختياري)</value>
+  </data>
+  <data name="PH_Step1_Analyse.Text" xml:space="preserve">
+    <value>1. التحليل</value>
+  </data>
+  <data name="PH_Step2_Structure.Text" xml:space="preserve">
+    <value>2. الهيكلة</value>
+  </data>
+  <data name="PH_Step3_Draft.Text" xml:space="preserve">
+    <value>3. الصياغة</value>
+  </data>
+  <data name="PH_Step4_Render.Text" xml:space="preserve">
+    <value>4. الإخراج</value>
+  </data>
+  <data name="PH_StreamedLiveHeader.Text" xml:space="preserve">
+    <value>صياغة مباشرة بالذكاء الاصطناعي</value>
+  </data>
+  <data name="PH_FindPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>البحث في المستند…</value>
+  </data>
+  <data name="PH_FindPrevious.ToolTipService.ToolTip" xml:space="preserve">
+    <value>السابق (Shift+Enter)</value>
+  </data>
+  <data name="PH_FindNext.ToolTipService.ToolTip" xml:space="preserve">
+    <value>التالي (Enter)</value>
+  </data>
+  <data name="PH_FindClose.ToolTipService.ToolTip" xml:space="preserve">
+    <value>إغلاق البحث (Esc)</value>
+  </data>
+  <data name="PH_ClipboardTipTitle" xml:space="preserve">
+    <value>الحافظة</value>
+  </data>
+  <data name="PH_ClipboardTipSubtitle" xml:space="preserve">
+    <value>تم نسخ النص كاملاً إلى الحافظة.</value>
+  </data>
+  <data name="AP_WelcomeText.Text" xml:space="preserve">
+    <value>مرحبًا! أنا مساعدك التربوي الذكي. يمكنني إنشاء جذاذة، تعديل المستند أو الإجابة عن استفساراتك.</value>
+  </data>
+  <data name="AD_Dialog.Title" xml:space="preserve">
+    <value>حساب المعلم في PROFstudio</value>
+  </data>
+  <data name="AD_Close.Text" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="AD_School.Text" xml:space="preserve">
+    <value>المؤسسة التعليمية</value>
+  </data>
+  <data name="AD_Active.Text" xml:space="preserve">
+    <value>نشط</value>
+  </data>
+  <data name="AD_CloudAccess.Text" xml:space="preserve">
+    <value>الوصول السحابي والحصة</value>
+  </data>
+  <data name="AD_SignOut.Content" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="AD_VerifyEmailTitle.Text" xml:space="preserve">
+    <value>تأكيد بريدك الإلكتروني</value>
+  </data>
+  <data name="AD_VerifyEmailDesc.Text" xml:space="preserve">
+    <value>يرجى النقر على الرابط المرسل إلى بريدك الإلكتروني لتأكيد الحساب ثم تسجيل الدخول.</value>
+  </data>
+  <data name="AD_GoToSignIn.Content" xml:space="preserve">
+    <value>الانتقال لتسجيل الدخول</value>
+  </data>
+  <data name="AD_SignUpTitle.Text" xml:space="preserve">
+    <value>إنشاء حساب معلم جديد</value>
+  </data>
+  <data name="AD_SignUpDesc.Text" xml:space="preserve">
+    <value>أدخل بياناتك المهنية لتفعيل حسابك.</value>
+  </data>
+  <data name="AD_Civility.Header" xml:space="preserve">
+    <value>الصفة</value>
+  </data>
+  <data name="AD_LastName.Header" xml:space="preserve">
+    <value>اللقب / الاسم العائلي</value>
+  </data>
+  <data name="AD_LastName.PlaceholderText" xml:space="preserve">
+    <value>مثال: بناني</value>
+  </data>
+  <data name="AD_FirstName.Header" xml:space="preserve">
+    <value>الاسم الشخصي</value>
+  </data>
+  <data name="AD_FirstName.PlaceholderText" xml:space="preserve">
+    <value>مثال: مريم</value>
+  </data>
+  <data name="AD_BirthDate.Header" xml:space="preserve">
+    <value>تاريخ الازدياد</value>
+  </data>
+  <data name="AD_BirthDate.PlaceholderText" xml:space="preserve">
+    <value>اختر تاريخ ميلادك</value>
+  </data>
+  <data name="AD_SchoolHeader.Header" xml:space="preserve">
+    <value>المدرسة / المؤسسة</value>
+  </data>
+  <data name="AD_SchoolHeader.PlaceholderText" xml:space="preserve">
+    <value>مثال: ثانوية ابن رشد</value>
+  </data>
+  <data name="AD_Academy.Header" xml:space="preserve">
+    <value>الأكاديمية / المديرية</value>
+  </data>
+  <data name="AD_Discipline.Header" xml:space="preserve">
+    <value>المادة / المستوى المدرس</value>
+  </data>
+  <data name="AD_Discipline.PlaceholderText" xml:space="preserve">
+    <value>مثال: أستاذ التعليم الابتدائي أو الرياضيات</value>
+  </data>
+  <data name="AD_Email.Header" xml:space="preserve">
+    <value>البريد الإلكتروني المهني أو الشخصي</value>
+  </data>
+  <data name="AD_Email.PlaceholderText" xml:space="preserve">
+    <value>teacher@school.edu</value>
+  </data>
+  <data name="AD_Password.Header" xml:space="preserve">
+    <value>كلمة المرور (6 أحرف على الأقل)</value>
+  </data>
+  <data name="AD_ConfirmPassword.Header" xml:space="preserve">
+    <value>تأكيد كلمة المرور</value>
+  </data>
+  <data name="AD_SignInTitle.Text" xml:space="preserve">
+    <value>تسجيل دخول المعلم</value>
+  </data>
+  <data name="AD_SignInDesc.Text" xml:space="preserve">
+    <value>سجل الدخول للوصول إلى النماذج السحابية وحصتك.</value>
+  </data>
+  <data name="AD_SignInEmail.Header" xml:space="preserve">
+    <value>البريد الإلكتروني</value>
+  </data>
+  <data name="AD_SignInPassword.Header" xml:space="preserve">
+    <value>كلمة المرور</value>
+  </data>
+  <data name="AD_BtnCreateAccount.Content" xml:space="preserve">
+    <value>إنشاء حساب معلم</value>
+  </data>
+  <data name="AD_BtnHaveAccount.Content" xml:space="preserve">
+    <value>لديك حساب بالفعل؟ تسجيل الدخول</value>
+  </data>
+  <data name="AD_BtnSignIn.Content" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="AD_BtnSubmitSignUp.Content" xml:space="preserve">
+    <value>إنشاء حسابي</value>
+  </data>
+  <data name="Account_GuestMode" xml:space="preserve">
+    <value>وضع الضيف (محلي)</value>
+  </data>
+  <data name="Account_ActiveBadge" xml:space="preserve">
+    <value>حساب المعلم نشط</value>
+  </data>
+  <data name="Account_UnlimitedQuota" xml:space="preserve">
+    <value>وضع محلي / غير محدود</value>
+  </data>
+  <data name="Account_QuotaFormat" xml:space="preserve">
+    <value>{0} توليد / شهر</value>
+  </data>
+  <data name="Account_MissingEmailPassword" xml:space="preserve">
+    <value>يرجى إدخال عنوان بريدك الإلكتروني وكلمة المرور.</value>
+  </data>
+  <data name="Account_SigningIn" xml:space="preserve">
+    <value>جارٍ تسجيل الدخول…</value>
+  </data>
+  <data name="Account_SignInSuccess" xml:space="preserve">
+    <value>تم تسجيل الدخول بنجاح!</value>
+  </data>
+  <data name="Account_MissingName" xml:space="preserve">
+    <value>يرجى إدخال اسمك الشخصي والعائلي.</value>
+  </data>
+  <data name="Account_MissingSchool" xml:space="preserve">
+    <value>يرجى تحديد المؤسسة التعليمية.</value>
+  </data>
+  <data name="Account_InvalidEmail" xml:space="preserve">
+    <value>يرجى إدخال عنوان بريد إلكتروني صالح.</value>
+  </data>
+  <data name="Account_PasswordTooShort" xml:space="preserve">
+    <value>يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.</value>
+  </data>
+  <data name="Account_PasswordMismatch" xml:space="preserve">
+    <value>كلمتا المرور غير متطابقتين.</value>
+  </data>
+  <data name="Account_CreatingAccount" xml:space="preserve">
+    <value>جارٍ إنشاء وتسجيل حساب المعلم الخاص بك…</value>
+  </data>
+  <data name="Account_ConfirmationSent" xml:space="preserve">
+    <value>تم إرسال بريد التأكيد إلى {0}.
+يرجى النقر على الرابط لتفعيل حسابك ثم تسجيل الدخول.</value>
+  </data>
+  <data name="Account_SignUpSuccess" xml:space="preserve">
+    <value>تم إنشاء حساب المعلم بنجاح!</value>
+  </data>
+  <data name="Account_SignedOut" xml:space="preserve">
+    <value>تم تسجيل الخروج.</value>
+  </data>
+  <data name="Shell_TeacherBadge_Active" xml:space="preserve">
+    <value>حساب المعلم نشط</value>
+  </data>
+  <data name="Shell_TeacherBadge_SignIn" xml:space="preserve">
+    <value>تسجيل الدخول / إنشاء حساب</value>
+  </data>
+  <data name="Shell_TeacherBadge_MyAccount" xml:space="preserve">
+    <value>حسابي ({0})</value>
+  </data>
+  <data name="SP_AccountHeader.Text" xml:space="preserve">
+    <value>الحساب والوصول كمعلم</value>
+  </data>
+  <data name="SP_AccountCard.Header" xml:space="preserve">
+    <value>حساب المعلم في PROFstudio</value>
+  </data>
+  <data name="SP_AccountCard.Description" xml:space="preserve">
+    <value>سجل الدخول بحساب المعلم لتفعيل نماذج الذكاء الاصطناعي السحابية ومتابعة الحصة.</value>
+  </data>
+  <data name="SP_AccountConnectBtn.Content" xml:space="preserve">
+    <value>تسجيل الدخول / إنشاء حساب…</value>
+  </data>
+  <data name="SP_AccountProfileBtn.Content" xml:space="preserve">
+    <value>ملفي والحصة السحابية…</value>
+  </data>
+  <data name="SP_ProfileHeader.Text" xml:space="preserve">
+    <value>الملف التعريفي للمعلم</value>
+  </data>
+  <data name="SP_TeacherName.Header" xml:space="preserve">
+    <value>الاسم / الهوية</value>
+  </data>
+  <data name="SP_TeacherName.Description" xml:space="preserve">
+    <value>يظهر في شريط التطبيق وعلى الوثائق المنشأة.</value>
+  </data>
+  <data name="SP_TeacherNameBox.PlaceholderText" xml:space="preserve">
+    <value>مثال: أ. محمد / أ. فاطمة</value>
+  </data>
+  <data name="SP_SchoolName.Header" xml:space="preserve">
+    <value>المدرسة / المؤسسة التعليمية</value>
+  </data>
+  <data name="SP_SchoolName.Description" xml:space="preserve">
+    <value>اسم المؤسسة المطبوع على المستندات المولدة.</value>
+  </data>
+  <data name="SP_SchoolNameBox.PlaceholderText" xml:space="preserve">
+    <value>مثال: مدرسة النور الابتدائية</value>
+  </data>
+  <data name="SP_UiHeader.Text" xml:space="preserve">
+    <value>تخصيص الواجهة</value>
+  </data>
+  <data name="SP_AppTheme.Header" xml:space="preserve">
+    <value>سمة التطبيق</value>
+  </data>
+  <data name="SP_AppTheme.Description" xml:space="preserve">
+    <value>يطبق فورياً على واجهة PROFstudio كاملة.</value>
+  </data>
+  <data name="SP_AccentColor.Header" xml:space="preserve">
+    <value>لون التمييز</value>
+  </data>
+  <data name="SP_AccentColor.Description" xml:space="preserve">
+    <value>اللون الرئيسي لعلامة PROFstudio — يطبق فورياً.</value>
+  </data>
+  <data name="SP_Language.Header" xml:space="preserve">
+    <value>لغة الواجهة</value>
+  </data>
+  <data name="SP_Language.Description" xml:space="preserve">
+    <value>لغة واجهة التطبيق (الفرنسية، الإنجليزية، العربية).</value>
+  </data>
+  <data name="SP_Streaming.Header" xml:space="preserve">
+    <value>عرض النص المباشر (التدفق)</value>
+  </data>
+  <data name="SP_Streaming.Description" xml:space="preserve">
+    <value>يعرض المستند تدريجياً أثناء صياغته بالذكاء الاصطناعي.</value>
+  </data>
+  <data name="SP_PedagogicalHeader.Text" xml:space="preserve">
+    <value>التفضيلات البيداغوجية</value>
+  </data>
+  <data name="SP_DefaultLevel.Header" xml:space="preserve">
+    <value>المستوى الدراسي الافتراضي</value>
+  </data>
+  <data name="SP_DefaultLevel.Description" xml:space="preserve">
+    <value>يحدد تلقائياً عند فتح أي نموذج جديد.</value>
+  </data>
+  <data name="SP_DefaultSubject.Header" xml:space="preserve">
+    <value>المادة الافتراضية</value>
+  </data>
+  <data name="SP_DefaultSubject.Description" xml:space="preserve">
+    <value>حقل حر — اختر من القائمة أو اكتب المادة.</value>
+  </data>
+  <data name="SP_DefaultExportFolder.Header" xml:space="preserve">
+    <value>مجلد التصدير الافتراضي</value>
+  </data>
+  <data name="SP_ManageFoldersBtn.Content" xml:space="preserve">
+    <value>إدارة المجلدات…</value>
+  </data>
+  <data name="SP_StartupHeader.Text" xml:space="preserve">
+    <value>بدء التشغيل مع Windows</value>
+  </data>
+  <data name="SP_LaunchAtStartup.Header" xml:space="preserve">
+    <value>تشغيل PROFstudio تلقائياً عند إقلاع Windows</value>
+  </data>
+  <data name="SP_AboutHeader.Text" xml:space="preserve">
+    <value>حول التطبيق</value>
+  </data>
+  <data name="SP_AboutCard.Header" xml:space="preserve">
+    <value>حول PROFstudio</value>
+  </data>
+  <data name="SP_AboutCard.Description" xml:space="preserve">
+    <value>الإصدار 1.4 — صُمم للمعلمين. إعداد تربوي آمن وموثوق.</value>
+  </data>
+  <data name="SP_AboutBtn.Content" xml:space="preserve">
+    <value>عرض المعلومات…</value>
+  </data>
+  <data name="SP_AiConfigMode.Header" xml:space="preserve">
+    <value>نمط ضبط الذكاء الاصطناعي</value>
+  </data>
+  <data name="SP_AiConfigMode.Description" xml:space="preserve">
+    <value>التبديل بين الوضع التلقائي المدمج والإدارة المتقدمة للنماذج.</value>
+  </data>
+  <data name="SP_ExpertModeToggle.Content" xml:space="preserve">
+    <value>الوضع المتقدم (خبير)</value>
+  </data>
+  <data name="SP_CloudService.Header" xml:space="preserve">
+    <value>خدمة PROFstudio السحابية</value>
+  </data>
+  <data name="SP_CloudService.Description" xml:space="preserve">
+    <value>توليد تربوي عالي الأداء مشمول. سجل دخولك بحساب المعلم للتفعيل.</value>
+  </data>
+  <data name="SP_CloudActiveHeader.Header" xml:space="preserve">
+    <value>خدمة PROFstudio السحابية (نشطة)</value>
+  </data>
+  <data name="SP_ReadyCard.Title" xml:space="preserve">
+    <value>جاهز لتحضير دروسك</value>
+  </data>
+  <data name="SP_TaskRouting.Title" xml:space="preserve">
+    <value>توجيه ذكي للمهام</value>
+  </data>
+  <data name="SP_MainProvider.Header" xml:space="preserve">
+    <value>مزود الذكاء الاصطناعي الرئيسي</value>
+  </data>
+  <data name="SP_MainProvider.Description" xml:space="preserve">
+    <value>يستخدم افتراضياً لكل مهمة توليد جديدة.</value>
+  </data>
+  <data name="SP_ApiKeysHeader.Header" xml:space="preserve">
+    <value>مفاتيح API — محمية بخزنة Windows</value>
+  </data>
+  <data name="SP_ApiKeysHeader.Description" xml:space="preserve">
+    <value>مفاتيحك مشفرة ومحفوظة بأمان داخل خزنة بيانات الاعتماد في Windows.</value>
+  </data>
+  <data name="SP_VaultSecured.Text" xml:space="preserve">
+    <value>خزنة Windows لبيانات الاعتماد</value>
+  </data>
+  <data name="SP_KeyConfigured.Text" xml:space="preserve">
+    <value>المفتاح مُعد ومضبوط</value>
+  </data>
+  <data name="SP_GetKeyBtn.Content" xml:space="preserve">
+    <value>الحصول على مفتاح ↗</value>
+  </data>
+  <data name="SP_TestBtn.Content" xml:space="preserve">
+    <value>اختبار الاتصال</value>
+  </data>
+  <data name="SP_ClearBtn.Content" xml:space="preserve">
+    <value>مسح</value>
+  </data>
+  <data name="SP_GeminiPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>الصق مفتاح Google AI Studio هنا…</value>
+  </data>
+  <data name="SP_OpenAiPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>sk-…</value>
+  </data>
+  <data name="SP_AnthropicPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>sk-ant-…</value>
+  </data>
+  <data name="SP_VercelPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>مفتاح Vercel AI Gateway…</value>
+  </data>
+  <data name="SP_LocalServer.Text" xml:space="preserve">
+    <value>خادم محلي (Ollama، LM Studio…)</value>
+  </data>
+  <data name="SP_LocalServerZeroData.Text" xml:space="preserve">
+    <value>لا تغادر أي بيانات حاسوبك</value>
+  </data>
+  <data name="SP_LocalServerUrl.Header" xml:space="preserve">
+    <value>عنوان الخادم (متوافق مع OpenAI)</value>
+  </data>
+  <data name="SP_LocalServerModel.Header" xml:space="preserve">
+    <value>النموذج المستخدم (مثال: mistral)</value>
+  </data>
+  <data name="SP_LocalServerKey.Header" xml:space="preserve">
+    <value>مفتاح API (اختياري)</value>
+  </data>
+  <data name="SP_LocalServerLoadModels.Content" xml:space="preserve">
+    <value>تحميل النماذج المتوفرة</value>
+  </data>
+  <data name="SP_VertexHeader.Text" xml:space="preserve">
+    <value>Google Cloud Vertex AI (مؤسسات)</value>
+  </data>
+  <data name="SP_VertexProject.Header" xml:space="preserve">
+    <value>معرف مشروع Google Cloud</value>
+  </data>
+  <data name="SP_VertexRegion.Header" xml:space="preserve">
+    <value>المنطقة الجغرافية</value>
+  </data>
+  <data name="SP_VercelHeader.Text" xml:space="preserve">
+    <value>Vercel AI Gateway — بوابة متعددة النماذج</value>
+  </data>
+  <data name="SP_TestAllProviders.Content" xml:space="preserve">
+    <value>⚡ اختبار جميع المزودين</value>
+  </data>
+  <data name="SP_RoutingMatrix.Header" xml:space="preserve">
+    <value>مصفوفة التوجيه المفصلة (الوضع المتقدم)</value>
+  </data>
+  <data name="SP_RoutingMatrix.Description" xml:space="preserve">
+    <value>تخصيص النموذج المناسب لكل مهمة تربوية.</value>
+  </data>
+  <data name="SP_MatrixColTask.Text" xml:space="preserve">
+    <value>المهمة</value>
+  </data>
+  <data name="SP_MatrixColProvider.Text" xml:space="preserve">
+    <value>المزود</value>
+  </data>
+  <data name="SP_MatrixColModel.Text" xml:space="preserve">
+    <value>النموذج (قابل للتعديل يدوياً)</value>
+  </data>
+  <data name="SP_Creativity.Header" xml:space="preserve">
+    <value>درجة الإبداع في الردود</value>
+  </data>
+  <data name="SP_Creativity.Description" xml:space="preserve">
+    <value>درجة الإبداع والحرية في التوليد.</value>
+  </data>
+  <data name="SP_TaskFiche.Text" xml:space="preserve">
+    <value>توليد الجذاذات</value>
+  </data>
+  <data name="SP_TaskIntent.Text" xml:space="preserve">
+    <value>تصنيف النية</value>
+  </data>
+  <data name="SP_TaskAssistant.Text" xml:space="preserve">
+    <value>المساعد الحواري</value>
+  </data>
+  <data name="SP_StorageLocations.Text" xml:space="preserve">
+    <value>مسارات التخزين</value>
+  </data>
+  <data name="SP_GuidesFolder.Header" xml:space="preserve">
+    <value>الدلائل والمراجع البيداغوجية (PDF)</value>
+  </data>
+  <data name="SP_GuidesFolder.Description" xml:space="preserve">
+    <value>المراجع المستخدمة لاستخراج الفهرس والتأطير التربوي.</value>
+  </data>
+  <data name="SP_NoFolderSelected.PlaceholderText" xml:space="preserve">
+    <value>لم يتم تحديد أي مجلد</value>
+  </data>
+  <data name="SP_BrowseBtn.Content" xml:space="preserve">
+    <value>استعراض…</value>
+  </data>
+  <data name="SP_OpenBtn.Content" xml:space="preserve">
+    <value>فتح</value>
+  </data>
+  <data name="SP_PermanentAccess.Text" xml:space="preserve">
+    <value>تم منح الوصول الدائم</value>
+  </data>
+  <data name="SP_ExportsFolder.Header" xml:space="preserve">
+    <value>مجلد حفظ الملفات المصدرة (PDF, DOCX, RTF)</value>
+  </data>
+  <data name="SP_ExportsFolder.Description" xml:space="preserve">
+    <value>الوجهة الافتراضية لجميع وثائقك المصدرة.</value>
+  </data>
+  <data name="SP_CacheMaintenance.Text" xml:space="preserve">
+    <value>الذاكرة المؤقتة والصيانة</value>
+  </data>
+  <data name="SP_TocCache.Header" xml:space="preserve">
+    <value>ذاكرة جداول المحتويات (ToC)</value>
+  </data>
+  <data name="SP_ClearCacheBtn.Content" xml:space="preserve">
+    <value>إفراغ الذاكرة المؤقتة</value>
+  </data>
+  <data name="SP_AppLogs.Header" xml:space="preserve">
+    <value>سجلات تشغيل التطبيق</value>
+  </data>
+  <data name="SP_AppLogs.Description" xml:space="preserve">
+    <value>راجع السجلات المحلية في حالة حدوث سلوك غير متوقع.</value>
+  </data>
+  <data name="SP_OpenLogsBtn.Content" xml:space="preserve">
+    <value>فتح مجلد السجلات</value>
+  </data>
+  <data name="SP_GdprHeader.Text" xml:space="preserve">
+    <value>الخصوصية والأمان — مسار بياناتك</value>
+  </data>
+  <data name="SP_GdprSubtitle.Text" xml:space="preserve">
+    <value>بياناتك محفوظة محليًا ولا يتم مشاركتها إلا مع المزود المختار.</value>
+  </data>
+  <data name="SP_GdprRequest.Text" xml:space="preserve">
+    <value>طلبك</value>
+  </data>
+  <data name="SP_GdprSentToAi.Text" xml:space="preserve">
+    <value>مرسل للذكاء الاصطناعي</value>
+  </data>
+  <data name="SP_GdprHttps.Text" xml:space="preserve">
+    <value>تشفير HTTPS</value>
+  </data>
+  <data name="SP_GdprSecureConn.Text" xml:space="preserve">
+    <value>اتصال آمن</value>
+  </data>
+  <data name="SP_GdprAiService.Text" xml:space="preserve">
+    <value>خدمة الذكاء الاصطناعي</value>
+  </data>
+  <data name="SP_GdprDrafting.Text" xml:space="preserve">
+    <value>صياغة الوثيقة</value>
+  </data>
+  <data name="SP_GdprYourDocs.Text" xml:space="preserve">
+    <value>مستنداتك</value>
+  </data>
+  <data name="SP_GdprLocalOnly.Text" xml:space="preserve">
+    <value>حصرياً على هذا الجهاز</value>
+  </data>
+  <data name="SP_GdprBullet1.Text" xml:space="preserve">
+    <value>• لا يتم بيع أو مشاركة أو استخدام أي بيانات لتدريب النماذج العامة.</value>
+  </data>
+  <data name="SP_GdprBullet2.Text" xml:space="preserve">
+    <value>• مفاتيح API الخاصة بك لا تغادر خزنة Windows الآمنة أبداً.</value>
+  </data>
+  <data name="SP_GdprBullet3.Text" xml:space="preserve">
+    <value>• نصيحة: تجنب إدخال الأسماء والبيانات الشخصية للتلاميذ في الاستمارات.</value>
+  </data>
+  <data name="SP_GdprBullet4.Text" xml:space="preserve">
+    <value>• خيار العمل دون اتصال متاح بالكامل 100% عبر مزود «الخادم المحلي / Ollama».</value>
+  </data>
+  <data name="SP_Telemetry.Header" xml:space="preserve">
+    <value>القياس والتحسين المجهول</value>
+  </data>
+  <data name="SP_Telemetry.Description" xml:space="preserve">
+    <value>معطل افتراضياً. عند التفعيل: إحصاءات استخدام عامة دون أي محتوى تعليمي.</value>
+  </data>
+  <data name="SP_TwoPass.Header" xml:space="preserve">
+    <value>توليد مزدوج بمرحلتين (تجريبي)</value>
+  </data>
+  <data name="SP_TwoPass.Description" xml:space="preserve">
+    <value>صياغة عبر مرحلتين مع تدقيق تلقائي لجودة أفضل. يضاعف مدة التوليد.</value>
+  </data>
+  <data name="SP_LogLevel.Header" xml:space="preserve">
+    <value>مستوى تسجيل العمليات (تشخيص)</value>
+  </data>
+  <data name="SP_LogLevel.Description" xml:space="preserve">
+    <value>تفصيل السجلات المحلية. يوصى بـ «معلومات» للاستخدام اليومي.</value>
+  </data>
+  <data name="SP_Retention.Header" xml:space="preserve">
+    <value>مدة الاحتفاظ بالأرشيف</value>
+  </data>
+  <data name="SP_Retention.Description" xml:space="preserve">
+    <value>مدة الاحتفاظ بالأيام. 0 = احتفاظ غير محدود.</value>
+  </data>
+  <data name="SP_DiagMaintenance.Header" xml:space="preserve">
+    <value>التشخيص والصيانة</value>
+  </data>
+  <data name="SP_DiagMaintenance.Description" xml:space="preserve">
+    <value>تصدير حزمة تشخيص كاملة للدعم الفني.</value>
+  </data>
+  <data name="SP_DiagPackNote.Text" xml:space="preserve">
+    <value>تحتوي الحزمة (.zip) على السجلات والإعدادات وحالة التوجيه. يتم إخفاء مفاتيح API تلقائياً.</value>
+  </data>
+  <data name="SP_ExportDiagBtn.Content" xml:space="preserve">
+    <value>تصدير حزمة التشخيص (.zip)</value>
+  </data>
+  <data name="SP_DangerZone.Text" xml:space="preserve">
+    <value>منطقة الخطر</value>
+  </data>
+  <data name="SP_DangerZoneDesc.Text" xml:space="preserve">
+    <value>إعادة ضبط جميع الإعدادات وحذف السجل المحلي.</value>
+  </data>
+  <data name="SP_ResetAllBtn.Content" xml:space="preserve">
+    <value>إعادة ضبط جميع الإعدادات</value>
+  </data>
+  <data name="SP_PromptsHeader.Text" xml:space="preserve">
+    <value>قوالب التوجيهات القابلة للتخصيص</value>
+  </data>
+  <data name="SP_ResetPromptBtn.Content" xml:space="preserve">
+    <value>↺ استعادة القالب الافتراضي</value>
+  </data>
+  <data name="SP_PromptSaveNote.Text" xml:space="preserve">
+    <value>يتم حفظ التغييرات باستخدام زر «حفظ الإعدادات» أدناه.</value>
+  </data>
+  <data name="SP_ShortcutsHeader.Text" xml:space="preserve">
+    <value>اختصارات لوحة المفاتيح</value>
+  </data>
+  <data name="SP_ShortcutEditor.Header" xml:space="preserve">
+    <value>محرر الاختصارات</value>
+  </data>
+  <data name="SP_ShortcutEditor.Description" xml:space="preserve">
+    <value>خصص مجموعات المفاتيح. تطبق عند إعادة تشغيل PROFstudio.</value>
+  </data>
+  <data name="SP_ResetShortcutsBtn.Content" xml:space="preserve">
+    <value>↺ استعادة الكل</value>
+  </data>
+  <data name="SP_ThemeGallery.Text" xml:space="preserve">
+    <value>معرض التنسيقات والأنماط</value>
+  </data>
+  <data name="SP_ThemeGallerySubtitle.Text" xml:space="preserve">
+    <value>اختر تصميماً فنياً شاملاً أو عدل كل تفصيل أدناه.</value>
+  </data>
+  <data name="SP_DefaultStyleTitle.Title" xml:space="preserve">
+    <value>النمط الافتراضي</value>
+  </data>
+  <data name="SP_StyleBuilder.Header" xml:space="preserve">
+    <value>محرر الأنماط StyleBuilder</value>
+  </data>
+  <data name="SP_StyleBuilder.Description" xml:space="preserve">
+    <value>تخصيص الألوان، الهوامش، والخطوط للمستندات المُصدرة.</value>
+  </data>
+  <data name="SP_ColorPalette.Text" xml:space="preserve">
+    <value>لوحة الألوان</value>
+  </data>
+  <data name="SP_PrimaryColor.Text" xml:space="preserve">
+    <value>اللون الأساسي</value>
+  </data>
+  <data name="SP_PrimaryLabel.Text" xml:space="preserve">
+    <value>الأساسي</value>
+  </data>
+  <data name="SP_SecondaryColor.Text" xml:space="preserve">
+    <value>اللون الثانوي</value>
+  </data>
+  <data name="SP_SecondaryLabel.Text" xml:space="preserve">
+    <value>الثانوي</value>
+  </data>
+  <data name="SP_AccentColorLabel.Text" xml:space="preserve">
+    <value>لون التمييز</value>
+  </data>
+  <data name="SP_AccentLabel.Text" xml:space="preserve">
+    <value>التمييز</value>
+  </data>
+  <data name="SP_PaletteSuggestions.Text" xml:space="preserve">
+    <value>اقتراحات الألوان:</value>
+  </data>
+  <data name="SP_PaletteOcean.Text" xml:space="preserve">
+    <value>محيطي</value>
+  </data>
+  <data name="SP_PaletteEmerald.Text" xml:space="preserve">
+    <value>زمردي</value>
+  </data>
+  <data name="SP_PalettePurple.Text" xml:space="preserve">
+    <value>أرجواني</value>
+  </data>
+  <data name="SP_PaletteTerracotta.Text" xml:space="preserve">
+    <value>طين دافئ (Terracotta)</value>
+  </data>
+  <data name="SP_PaletteSlate.Text" xml:space="preserve">
+    <value>أردوازي</value>
+  </data>
+  <data name="SP_PaletteRuby.Text" xml:space="preserve">
+    <value>ياقوتي</value>
+  </data>
+  <data name="SP_HeaderStyle.Text" xml:space="preserve">
+    <value>تنسيق الترويسة</value>
+  </data>
+  <data name="SP_TypographyBorders.Text" xml:space="preserve">
+    <value>الخطوط والإطارات</value>
+  </data>
+  <data name="SP_DocFont.Header" xml:space="preserve">
+    <value>خط المستند</value>
+  </data>
+  <data name="SP_CornerRadius.Header" xml:space="preserve">
+    <value>استدارة الحواف (بكسل)</value>
+  </data>
+  <data name="SP_PageMargins.Text" xml:space="preserve">
+    <value>هوامش الصفحة (ملم)</value>
+  </data>
+  <data name="SP_MarginTop.Header" xml:space="preserve">
+    <value>أعلى</value>
+  </data>
+  <data name="SP_MarginBottom.Header" xml:space="preserve">
+    <value>أسفل</value>
+  </data>
+  <data name="SP_MarginLeft.Header" xml:space="preserve">
+    <value>يسار</value>
+  </data>
+  <data name="SP_MarginRight.Header" xml:space="preserve">
+    <value>يمين</value>
+  </data>
+  <data name="SP_CustomStyleNote.Text" xml:space="preserve">
+    <value>أي تعديل ينشئ نمطاً «مخصصاً» يتم حفظه بـ Ctrl+S.</value>
+  </data>
+  <data name="SP_InferStylePdf.Header" xml:space="preserve">
+    <value>استخراج النمط من ملف PDF</value>
+  </data>
+  <data name="SP_InferStylePdf.Description" xml:space="preserve">
+    <value>يحلل PROFstudio نموذج PDF ويستخرج ورقة نمط مخصصة.</value>
+  </data>
+  <data name="SP_InferStylePdfNote.Text" xml:space="preserve">
+    <value>قدم ملف PDF يعجبك تصميمه لاستخراج الألوان والخطوط وترويسة الصفحة.</value>
+  </data>
+  <data name="SP_AnalyzePdfBtn.Content" xml:space="preserve">
+    <value>تحليل ملف PDF مرجعي…</value>
+  </data>
+  <data name="SP_GeneratedStyleSheet.Header" xml:space="preserve">
+    <value>ورقة النمط المستخرجة</value>
+  </data>
+  <data name="SP_LivePreview.Text" xml:space="preserve">
+    <value>معاينة مباشرة</value>
+  </data>
+  <data name="SP_WebView2Required.Text" xml:space="preserve">
+    <value>مكون WebView2 مطلوب للمعاينة المباشرة.</value>
+  </data>
+  <data name="SP_DownloadWebView2Btn.Content" xml:space="preserve">
+    <value>تنزيل مكون WebView2 ↗</value>
+  </data>
+  <data name="Settings_Temp_Precise" xml:space="preserve">
+    <value>دقيق وموثوق</value>
+  </data>
+  <data name="Settings_Temp_Balanced" xml:space="preserve">
+    <value>متوازن</value>
+  </data>
+  <data name="Settings_Temp_Creative" xml:space="preserve">
+    <value>إبداعي</value>
+  </data>
+  <data name="Settings_Temp_VeryCreative" xml:space="preserve">
+    <value>إبداعي للغاية</value>
+  </data>
+  <data name="Settings_KeyCleared" xml:space="preserve">
+    <value>تم مسح المفتاح — تذكر الحفظ (Ctrl+S).</value>
+  </data>
+  <data name="Settings_NeverTested" xml:space="preserve">
+    <value>لم يتم الاختبار بعد</value>
+  </data>
+  <data name="Settings_TestingInProgress" xml:space="preserve">
+    <value>جارٍ الاختبار…</value>
+  </data>
+  <data name="Settings_ConnectedLatency" xml:space="preserve">
+    <value>متصل في {0} مللي ثانية</value>
+  </data>
+  <data name="Settings_MissingApiKey" xml:space="preserve">
+    <value>مفتاح API مفقود — تعذر الاختبار</value>
+  </data>
+  <data name="Settings_MissingServerUrl" xml:space="preserve">
+    <value>عنوان الخادم مطلوب</value>
+  </data>
+  <data name="Settings_MissingVertexProject" xml:space="preserve">
+    <value>معرف مشروع Google Cloud مطلوب</value>
+  </data>
+  <data name="Settings_TesterUnavailable" xml:space="preserve">
+    <value>أداة اختبار الاتصال غير متاحة.</value>
+  </data>
+  <data name="Settings_CheckingStartup" xml:space="preserve">
+    <value>جارٍ التحقق من حالة بدء التشغيل…</value>
+  </data>
+  <data name="Settings_StartupEnabled" xml:space="preserve">
+    <value>مفعل (بدء تلقائي)</value>
+  </data>
+  <data name="Settings_StartupDisabled" xml:space="preserve">
+    <value>معطل</value>
+  </data>
+  <data name="Settings_StartupDisabledByUser" xml:space="preserve">
+    <value>معطل من مدير المهام (Task Manager)</value>
+  </data>
+  <data name="Settings_StartupDisabledByPolicy" xml:space="preserve">
+    <value>معطل بسياسة المسؤول</value>
+  </data>
+  <data name="Result_StudentAction" xml:space="preserve">
+    <value>نسخة التلميذ</value>
+  </data>
+  <data name="Result_TeacherAction" xml:space="preserve">
+    <value>عناصر الإجابة</value>
+  </data>
+  <data name="Result_DefaultPdfFilter" xml:space="preserve">
+    <value>مستند PDF (*.pdf)</value>
+  </data>
+  <data name="Result_DefaultDocxFilter" xml:space="preserve">
+    <value>مستند Word (*.docx)</value>
+  </data>
+  <data name="Result_DefaultRtfFilter" xml:space="preserve">
+    <value>مستند RTF (*.rtf)</value>
+  </data>
+  <data name="PDZ_ChapterCombo.Header" xml:space="preserve">
+    <value>فصل الدليل (جدول المحتويات)</value>
+  </data>
+  <data name="PDZ_ChapterCombo.PlaceholderText" xml:space="preserve">
+    <value>اختر فصلاً لتعبئة الموضوع مسبقاً…</value>
+  </data>
+  <data name="PDZ_ChapterCombo.AutomationProperties.Name" xml:space="preserve">
+    <value>فصل الدليل البيداغوجي</value>
+  </data>
+  <data name="PDZ_ChapterNote.Text" xml:space="preserve">
+    <value>مستخرج من ذاكرة الفهرس — التحديد يعبئ الموضوع تلقائياً.</value>
+  </data>
+  <data name="AD_Password.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="AD_ConfirmPassword.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="AD_SignInEmail.PlaceholderText" xml:space="preserve">
+    <value>teacher@school.edu</value>
+  </data>
+  <data name="AD_SignInPassword.PlaceholderText" xml:space="preserve">
+    <value>••••••••</value>
+  </data>
+  <data name="SP_RefreshPreviewBtn.Text" xml:space="preserve">
+    <value>تحديث</value>
+  </data>
+  <data name="AD_Dialog.CloseButtonText" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
 </root>

@@ -48,7 +48,7 @@ public static class HtmlRenderer
         {
             sb.AppendLine("    <div class=\"student-header-box\">");
             sb.AppendLine("      <div><strong>Nom :</strong> .......................................... &nbsp;&nbsp; <strong>Prénom :</strong> ..........................................</div>");
-            sb.AppendLine("      <div><strong>Classe :</strong> ................ &nbsp;&nbsp; <strong>Note :</strong> ..... / 20</div>");
+            sb.AppendLine("      <div><strong>Classe :</strong> ................ &nbsp;&nbsp; <strong>Date :</strong> ................ &nbsp;&nbsp; <strong>Note :</strong> .............</div>");
             sb.AppendLine("    </div>");
         }
 
@@ -57,6 +57,7 @@ public static class HtmlRenderer
         // Document Body Blocks
         sb.AppendLine("  <main class=\"document-body\">");
         var skippingCorrectionSection = false;
+        var correctionHeadingLevel = 0; // level of the heading that opened the correction section
         foreach (var block in doc.Blocks)
         {
             if (isStudentVersion)
@@ -67,11 +68,14 @@ public static class HtmlRenderer
                     if (headingText.Contains("corrigé") || headingText.Contains("correction") || headingText.Contains("solutions"))
                     {
                         skippingCorrectionSection = true;
+                        correctionHeadingLevel = hb.Level;
                         continue;
                     }
-                    else
+                    else if (skippingCorrectionSection && hb.Level <= correctionHeadingLevel)
                     {
+                        // A heading at the same or higher level ends the correction section.
                         skippingCorrectionSection = false;
+                        correctionHeadingLevel = 0;
                     }
                 }
 
@@ -169,9 +173,14 @@ public static class HtmlRenderer
         var fragment = RenderToFragment(doc, isStudentVersion);
 
         var css = CssSanitizer.SanitizeCss(customCss ?? DefaultCss);
+        var isArabic = ContainsArabic(doc.Metadata.Title) ||
+                       (doc.Metadata.Subject != null && ContainsArabic(doc.Metadata.Subject)) ||
+                       (doc.Metadata.Subtitle != null && ContainsArabic(doc.Metadata.Subtitle));
+        var lang = isArabic ? "ar" : "fr";
+        var dirAttr = isArabic ? " dir=\"rtl\"" : string.Empty;
 
         return $@"<!DOCTYPE html>
-<html lang=""fr"">
+<html lang=""{lang}""{dirAttr}>
 <head>
     <meta charset=""UTF-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
@@ -185,6 +194,20 @@ public static class HtmlRenderer
 {fragment}
 </body>
 </html>";
+    }
+
+    private static bool ContainsArabic(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        foreach (var c in text)
+        {
+            if (c >= '\u0600' && c <= '\u06FF') return true;
+            if (c >= '\u0750' && c <= '\u077F') return true;
+            if (c >= '\u08A0' && c <= '\u08FF') return true;
+            if (c >= '\uFB50' && c <= '\uFDFF') return true;
+            if (c >= '\uFE70' && c <= '\uFEFF') return true;
+        }
+        return false;
     }
 
     private static void RenderBlock(Block block, StringBuilder sb, string indent)

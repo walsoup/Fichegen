@@ -66,6 +66,9 @@ public class GenerationOrchestratorTests
         result.Document.Metadata.Title.Should().Be("Séquence Vocabulaire");
         result.PreviewHtml.Should().Contain("Séquence Vocabulaire");
         result.PreviewHtml.Should().Contain("Les synonymes");
+        result.RawResponse.Should().Be(mockJson);
+        result.RawPrompt.Should().NotBeNullOrWhiteSpace();
+        result.Document.SourceJson.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]

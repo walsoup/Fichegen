@@ -14,7 +14,7 @@
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
     <EnablePriGenTooling>false</EnablePriGenTooling>
     <AppxPackage>false</AppxPackage>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>AnyCPU;x64;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

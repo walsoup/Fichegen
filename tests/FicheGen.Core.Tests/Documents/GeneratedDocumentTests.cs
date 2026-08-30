@@ -182,5 +182,62 @@ public class GeneratedDocumentTests
 
     }
 
-}
+    [Fact]
+    public void ToBodyPlainText_ExcludesTitleAndSubtitle_ContainsOnlyBlockContent()
+    {
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Grand Titre", Subtitle: "Sous-titre descriptif"),
+            Blocks: new List<Block>
+            {
+                new HeadingBlock(2, "Section 1"),
+                new ParagraphBlock("Contenu de la section."),
+                new NumberedListBlock(new List<List<TextRun>>
+                {
+                    new() { new TextRun("Étape 1") },
+                    new() { new TextRun("Étape 2") }
+                })
+            }
+        );
 
+        var body = doc.ToBodyPlainText();
+
+        body.Should().NotContain("Grand Titre");
+        body.Should().NotContain("=====");
+        body.Should().NotContain("Sous-titre descriptif");
+        body.Should().Contain("## Section 1");
+        body.Should().Contain("Contenu de la section.");
+        body.Should().Contain("1. Étape 1");
+        body.Should().Contain("2. Étape 2");
+    }
+
+    [Fact]
+    public void ManualEdit_MarkdownRoundTrip_PreservesBlocksWithoutWarningCallout()
+    {
+        var original = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Fiche Originale", Subtitle: "Objectifs"),
+            Blocks: new List<Block>
+            {
+                new HeadingBlock(1, "1. Découverte"),
+                new ParagraphBlock("Texte explicatif initial."),
+                new BulletListBlock(new List<List<TextRun>>
+                {
+                    new() { new TextRun("Point A") },
+                    new() { new TextRun("Point B") }
+                })
+            }
+        );
+
+        var body = original.ToBodyPlainText();
+        var editedBody = body.Replace("Point B", "Point B Modifié");
+
+        var newDoc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(editedBody, "Fiche Modifiée", includeWarningCallout: false);
+
+        newDoc.Metadata.Title.Should().Be("Fiche Modifiée");
+        newDoc.Blocks.Should().HaveCount(3);
+        newDoc.Blocks.Should().NotContain(b => b is CalloutBoxBlock && ((CalloutBoxBlock)b).Kind == "warning");
+        newDoc.Blocks[0].Should().BeOfType<HeadingBlock>();
+        newDoc.Blocks[1].Should().BeOfType<ParagraphBlock>();
+        var list = newDoc.Blocks[2].Should().BeOfType<BulletListBlock>().Subject;
+        list.Items[1][0].Text.Should().Be("Point B Modifié");
+    }
+}

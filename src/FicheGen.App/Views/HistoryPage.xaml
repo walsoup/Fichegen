@@ -133,8 +133,9 @@
 
         <!-- En-tête serein -->
         <StackPanel Grid.Row="0" Spacing="3" Margin="0,0,0,16">
-            <TextBlock x:Uid="HP_Title" Text="Mes documents" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="SemiBold"/>
-            <TextBlock x:Uid="HP_Subtitle" Text="Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur."
+            <TextBlock x:Name="PageTitle" x:Uid="HP_Title" Text="Mes documents" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="SemiBold"
+                       AutomationProperties.HeadingLevel="Level1"/>
+            <TextBlock x:Name="PageSubtitle" x:Uid="HP_Subtitle" Text="Retrouvez toutes vos fiches, évaluations et quiz sauvegardés automatiquement sur cet ordinateur."
                        Style="{StaticResource CaptionSecondaryStyle}"/>
         </StackPanel>
 
@@ -145,26 +146,25 @@
                         PlaceholderText="Rechercher par titre, matière, niveau ou mot-clé…"
                         Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         QuerySubmitted="OnSearchQuerySubmitted"
-                        QueryIcon="Find"
-                        Visibility="{x:Bind local:HistoryPage.InverseBoolToVisibility(ViewModel.IsLoading), Mode=OneWay}"/>
+                        QueryIcon="Find"/>
 
         <!-- Filtres par type -->
         <RadioButtons x:Name="FilterRadioButtons"
                       Grid.Row="2"
                       Margin="0,0,0,16"
+                      HorizontalAlignment="Left"
                       MaxColumns="5"
                       SelectedIndex="0"
-                      SelectionChanged="OnFilterSelectionChanged"
-                      Visibility="{x:Bind local:HistoryPage.InverseBoolToVisibility(ViewModel.IsLoading), Mode=OneWay}">
-            <RadioButton x:Uid="HP_FilterAll" Content="Tout" 
+                      SelectionChanged="OnFilterSelectionChanged">
+            <RadioButton x:Name="FilterAll" x:Uid="HP_FilterAll" Content="Tout" Tag="all"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton x:Uid="HP_FilterFiches" Content="Fiches"
+            <RadioButton x:Name="FilterFiches" x:Uid="HP_FilterFiches" Content="Fiches" Tag="fiche"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton x:Uid="HP_FilterEvals" Content="Évaluations"
+            <RadioButton x:Name="FilterEvals" x:Uid="HP_FilterEvals" Content="Évaluations" Tag="evaluation"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton x:Uid="HP_FilterQuiz" Content="Quiz"
+            <RadioButton x:Name="FilterQuiz" x:Uid="HP_FilterQuiz" Content="Quiz" Tag="quiz"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
-            <RadioButton x:Uid="HP_FilterFavorites" Content="Favoris"
+            <RadioButton x:Name="FilterFavorites" x:Uid="HP_FilterFavorites" Content="Favoris" Tag="favorite"
                          Style="{StaticResource FilterChipRadioButtonStyle}"/>
         </RadioButtons>
 
@@ -207,12 +207,12 @@
                     Margin="0,6,0,0">
                 <StackPanel Spacing="8">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="💡" FontSize="13"/>
+                        <TextBlock Text="💡" FontSize="13" AutomationProperties.AccessibilityView="Raw"/>
                         <TextBlock x:Uid="HP_Tip1" Text="Chaque fiche, évaluation ou quiz généré est sauvegardé automatiquement ici."
                                    FontSize="12" TextWrapping="Wrap"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="🔍" FontSize="13"/>
+                        <TextBlock Text="🔍" FontSize="13" AutomationProperties.AccessibilityView="Raw"/>
                         <TextBlock x:Uid="HP_Tip2" Text="Utilisez la recherche pour retrouver rapidement un document par matière, niveau ou mot-clé."
                                    FontSize="12" TextWrapping="Wrap"/>
                     </StackPanel>
@@ -229,18 +229,18 @@
                             Margin="0,0,0,16"
                             HorizontalAlignment="Stretch">
                     <Border Style="{StaticResource StatPillStyle}" Margin="0,0,8,0">
-                        <TextBlock Text="{x:Bind ViewModel.StatsTotalDisplay}" FontSize="12"/>
+                        <TextBlock Text="{x:Bind ViewModel.StatsTotalDisplay, Mode=OneWay}" FontSize="12"/>
                     </Border>
                     <Border Style="{StaticResource StatPillStyle}" Margin="0,0,8,0">
-                        <TextBlock Text="{x:Bind ViewModel.StatsMonthDisplay}" FontSize="12"/>
+                        <TextBlock Text="{x:Bind ViewModel.StatsMonthDisplay, Mode=OneWay}" FontSize="12"/>
                     </Border>
                     <Border Style="{StaticResource StatPillStyle}">
-                        <TextBlock Text="{x:Bind ViewModel.StatsFavoritesDisplay}" FontSize="12"/>
+                        <TextBlock Text="{x:Bind ViewModel.StatsFavoritesDisplay, Mode=OneWay}" FontSize="12"/>
                     </Border>
                 </StackPanel>
 
                 <!-- Liste groupée -->
-                <ListView ItemsSource="{x:Bind ViewModel.GroupedItems}"
+                <ListView ItemsSource="{x:Bind ViewModel.GroupedItems, Mode=OneWay}"
                           SelectionMode="None"
                           IsItemClickEnabled="True"
                           ItemContainerStyle="{StaticResource HistoryGroupContainerStyle}">
@@ -337,12 +337,17 @@
                                                             <FontIcon Glyph="&#xE712;" FontSize="12"/>
                                                             <Button.Flyout>
                                                                 <MenuFlyout>
-                                                                    <MenuFlyoutItem x:Uid="HP_MenuOpen" Text="Ouvrir le document" Click="OnOpenMenuItemClicked" Tag="{Binding}">
-                                                                        <MenuFlyoutItem.Icon>
-                                                                            <FontIcon Glyph="&#xE8E5;"/>
-                                                                        </MenuFlyoutItem.Icon>
-                                                                    </MenuFlyoutItem>
-                                                                    <MenuFlyoutItem x:Uid="HP_MenuExportWord" Text="Exporter en Word (.docx)" Click="OnExportWordMenuItemClicked" Tag="{Binding}">
+                                                                     <MenuFlyoutItem x:Uid="HP_MenuOpen" Text="Ouvrir le document" Click="OnOpenMenuItemClicked" Tag="{Binding}">
+                                                                         <MenuFlyoutItem.Icon>
+                                                                             <FontIcon Glyph="&#xE8E5;"/>
+                                                                         </MenuFlyoutItem.Icon>
+                                                                     </MenuFlyoutItem>
+                                                                     <MenuFlyoutItem x:Uid="HP_MenuRename" Text="Renommer" Click="OnRenameMenuItemClicked" Tag="{Binding}">
+                                                                         <MenuFlyoutItem.Icon>
+                                                                             <FontIcon Glyph="&#xE8AC;"/>
+                                                                         </MenuFlyoutItem.Icon>
+                                                                     </MenuFlyoutItem>
+                                                                     <MenuFlyoutItem x:Uid="HP_MenuExportWord" Text="Exporter en Word (.docx)" Click="OnExportWordMenuItemClicked" Tag="{Binding}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE8A5;"/>
                                                                         </MenuFlyoutItem.Icon>
@@ -383,7 +388,8 @@
                 BorderThickness="1" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                <TextBlock x:Name="UndoToastText" x:Uid="HP_UndoToastDefault" Text="Document supprimé" FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock x:Name="UndoToastText" x:Uid="HP_UndoToastDefault" Text="Document supprimé" FontSize="13" VerticalAlignment="Center"
+                           AutomationProperties.LiveSetting="Polite"/>
                 <Button x:Name="UndoToastButton" x:Uid="HP_UndoButton" Content="Annuler" Style="{ThemeResource AccentButtonStyle}"
                         Padding="12,4" FontSize="12" Click="OnUndoDeleteClicked"/>
                 <Button Style="{ThemeResource SubtleButtonStyle}" Padding="6" Click="OnDismissUndoClicked">

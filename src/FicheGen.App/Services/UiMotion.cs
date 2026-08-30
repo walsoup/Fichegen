@@ -13,7 +13,7 @@ namespace FicheGen.App.Services;
 /// </summary>
 public static class UiMotion
 {
-    public static bool Enabled { get; } = ReadAnimationsEnabled();
+    public static bool Enabled => ReadAnimationsEnabled();
 
     private static bool ReadAnimationsEnabled()
     {

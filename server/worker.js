@@ -26,14 +26,12 @@ export default {
 
     const url = new URL(request.url);
 
-    // Health check & dump of active resolved routes
+    // Health check (safe status only, no internal route dump)
     if (url.pathname === "/" || url.pathname === "/health") {
-      const routes = await fetchResolvedRoutes(env);
       return new Response(JSON.stringify({
         status: "healthy",
         service: "PROFstudio AI Proxy",
         version: "1.3.0",
-        routes,
       }, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
@@ -45,21 +43,39 @@ export default {
         return new Response("Method not allowed", { status: 405 });
       }
 
-      // 1. Authenticate Teacher via Supabase JWT or community access token
+      // Check request size (read arrayBuffer safely, max 1MB)
+      let rawText;
+      try {
+        const rawBuffer = await request.arrayBuffer();
+        if (rawBuffer.byteLength > 1024 * 1024) {
+          return new Response(
+            JSON.stringify({ error: { message: "Payload too large. Max size is 1MB.", code: "payload_too_large" } }),
+            { status: 413, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        rawText = new TextDecoder().decode(rawBuffer);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: { message: "Erreur de lecture de la requête.", code: "read_error" } }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 1. Authenticate Teacher via Supabase JWT
       const authHeader = request.headers.get("Authorization");
       let user = null;
       let profile = null;
+      let userToken = null;
 
       if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-        user = await verifySupabaseJwt(token, env.SUPABASE_ANON_KEY);
+        userToken = authHeader.substring(7);
+        user = await verifySupabaseJwt(userToken, env.SUPABASE_ANON_KEY);
         if (user && user.id) {
-          profile = await getTeacherProfile(user.id, token, env);
+          profile = await getTeacherProfile(user.id, userToken, env);
         }
       }
 
-      const isCommunity = authHeader && authHeader.includes("profstudio-community");
-      if (!user && !isCommunity) {
+      if (!user || !user.id) {
         return new Response(
           JSON.stringify({
             error: {
@@ -72,35 +88,92 @@ export default {
         );
       }
 
-      // 1b. Check if teacher account is approved by admin & has remaining quota
-      if (profile) {
-        if (profile.is_approved === false) {
-          return new Response(
-            JSON.stringify({
-              error: {
-                message: "Votre compte enseignant est en attente d'approbation par l'administrateur. Veuillez patienter.",
-                code: "account_pending_approval",
-              }
-            }),
-            { status: 403, headers: { "Content-Type": "application/json" } }
-          );
-        }
+      // 1b. Check if teacher account is approved by admin & has remaining quota (fail-closed)
+      if (!profile) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Impossible de valider le profil enseignant.",
+              code: "profile_not_found",
+            }
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
 
-        if (typeof profile.monthly_quota === "number" && profile.monthly_quota <= 0) {
-          return new Response(
-            JSON.stringify({
-              error: {
-                message: "Quota mensuel de générations atteint. Contactez votre établissement ou l'administrateur.",
-                code: "quota_exceeded",
-              }
-            }),
-            { status: 429, headers: { "Content-Type": "application/json" } }
-          );
-        }
+      if (profile.is_approved !== true) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Votre compte enseignant est en attente d'approbation par l'administrateur. Veuillez patienter.",
+              code: "account_pending_approval",
+            }
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (typeof profile.monthly_quota === "number" && profile.monthly_quota <= 0) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Quota mensuel de générations atteint. Contactez votre établissement ou l'administrateur.",
+              code: "quota_exceeded",
+            }
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        );
       }
 
       // 2. Parse request payload
-      const body = await request.json();
+      let body;
+      try {
+        body = JSON.parse(rawText);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: { message: "Corps de requête JSON invalide.", code: "invalid_json" } }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!body || typeof body !== "object") {
+        return new Response(
+          JSON.stringify({ error: { message: "Requête invalide.", code: "invalid_request" } }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate messages
+      if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 50) {
+        return new Response(
+          JSON.stringify({ error: { message: "Le nombre de messages doit être compris entre 1 et 50.", code: "invalid_messages_count" } }),
+          { status: 422, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      for (const msg of body.messages) {
+        if (!msg || typeof msg !== "object") {
+          return new Response(JSON.stringify({ error: { message: "Message malformé.", code: "malformed_message" } }), { status: 422, headers: { "Content-Type": "application/json" } });
+        }
+        if (!["system", "user", "assistant"].includes(msg.role)) {
+          return new Response(JSON.stringify({ error: { message: `Rôle de message non supporté : ${msg.role}`, code: "invalid_role" } }), { status: 422, headers: { "Content-Type": "application/json" } });
+        }
+        if (typeof msg.content !== "string" || msg.content.length > 50000) {
+          return new Response(JSON.stringify({ error: { message: "Contenu de message trop volumineux (50 000 caractères max).", code: "message_too_long" } }), { status: 422, headers: { "Content-Type": "application/json" } });
+        }
+      }
+
+      // Bound consumption parameters
+      if (typeof body.max_tokens === "number") {
+        body.max_tokens = Math.max(1, Math.min(8192, Math.floor(body.max_tokens)));
+      } else {
+        body.max_tokens = 4096;
+      }
+
+      if (typeof body.temperature === "number") {
+        body.temperature = Math.max(0.0, Math.min(2.0, body.temperature));
+      }
+
       const isStreaming = body.stream === true;
       const requestedTask = (body.model || "fiche").trim().toLowerCase();
 
@@ -111,7 +184,7 @@ export default {
         return new Response(
           JSON.stringify({
             error: {
-              message: `Aucune route IA configurée pour la tâche '${requestedTask}'. Veuillez configurer 'ai_routes' dans Supabase.`,
+              message: `Aucune route IA configurée pour la tâche demandée.`,
               code: "no_route",
             }
           }),
@@ -131,11 +204,10 @@ export default {
           isStreaming,
         });
       } catch (primaryErr) {
-        console.warn(`[Proxy] Échec provider ${resolvedRoute.provider} (${resolvedRoute.model}):`, primaryErr.message);
+        console.warn(`[Proxy] Échec provider ${resolvedRoute.provider}:`, primaryErr.message);
 
         // 5. Automatic Fallback attempt if configured and enabled
         if (resolvedRoute.fallback_provider && resolvedRoute.fallback_enabled && resolvedRoute.fallback_model && resolvedRoute.fallback_base_url) {
-          console.info(`[Proxy] Basculement sur le fallback ${resolvedRoute.fallback_provider} (${resolvedRoute.fallback_model})`);
           try {
             return await executeProviderCall({
               baseUrl: resolvedRoute.fallback_base_url,
@@ -150,7 +222,7 @@ export default {
             return new Response(
               JSON.stringify({
                 error: {
-                  message: `Échec du fournisseur principal (${primaryErr.message}) et du fallback (${fallbackErr.message})`,
+                  message: "Le service d'IA est temporairement indisponible. Veuillez réessayer ultérieurement.",
                   code: "all_providers_failed",
                 }
               }),
@@ -160,10 +232,11 @@ export default {
         }
 
         return new Response(
-          JSON.stringify({ error: { message: primaryErr.message } }),
-          { status: 500, headers: { "Content-Type": "application/json" } }
+          JSON.stringify({ error: { message: "Erreur lors de la génération avec le fournisseur d'IA.", code: "provider_error" } }),
+          { status: 502, headers: { "Content-Type": "application/json" } }
         );
       }
+    }
     }
 
     return new Response("Not found", { status: 404 });
@@ -277,30 +350,20 @@ async function callAnthropicApi(baseUrl, model, body, apiKey, isStreaming) {
     }), { headers: { "Content-Type": "application/json" } });
   }
 
-  // Transform Anthropic SSE stream to OpenAI standard format for client
-  const { readable, writable } = new TransformStream({
-    transform(chunk, controller) {
-      const text = new TextDecoder().decode(chunk);
-      for (const line of text.split("\n")) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.substring(6));
-            if (data.type === "content_block_delta" && data.delta?.text) {
-              const chunkObj = {
-                id: `chatcmpl-${Date.now()}`,
-                object: "chat.completion.chunk",
-                model,
-                choices: [{ index: 0, delta: { content: data.delta.text }, finish_reason: null }],
-              };
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
-            }
-          } catch {}
-        }
+  // Transform Anthropic SSE stream to OpenAI standard format for client with proper chunk/line buffering
+  const { readable, writable } = createSseTransformStream((payload, controller) => {
+    try {
+      const data = JSON.parse(payload);
+      if (data.type === "content_block_delta" && data.delta?.text) {
+        const chunkObj = {
+          id: `chatcmpl-${Date.now()}`,
+          object: "chat.completion.chunk",
+          model,
+          choices: [{ index: 0, delta: { content: data.delta.text }, finish_reason: null }],
+        };
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
       }
-    },
-    flush(controller) {
-      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-    },
+    } catch {}
   });
 
   res.body.pipeTo(writable);
@@ -364,35 +427,57 @@ async function callGoogleNativeApi(baseUrl, model, body, apiKey, isStreaming) {
     }), { headers: { "Content-Type": "application/json" } });
   }
 
-  const { readable, writable } = new TransformStream({
-    transform(chunk, controller) {
-      const text = new TextDecoder().decode(chunk);
-      for (const line of text.split("\n")) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.substring(6));
-            const delta = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            if (delta) {
-              const chunkObj = {
-                id: `chatcmpl-${Date.now()}`,
-                object: "chat.completion.chunk",
-                model,
-                choices: [{ index: 0, delta: { content: delta }, finish_reason: null }],
-              };
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
-            }
-          } catch {}
-        }
+  const { readable, writable } = createSseTransformStream((payload, controller) => {
+    try {
+      const data = JSON.parse(payload);
+      const delta = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (delta) {
+        const chunkObj = {
+          id: `chatcmpl-${Date.now()}`,
+          object: "chat.completion.chunk",
+          model,
+          choices: [{ index: 0, delta: { content: delta }, finish_reason: null }],
+        };
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunkObj)}\n\n`));
       }
-    },
-    flush(controller) {
-      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-    },
+    } catch {}
   });
 
   res.body.pipeTo(writable);
   return new Response(readable, {
     headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" },
+  });
+}
+
+function createSseTransformStream(transformer) {
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (line.startsWith("data: ")) {
+          const payload = line.substring(6).trim();
+          if (payload && payload !== "[DONE]") {
+            transformer(payload, controller);
+          }
+        }
+      }
+    },
+    flush(controller) {
+      buffer += decoder.decode();
+      if (buffer.trim().startsWith("data: ")) {
+        const payload = buffer.trim().substring(6).trim();
+        if (payload && payload !== "[DONE]") {
+          transformer(payload, controller);
+        }
+      }
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+    },
   });
 }
 

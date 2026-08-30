@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FicheGen.Core.Abstractions;
+using FicheGen.Core.Documents;
 using FicheGen.Core.Services;
 using FicheGen.Core.Storage;
 
@@ -53,8 +54,6 @@ public partial class HistoryGroupViewModel : ObservableObject
 /// </summary>
 public partial class HistoryItemViewModel : ObservableObject
 {
-    private static readonly CultureInfo FrenchCulture = CultureInfo.GetCultureInfo("fr-FR");
-
     private readonly HistoryItem _model;
     private readonly string _plainText;
     private string? _levelBadge;
@@ -62,11 +61,13 @@ public partial class HistoryItemViewModel : ObservableObject
     public HistoryItemViewModel(HistoryItem model, string? searchQuery)
     {
         _model = model;
-        Title = string.IsNullOrWhiteSpace(model.Title) ? "Sans titre" : model.Title;
+        Title = string.IsNullOrWhiteSpace(model.Title) ? Services.L10n.Get("History_Untitled", "Sans titre") : model.Title;
         EditingTitle = Title;
         IsFavorite = model.IsFavorite;
 
-        _plainText = HistoryTextUtilities.ToPlainText(model.Html);
+        _plainText = !string.IsNullOrWhiteSpace(model.PlainText)
+            ? model.PlainText
+            : HistoryTextUtilities.ToPlainText(model.Html);
         Snippet = HistoryTextUtilities.BuildSnippet(_plainText, searchQuery);
         HasSnippet = Snippet.Length > 0;
     }
@@ -96,9 +97,9 @@ public partial class HistoryItemViewModel : ObservableObject
 
     public string TypeDisplay => TypeKey switch
     {
-        "evaluation" => "Évaluation",
-        "quiz" => "Quiz",
-        _ => "Fiche"
+        "evaluation" => Services.L10n.Get("History_TypeEvaluation", "Évaluation"),
+        "quiz" => Services.L10n.Get("History_TypeQuiz", "Quiz"),
+        _ => Services.L10n.Get("History_TypeFiche", "Fiche")
     };
 
     public string TypeEmoji => TypeKey switch
@@ -108,24 +109,24 @@ public partial class HistoryItemViewModel : ObservableObject
         _ => "📘"
     };
 
-    public string LevelBadge => _levelBadge ??= HistoryTextUtilities.ExtractLevel(_model.Title, _model.Html);
+    public string LevelBadge => _levelBadge ??= HistoryTextUtilities.ExtractLevel(_model.Title, !string.IsNullOrEmpty(_plainText) ? _plainText : _model.Html);
 
     public string CreatedTimeDisplay => CreatedUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
 
-    public string CreatedFullDisplay => CreatedUtc.ToLocalTime().ToString("dddd d MMMM yyyy 'à' HH:mm", FrenchCulture);
+    public string CreatedFullDisplay => CreatedUtc.ToLocalTime().ToString("f", CultureInfo.CurrentUICulture);
 
     public string FavoriteGlyph => IsFavorite ? "\uE735" : "\uE734";
 
-    public string FavoriteActionName => IsFavorite ? "Retirer des favoris" : "Ajouter aux favoris";
+    public string FavoriteActionName => IsFavorite ? Services.L10n.Get("History_FavoriteRemove", "Retirer des favoris") : Services.L10n.Get("History_FavoriteAdd", "Ajouter aux favoris");
 
-    public string FavoriteText => IsFavorite ? "Retirer des favoris" : "Marquer comme favori";
+    public string FavoriteText => IsFavorite ? Services.L10n.Get("History_FavoriteRemove", "Retirer des favoris") : Services.L10n.Get("History_FavoriteMark", "Marquer comme favori");
 
     public string FullAutomationName =>
-        $"{TypeDisplay} « {Title} », créé le {CreatedFullDisplay}{(IsFavorite ? ", favori" : string.Empty)}";
+        Services.L10n.Format("History_AutomationItem", TypeDisplay, Title, CreatedFullDisplay, IsFavorite ? Services.L10n.Get("History_FavoriteSuffix", ", favori") : string.Empty);
 
-    public string SelectionAutomationName => $"Sélectionner le document « {Title} »";
+    public string SelectionAutomationName => Services.L10n.Format("History_AutomationSelect", Title);
 
-    public string OverflowAutomationName => $"Plus d'actions pour « {Title} »";
+    public string OverflowAutomationName => Services.L10n.Format("History_AutomationMore", Title);
 
     // ---- Propriétés observables ----------------------------------------------
 
@@ -266,6 +267,7 @@ public partial class HistoryViewModel : ObservableObject
     private readonly List<HistoryItemViewModel> _allItems = new();
     private CancellationTokenSource? _debounceCts;
     private int _loadVersion;
+    private HistoryItem? _lastDeletedFullModel;
 
     public HistoryViewModel(
         IHistoryRepository historyRepository,
@@ -300,9 +302,9 @@ public partial class HistoryViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EmptyStateTitle))]
     public partial string SearchQuery { get; set; } = string.Empty;
 
-    /// <summary>"Tout" | "Fiches" | "Évaluations" | "Quiz" | "Favoris".</summary>
+    /// <summary>"all" | "fiche" | "evaluation" | "quiz" | "favorite" (or French legacy strings for backwards compat).</summary>
     [ObservableProperty]
-    public partial string SelectedTypeFilter { get; set; } = "Tout";
+    public partial string SelectedTypeFilter { get; set; } = "all";
 
     [ObservableProperty]
     public partial HistoryItemViewModel? SelectedItem { get; set; }
@@ -317,8 +319,8 @@ public partial class HistoryViewModel : ObservableObject
     /// <summary>Titre de l'état vide : distingue « aucun document » de « aucun résultat ».</summary>
     public string EmptyStateTitle
         => !string.IsNullOrWhiteSpace(SearchQuery)
-            ? "Aucun résultat trouvé"
-            : "Votre bibliothèque est vide pour l'instant";
+            ? Services.L10n.Get("History_NoResultsTitle", "Aucun résultat trouvé")
+            : Services.L10n.Get("History_EmptyLibraryTitle", "Votre bibliothèque est vide pour l'instant");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
@@ -330,19 +332,19 @@ public partial class HistoryViewModel : ObservableObject
     public partial int SelectedCount { get; set; }
 
     [ObservableProperty]
-    public partial string StatsTotalDisplay { get; set; } = "0 document";
+    public partial string StatsTotalDisplay { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string StatsMonthDisplay { get; set; } = "Aucune génération ce mois-ci";
+    public partial string StatsMonthDisplay { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string StatsFavoritesDisplay { get; set; } = "0 favori";
+    public partial string StatsFavoritesDisplay { get; set; } = string.Empty;
 
     public bool HasSelection => SelectedCount > 0;
 
     public bool ShowEmptyState => !HasResults && !IsLoading;
 
-    public string SelectionSummary => Pluralize(SelectedCount, "document sélectionné", "documents sélectionnés");
+    public string SelectionSummary => Services.L10n.Format("History_SelectionSummary", SelectedCount);
 
     // ---- Réactions aux changements --------------------------------------------
 
@@ -364,8 +366,8 @@ public partial class HistoryViewModel : ObservableObject
         var old = _debounceCts;
         if (old is null) return;
         _debounceCts = null;
-        old.Cancel();
-        old.Dispose();
+        try { old.Cancel(); } catch (ObjectDisposedException) { }
+        try { old.Dispose(); } catch (ObjectDisposedException) { }
     }
 
     private async Task DebouncedLoadAsync(CancellationTokenSource cts)
@@ -421,20 +423,21 @@ public partial class HistoryViewModel : ObservableObject
         var version = ++_loadVersion;
         IsLoading = true;
         StatusMessage = string.IsNullOrWhiteSpace(SearchQuery)
-            ? "Chargement de l'historique…"
-            : $"Recherche de « {SearchQuery} » en cours…";
+            ? Services.L10n.Get("History_Loading", "Chargement de l'historique…")
+            : Services.L10n.Format("History_Searching", SearchQuery);
 
         try
         {
-            var typeFilter = SelectedTypeFilter switch
+            var filterLower = (SelectedTypeFilter ?? "all").ToLowerInvariant();
+            var typeFilter = filterLower switch
             {
-                "Fiches" => "fiche",
-                "Évaluations" => "evaluation",
-                "Quiz" => "quiz",
+                "fiche" or "fiches" => "fiche",
+                "evaluation" or "évaluations" or "evaluations" => "evaluation",
+                "quiz" => "quiz",
                 _ => null
             };
 
-            var isFavoriteOnly = SelectedTypeFilter == "Favoris";
+            var isFavoriteOnly = filterLower is "favorite" or "favoris" or "favorites";
 
             var items = await _historyRepository.SearchAsync(
                 query: SearchQuery,
@@ -456,16 +459,16 @@ public partial class HistoryViewModel : ObservableObject
 
             StatusMessage = _allItems.Count switch
             {
-                0 => "Aucun document ne correspond aux critères.",
-                1 => "1 document trouvé.",
-                var n => $"{n} documents trouvés."
+                0 => Services.L10n.Get("History_NoResultsMatching", "Aucun document ne correspond aux critères."),
+                1 => Services.L10n.Get("History_OneResultFound", "1 document trouvé."),
+                var n => Services.L10n.Format("History_MultipleResultsFound", n)
             };
         }
         catch (Exception ex)
         {
             if (version == _loadVersion)
             {
-                StatusMessage = $"Erreur lors du chargement de l'historique : {ex.Message}";
+                StatusMessage = Services.L10n.Format("History_LoadError", ex.Message);
             }
         }
         finally
@@ -487,7 +490,7 @@ public partial class HistoryViewModel : ObservableObject
         _allItems.Clear();
         GroupedItems.Clear();
 
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date;
         var yesterday = today.AddDays(-1);
         var thisWeek = today.AddDays(-7);
 
@@ -502,17 +505,17 @@ public partial class HistoryViewModel : ObservableObject
             vm.PropertyChanged += OnItemPropertyChanged;
             _allItems.Add(vm);
 
-            var date = model.CreatedUtc.Date;
-            if (date == today) todayItems.Add(vm);
-            else if (date == yesterday) yesterdayItems.Add(vm);
-            else if (date >= thisWeek) weekItems.Add(vm);
+            var localDate = model.CreatedUtc.ToLocalTime().Date;
+            if (localDate == today) todayItems.Add(vm);
+            else if (localDate == yesterday) yesterdayItems.Add(vm);
+            else if (localDate >= thisWeek) weekItems.Add(vm);
             else olderItems.Add(vm);
         }
 
-        if (todayItems.Count > 0) AddGroup("Aujourd'hui", todayItems);
-        if (yesterdayItems.Count > 0) AddGroup("Hier", yesterdayItems);
-        if (weekItems.Count > 0) AddGroup("Cette semaine", weekItems);
-        if (olderItems.Count > 0) AddGroup("Plus ancien", olderItems);
+        if (todayItems.Count > 0) AddGroup(Services.L10n.Get("History_GroupToday", "Aujourd'hui"), todayItems);
+        if (yesterdayItems.Count > 0) AddGroup(Services.L10n.Get("History_GroupYesterday", "Hier"), yesterdayItems);
+        if (weekItems.Count > 0) AddGroup(Services.L10n.Get("History_GroupThisWeek", "Cette semaine"), weekItems);
+        if (olderItems.Count > 0) AddGroup(Services.L10n.Get("History_GroupOlder", "Plus ancien"), olderItems);
     }
 
     private void AddGroup(string header, List<HistoryItemViewModel> items)
@@ -523,7 +526,7 @@ public partial class HistoryViewModel : ObservableObject
             group.Items.Add(item);
         }
 
-        group.CountDisplay = Pluralize(group.Items.Count, "document", "documents");
+        group.CountDisplay = Services.L10n.Format("History_GroupCount", group.Items.Count);
         GroupedItems.Add(group);
     }
 
@@ -542,15 +545,15 @@ public partial class HistoryViewModel : ObservableObject
 
     private void UpdateStats()
     {
-        StatsTotalDisplay = Pluralize(_allItems.Count, "document", "documents");
+        StatsTotalDisplay = Services.L10n.Format("History_StatsTotal", _allItems.Count);
 
         var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var monthCount = _allItems.Count(i => i.CreatedUtc >= monthStart);
         StatsMonthDisplay = monthCount == 0
-            ? "Aucune génération ce mois-ci"
-            : Pluralize(monthCount, "génération ce mois-ci", "générations ce mois-ci");
+            ? Services.L10n.Get("History_StatsMonthEmpty", "Aucune génération ce mois-ci")
+            : Services.L10n.Format("History_StatsMonthCount", monthCount);
 
-        StatsFavoritesDisplay = Pluralize(_allItems.Count(i => i.IsFavorite), "favori", "favoris");
+        StatsFavoritesDisplay = Services.L10n.Format("History_StatsFavorites", _allItems.Count(i => i.IsFavorite));
     }
 
     private void RemoveItem(HistoryItemViewModel item)
@@ -563,7 +566,7 @@ public partial class HistoryViewModel : ObservableObject
             var group = GroupedItems[i];
             if (group.Items.Remove(item))
             {
-                group.CountDisplay = Pluralize(group.Items.Count, "document", "documents");
+                group.CountDisplay = Services.L10n.Format("History_GroupCount", group.Items.Count);
                 if (group.Items.Count == 0)
                 {
                     GroupedItems.RemoveAt(i);
@@ -589,7 +592,7 @@ public partial class HistoryViewModel : ObservableObject
     // ---- Actions unitaires -------------------------------------------------------
 
     [RelayCommand]
-    public void OpenItem(HistoryItemViewModel? item)
+    public async Task OpenItemAsync(HistoryItemViewModel? item)
     {
         if (item is null)
         {
@@ -598,16 +601,56 @@ public partial class HistoryViewModel : ObservableObject
 
         SelectedItem = item;
 
-        // Réhydrate la prévisualisation principale (HTML + preset de style).
-        if (!string.IsNullOrEmpty(item.Html))
+        var fullModel = item.Model;
+        if (string.IsNullOrEmpty(fullModel.SourceJson) && string.IsNullOrEmpty(fullModel.Html))
         {
-            _resultViewModel.CurrentHtml = item.Html;
-            _resultViewModel.ActivePresetId = item.StylePresetId ?? "modern";
-            _resultViewModel.StatusMessage = $"Document « {item.Title} » chargé depuis l'historique.";
+            var fetched = await _historyRepository.GetByIdAsync(item.Id).ConfigureAwait(true);
+            if (fetched != null)
+            {
+                fullModel = fetched;
+            }
+        }
+
+        GeneratedDocument? doc = null;
+        if (!string.IsNullOrEmpty(fullModel.SourceJson))
+        {
+            if (JsonCleaner.TryDeserializeDocument(fullModel.SourceJson, out var parsedDoc) && parsedDoc != null)
+            {
+                doc = parsedDoc;
+            }
+            else
+            {
+                try
+                {
+                    doc = System.Text.Json.JsonSerializer.Deserialize<GeneratedDocument>(fullModel.SourceJson);
+                }
+                catch { }
+            }
+        }
+
+        if (doc == null && !string.IsNullOrEmpty(fullModel.PlainText))
+        {
+            doc = FallbackMarkdownRenderer.ConvertMarkdownToDocument(fullModel.PlainText, fullModel.Title, includeWarningCallout: false);
+        }
+
+        if (doc != null)
+        {
+            _resultViewModel.LoadDocument(doc, fullModel.Html ?? string.Empty, fullModel.StylePresetId);
+        }
+        else if (!string.IsNullOrEmpty(fullModel.Html))
+        {
+            _resultViewModel.CurrentHtml = fullModel.Html;
+            _resultViewModel.ActivePresetId = fullModel.StylePresetId ?? "modern";
+            _resultViewModel.StatusMessage = $"Document « {fullModel.Title} » chargé depuis l'historique.";
         }
 
         StatusMessage = $"« {item.Title} » ouvert dans le panneau de lecture.";
-        DocumentOpened?.Invoke(this, item);
+        DocumentOpened?.Invoke(this, new HistoryItemViewModel(fullModel, SearchQuery));
+    }
+
+    public void OpenItem(HistoryItemViewModel? item)
+    {
+        _ = OpenItemAsync(item);
     }
 
     [RelayCommand]
@@ -651,9 +694,13 @@ public partial class HistoryViewModel : ObservableObject
             return;
         }
 
+        // Hydrate the full model before deleting so restore/undo retains all fields byte-for-byte
+        var fullModel = await _historyRepository.GetByIdAsync(item.Id).ConfigureAwait(false) ?? item.Model;
+        _lastDeletedFullModel = fullModel;
+
         try
         {
-            await _historyRepository.DeleteAsync(item.Id);
+            await _historyRepository.DeleteAsync(item.Id).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -669,13 +716,18 @@ public partial class HistoryViewModel : ObservableObject
     [RelayCommand]
     public async Task RestoreItemAsync(HistoryItemViewModel? item)
     {
-        if (item?.Model is null) return;
+        var modelToRestore = (_lastDeletedFullModel != null && (item == null || _lastDeletedFullModel.Id == item.Id))
+            ? _lastDeletedFullModel
+            : item?.Model;
+
+        if (modelToRestore is null) return;
 
         try
         {
-            await _historyRepository.SaveAsync(item.Model);
-            await LoadHistoryAsync();
-            StatusMessage = $"« {item.Title} » restauré dans l'historique.";
+            await _historyRepository.SaveAsync(modelToRestore).ConfigureAwait(false);
+            _lastDeletedFullModel = null;
+            await LoadHistoryAsync().ConfigureAwait(false);
+            StatusMessage = $"« {modelToRestore.Title} » restauré dans l'historique.";
         }
         catch (Exception ex)
         {
@@ -744,6 +796,34 @@ public partial class HistoryViewModel : ObservableObject
         item.IsEditing = false;
     }
 
+    public async Task<bool> RenameItemAsync(HistoryItemViewModel? item, string newTitle)
+    {
+        if (item is null) return false;
+        var trimmed = newTitle?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(trimmed) || string.Equals(trimmed, item.Title, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var previousTitle = item.Title;
+        item.Title = trimmed;
+        item.EditingTitle = trimmed;
+
+        try
+        {
+            await _historyRepository.RenameAsync(item.Id, trimmed);
+            StatusMessage = $"Document renommé en « {trimmed} ».";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            item.Title = previousTitle;
+            item.EditingTitle = previousTitle;
+            StatusMessage = $"Échec du renommage : {ex.Message}";
+            return false;
+        }
+    }
+
     // ---- Sélection multiple --------------------------------------------------------
 
     [RelayCommand]
@@ -777,17 +857,31 @@ public partial class HistoryViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void ExportSelectionRtf() => RaiseExport(HistoryExportFormat.Rtf, single: null);
 
-    private void RaiseExport(HistoryExportFormat format, HistoryItemViewModel? single)
+    private async void RaiseExport(HistoryExportFormat format, HistoryItemViewModel? single)
     {
-        var items = single is not null
+        var rawItems = single is not null
             ? new[] { single }
             : _allItems.Where(i => i.IsSelected).ToArray();
 
-        if (items.Length == 0)
+        if (rawItems.Length == 0)
         {
             return;
         }
 
-        ExportRequested?.Invoke(this, new HistoryExportRequestedEventArgs(items, format));
+        var hydratedItems = new List<HistoryItemViewModel>(rawItems.Length);
+        foreach (var item in rawItems)
+        {
+            if (string.IsNullOrEmpty(item.Model.SourceJson) && string.IsNullOrEmpty(item.Model.Html))
+            {
+                var fullModel = await _historyRepository.GetByIdAsync(item.Id).ConfigureAwait(true) ?? item.Model;
+                hydratedItems.Add(new HistoryItemViewModel(fullModel, SearchQuery));
+            }
+            else
+            {
+                hydratedItems.Add(item);
+            }
+        }
+
+        ExportRequested?.Invoke(this, new HistoryExportRequestedEventArgs(hydratedItems, format));
     }
 }

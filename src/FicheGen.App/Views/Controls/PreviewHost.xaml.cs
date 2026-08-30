@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FicheGen.App.Services;
 using FicheGen.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -172,9 +173,7 @@ public sealed partial class PreviewHost : UserControl
     {
         if (sender is ResultViewModel vm)
         {
-            if (e.PropertyName == nameof(ResultViewModel.CurrentHtml) ||
-                e.PropertyName == nameof(ResultViewModel.PreviewHtml) ||
-                e.PropertyName == nameof(ResultViewModel.CurrentDocument))
+            if (e.PropertyName == nameof(ResultViewModel.CurrentHtml))
             {
                 SyncHtmlFromViewModel(vm);
             }
@@ -200,7 +199,7 @@ public sealed partial class PreviewHost : UserControl
                 {
                     if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Visible;
                     if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Collapsed;
-                    State = PreviewState.Generating;
+                    State = PreviewState.Streaming;
                 }
                 else
                 {
@@ -245,14 +244,17 @@ public sealed partial class PreviewHost : UserControl
 
     private async void SyncHtmlFromViewModel(ResultViewModel vm)
     {
-        if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Collapsed;
-        if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Visible;
+        if (string.IsNullOrWhiteSpace(vm.StreamedContent))
+        {
+            if (StreamedPreviewCard != null) StreamedPreviewCard.Visibility = Visibility.Collapsed;
+            if (SkelShimmerGroup != null) SkelShimmerGroup.Visibility = Visibility.Visible;
+        }
 
         if (!string.IsNullOrWhiteSpace(vm.CurrentHtml))
         {
             await NavigateToStringAsync(vm.CurrentHtml);
         }
-        else
+        else if (State != PreviewState.Streaming)
         {
             State = PreviewState.Empty;
         }
@@ -342,7 +344,7 @@ public sealed partial class PreviewHost : UserControl
         if (EmptyStatePanel != null)
             EmptyStatePanel.Visibility = state == PreviewState.Empty ? Visibility.Visible : Visibility.Collapsed;
         if (SkeletonOverlay != null)
-            SkeletonOverlay.Visibility = state == PreviewState.Generating ? Visibility.Visible : Visibility.Collapsed;
+            SkeletonOverlay.Visibility = (state == PreviewState.Generating || state == PreviewState.Streaming) ? Visibility.Visible : Visibility.Collapsed;
         if (WebViewControl != null)
             WebViewControl.Visibility = (state == PreviewState.Streaming || state == PreviewState.Ready) ? Visibility.Visible : Visibility.Collapsed;
         if (StreamingBanner != null)
@@ -361,12 +363,25 @@ public sealed partial class PreviewHost : UserControl
 
         if (!IsLoaded)
         {
+            if (EmptyStatePanel != null) EmptyStatePanel.Opacity = 1.0;
+            if (EmptyStateTransform != null) EmptyStateTransform.Y = 0.0;
             return;
         }
 
-        if (state == PreviewState.Generating) ShimmerStoryboard?.Begin(); else ShimmerStoryboard?.Stop();
-        if (state == PreviewState.Streaming) PulseStoryboard?.Begin(); else PulseStoryboard?.Stop();
-        if (state == PreviewState.Empty) EmptyEntranceStoryboard?.Begin();
+        if (UiMotion.Enabled)
+        {
+            try { if (state == PreviewState.Generating) ShimmerStoryboard?.Begin(); else ShimmerStoryboard?.Stop(); } catch { }
+            try { if (state == PreviewState.Streaming) PulseStoryboard?.Begin(); else PulseStoryboard?.Stop(); } catch { }
+            try { if (state == PreviewState.Empty) EmptyEntranceStoryboard?.Begin(); } catch { }
+        }
+        else
+        {
+            try { ShimmerStoryboard?.Stop(); } catch { }
+            try { PulseStoryboard?.Stop(); } catch { }
+            try { EmptyEntranceStoryboard?.Stop(); } catch { }
+            if (EmptyStatePanel != null) EmptyStatePanel.Opacity = 1.0;
+            if (EmptyStateTransform != null) EmptyStateTransform.Y = 0.0;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -484,13 +499,88 @@ public sealed partial class PreviewHost : UserControl
     }
 
     // ------------------------------------------------------------------
-    // Édition / Exports / Presse-papiers / Impression / Lecture / Version Élève
+    // Édition directe sur l'aperçu (n1) / Formulaire avancé
     // ------------------------------------------------------------------
 
     private void OnViewModelEditRequested(object? sender, EventArgs e)
-        => _ = ShowDocumentEditDialogAsync();
+        => _ = ToggleDirectEditAsync();
 
     private void OnEditDocumentClicked(object sender, RoutedEventArgs e)
+        => _ = ToggleDirectEditAsync();
+
+    private void OnFinishDirectEditClicked(object sender, RoutedEventArgs e)
+        => _ = FinishDirectEditAsync();
+
+    private async Task ToggleDirectEditAsync()
+    {
+        if (DataContext is not ResultViewModel vm || vm.CurrentDocument == null) return;
+
+        if (vm.IsDirectEditMode)
+        {
+            await FinishDirectEditAsync();
+        }
+        else
+        {
+            await StartDirectEditAsync();
+        }
+    }
+
+    private async Task StartDirectEditAsync()
+    {
+        if (DataContext is not ResultViewModel vm) return;
+        vm.IsDirectEditMode = true;
+
+        try
+        {
+            if (WebViewControl?.CoreWebView2 != null)
+            {
+                await WebViewControl.ExecuteScriptAsync(@"
+                    (() => {
+                        const article = document.querySelector('.fiche-content') || document.body;
+                        article.contentEditable = 'true';
+                        article.style.outline = '2px dashed #2563EB';
+                        article.style.outlineOffset = '6px';
+                        article.style.padding = '8px';
+                        article.focus();
+                    })();
+                ");
+            }
+        }
+        catch { }
+    }
+
+    private async Task FinishDirectEditAsync()
+    {
+        if (DataContext is not ResultViewModel vm) return;
+        vm.IsDirectEditMode = false;
+
+        try
+        {
+            if (WebViewControl?.CoreWebView2 != null)
+            {
+                var rawJson = await WebViewControl.ExecuteScriptAsync(@"
+                    (() => {
+                        const article = document.querySelector('.fiche-content') || document.body;
+                        article.contentEditable = 'false';
+                        article.style.outline = 'none';
+                        return document.documentElement.outerHTML;
+                    })();
+                ");
+
+                if (!string.IsNullOrWhiteSpace(rawJson) && rawJson != "null")
+                {
+                    var html = System.Text.Json.JsonSerializer.Deserialize<string>(rawJson);
+                    if (!string.IsNullOrWhiteSpace(html))
+                    {
+                        vm.ApplyDirectHtmlEdits(html);
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    private void OnOpenEditDialogClicked(object sender, RoutedEventArgs e)
         => _ = ShowDocumentEditDialogAsync();
 
     private async Task ShowDocumentEditDialogAsync()
@@ -517,7 +607,7 @@ public sealed partial class PreviewHost : UserControl
         var bodyBox = new TextBox
         {
             Header = "Contenu du document (Markdown / Texte structuré)",
-            Text = vm.CurrentDocument.ToPlainText(),
+            Text = vm.CurrentDocument.ToBodyPlainText(),
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
             MinHeight = 260,
@@ -795,32 +885,10 @@ public sealed partial class PreviewHost : UserControl
     /// Joue l'animation connectée « carte d'historique → aperçu » préparée par HistoryPage.
     /// Silencieux si aucune animation n'est en attente ou si les animations sont désactivées.
     /// </summary>
-    public async Task RunIncomingAnimationAsync(Frame? frame)
+    public Task RunIncomingAnimationAsync(Frame? frame)
     {
-        try
-        {
-            if (!Services.UiMotion.Enabled || frame == null) return;
-
-            var anim = Microsoft.UI.Xaml.Media.Animation.ConnectedAnimationService
-                .GetForCurrentView().GetAnimation("openDoc");
-            if (anim == null) return;
-
-            if (ContentHost.ActualWidth == 0)
-            {
-                var loaded = new TaskCompletionSource<bool>();
-                RoutedEventHandler? handler = null;
-                handler = (_, _) => { ContentHost.Loaded -= handler; loaded.TrySetResult(true); };
-                ContentHost.Loaded += handler;
-                await Task.WhenAny(loaded.Task, Task.Delay(800));
-            }
-
-            UpdateLayout();
-            anim.TryStart(ContentHost);
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(ex, "Animation connectée non jouée.");
-        }
+        // En WinUI 3 Desktop, ConnectedAnimationService.GetForCurrentView() n'est pas supporté (requiert UWP CoreWindow).
+        return Task.CompletedTask;
     }
 
     // ------------------------------------------------------------------
@@ -877,9 +945,37 @@ public sealed partial class PreviewHost : UserControl
             _isWebView2Initialized = true;
             _isWebView2Failed = false;
 
-            // Désactive le zoom natif du navigateur (Ctrl+molette WebView2) :
-            // seul le pipeline ResultViewModel.ZoomFactor doit zoomer.
-            WebViewControl.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+            // Durcissement sécuritaire des paramètres WebView2
+            var settings = WebViewControl.CoreWebView2.Settings;
+            settings.AreBrowserAcceleratorKeysEnabled = false;
+            settings.AreDevToolsEnabled = false;
+            settings.AreDefaultContextMenusEnabled = false;
+            settings.IsGeneralAutofillEnabled = false;
+            settings.IsPasswordAutosaveEnabled = false;
+            settings.IsStatusBarEnabled = false;
+
+            // Bloque les navigations non sollicitées
+            WebViewControl.CoreWebView2.NavigationStarting += (s, e) =>
+            {
+                if (!e.Uri.StartsWith("about:blank", StringComparison.OrdinalIgnoreCase) &&
+                    !e.Uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.Cancel = true;
+                }
+            };
+
+            // Bloque l'ouverture de nouvelles fenêtres
+            WebViewControl.CoreWebView2.NewWindowRequested += (s, e) =>
+            {
+                e.Handled = true;
+            };
+
+            // Refuse toutes les demandes de permissions
+            WebViewControl.CoreWebView2.PermissionRequested += (s, e) =>
+            {
+                e.State = Microsoft.Web.WebView2.Core.CoreWebView2PermissionState.Deny;
+                e.Handled = true;
+            };
 
             // Ré-applique le zoom courant après chaque navigation : le premier
             // chargement HTML réinitialise sinon le style visuel à 100 %.
@@ -907,6 +1003,15 @@ public sealed partial class PreviewHost : UserControl
 
     private void OnWebViewNavigationCompleted(WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
     {
+        if (args.IsSuccess)
+        {
+            State = PreviewState.Ready;
+        }
+        else
+        {
+            State = PreviewState.Error;
+        }
+
         // Après une navigation (nouveau document), ré-applique le zoom du ViewModel.
         if (DataContext is ResultViewModel vm)
         {
@@ -914,9 +1019,19 @@ public sealed partial class PreviewHost : UserControl
         }
     }
 
+    private string? _lastNavigatedHtml;
+    private int _navigationVersion;
+
     /// <summary>Charge un document HTML dans l'aperçu et passe à l'état <see cref="PreviewState.Ready"/>.</summary>
     public async Task NavigateToStringAsync(string html)
     {
+        if (string.Equals(_lastNavigatedHtml, html, StringComparison.Ordinal) && State == PreviewState.Ready)
+        {
+            return;
+        }
+
+        var version = ++_navigationVersion;
+
         try
         {
             var ready = await EnsureWebViewReadyAsync();
@@ -926,8 +1041,13 @@ public sealed partial class PreviewHost : UserControl
                 return;
             }
 
+            if (version != _navigationVersion)
+            {
+                return; // Replaced by a more recent navigation request
+            }
+
+            _lastNavigatedHtml = html;
             WebViewControl.NavigateToString(html ?? string.Empty);
-            State = PreviewState.Ready;
         }
         catch (Exception ex)
         {

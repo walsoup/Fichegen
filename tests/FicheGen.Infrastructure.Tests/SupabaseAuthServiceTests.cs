@@ -184,4 +184,76 @@ public class SupabaseAuthServiceTests : IDisposable
         result.Success.Should().BeTrue();
         result.RequiresEmailConfirmation.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task GetValidTokenAsync_WhenTokenExpiring_RefreshesTokenSuccessfully()
+    {
+        // Arrange
+        // Create an expired JWT token (exp in the past)
+        var header = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"alg\":\"HS256\",\"typ\":\"JWT\"}")).TrimEnd('=');
+        var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"sub\":\"usr-123\",\"exp\":1000}")).TrimEnd('=');
+        var expiredJwt = $"{header}.{payload}.signature";
+
+        _credStore.Set("supabase_access_token", expiredJwt);
+        _credStore.Set("supabase_refresh_token", "valid_refresh_token_789");
+        _credStore.Set("supabase_user_email", "prof@ecole.fr");
+
+        var refreshResponse = new
+        {
+            access_token = "new_refreshed_jwt_999",
+            refresh_token = "new_refresh_token_888",
+            expires_in = 3600
+        };
+
+        _server.Given(Request.Create()
+            .WithPath("/auth/v1/token")
+            .WithParam("grant_type", "refresh_token")
+            .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(HttpStatusCode.OK)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(refreshResponse)));
+
+        var service = new SupabaseAuthService(_httpClient, _credStore, _settingsStore);
+
+        // Act
+        var token = await service.GetValidTokenAsync();
+
+        // Assert
+        token.Should().Be("new_refreshed_jwt_999");
+        _credStore.Get("supabase_access_token").Should().Be("new_refreshed_jwt_999");
+        _credStore.Get("supabase_refresh_token").Should().Be("new_refresh_token_888");
+    }
+
+    [Fact]
+    public async Task GetValidTokenAsync_WhenRefreshFails_ClearsSessionAndReturnsNull()
+    {
+        // Arrange
+        var header = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"alg\":\"HS256\",\"typ\":\"JWT\"}")).TrimEnd('=');
+        var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"sub\":\"usr-123\",\"exp\":1000}")).TrimEnd('=');
+        var expiredJwt = $"{header}.{payload}.signature";
+
+        _credStore.Set("supabase_access_token", expiredJwt);
+        _credStore.Set("supabase_refresh_token", "invalid_refresh_token");
+        _credStore.Set("supabase_user_email", "prof@ecole.fr");
+
+        _server.Given(Request.Create()
+            .WithPath("/auth/v1/token")
+            .WithParam("grant_type", "refresh_token")
+            .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(HttpStatusCode.Unauthorized)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("{\"error\": \"invalid_grant\"}"));
+
+        var service = new SupabaseAuthService(_httpClient, _credStore, _settingsStore);
+
+        // Act
+        var token = await service.GetValidTokenAsync();
+
+        // Assert
+        token.Should().BeNull();
+        service.IsAuthenticated.Should().BeFalse();
+        _credStore.Get("supabase_access_token").Should().BeNull();
+    }
 }

@@ -46,18 +46,39 @@ public sealed partial class MainWindow
 
         ShellHintTip.IsOpen = false;
 
-        if (ContentFrame.Content is Page { DataContext: object dc } &&
-            ExecuteMatchingCommand(dc, out _, "CancelCommand", "CancelGenerationCommand"))
+        // Si l'assistant en superposition est ouvert, Échap le referme
+        if (AssistantToggleButton.IsChecked == true && ContentFrame.Content is Page page)
         {
+            if (page.FindName("Workspace") is Views.Controls.CreationWorkspace ws && ws.AssistantOverlay.Visibility == Microsoft.UI.Xaml.Visibility.Visible)
+            {
+                AssistantToggleButton.IsChecked = false;
+                SetAssistantVisible(false);
+                return;
+            }
+        }
+
+        // Si une génération est en cours, Échap l'annule globalement (F05)
+        var resultVm = App.Services.GetService<ResultViewModel>();
+        if (resultVm is { IsBusy: true })
+        {
+            resultVm.CancelActiveOperation();
             SetStatus(Services.L10n.Get("Status_Cancelled"));
             ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_Cancel_Message"));
             return;
         }
 
-        // En pleine saisie, Échap ne doit pas déclencher d'actions globales.
+        // En pleine saisie dans un champ éditable, Échap ne doit pas déclencher d'actions globales (F09).
         if (IsFocusInEditableField())
         {
             args.Handled = false;
+            return;
+        }
+
+        if (ContentFrame.Content is Page { DataContext: object dc } &&
+            ExecuteMatchingCommand(dc, out _, "CancelCommand", "CancelGenerationCommand"))
+        {
+            SetStatus(Services.L10n.Get("Status_Cancelled"));
+            ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_Cancel_Message"));
             return;
         }
 
@@ -213,17 +234,34 @@ public sealed partial class MainWindow
     private void OnCtrlShiftWInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        _isPreviewVisible = !_isPreviewVisible;
 
-        bool handled = false;
-        if (ContentFrame.Content is Page page && page.DataContext is object dc)
+        var resultVm = App.Services.GetService<ResultViewModel>();
+        if (resultVm != null && resultVm.HasDocument)
         {
-            handled = ExecuteMatchingCommand(dc, out _, "TogglePreviewCommand");
+            _ = resultVm.ExportDocxAsync();
+            SetStatus(Services.L10n.Get("Status_Exporting"));
+            ShowHint(Services.L10n.Get("Hint_Export_Title"), Services.L10n.Get("Hint_Export_Message"));
+            return;
         }
 
-        ShowHint(Services.L10n.Get("Hint_Preview_Title"), handled
-            ? (_isPreviewVisible ? Services.L10n.Get("Hint_Preview_Shown") : Services.L10n.Get("Hint_Preview_Hidden"))
-            : Services.L10n.Get("Hint_Preview_Unavailable"));
+        if (ContentFrame.Content is Page { DataContext: object dc })
+        {
+            if (ExecuteMatchingCommand(dc, out bool found,
+                    "ExportDocxCommand", "ExportCommand", "ExportWordCommand"))
+            {
+                SetStatus(Services.L10n.Get("Status_Exporting"));
+                ShowHint(Services.L10n.Get("Hint_Export_Title"), Services.L10n.Get("Hint_Export_Message"));
+                return;
+            }
+
+            ShowHint(Services.L10n.Get("Hint_Export_Title"), found
+                ? Services.L10n.Get("Hint_Unavailable")
+                : Services.L10n.Get("Hint_Export_GenerateFirst"));
+        }
+        else
+        {
+            ShowHint(Services.L10n.Get("Hint_Export_Title"), Services.L10n.Get("Hint_NothingToExport"));
+        }
     }
 
     private void OnCtrlPInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -271,6 +309,21 @@ public sealed partial class MainWindow
         if (IsFocusInEditableField()) return;
 
         args.Handled = true;
+
+        if (ContentFrame.Content is Views.HistoryPage historyPage)
+        {
+            historyPage.TriggerUndo();
+            return;
+        }
+
+        var resultVm = App.Services.GetService<ResultViewModel>();
+        if (resultVm != null && resultVm.CanUndo)
+        {
+            resultVm.Undo();
+            SetStatus(Services.L10n.Get("Status_Undone"));
+            ShowHint(Services.L10n.Get("Hint_Undo_Title"), Services.L10n.Get("Hint_Undo_Message"));
+            return;
+        }
 
         if (ContentFrame.Content is Page { DataContext: object dc } &&
             ExecuteMatchingCommand(dc, out _, "UndoCommand", "RestoreLastDeletedCommand", "UndoDeleteCommand"))

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FicheGen.App (Unpackaged)": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}
