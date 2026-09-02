@@ -311,7 +311,8 @@ public partial class EvaluationViewModel : ObservableValidator
                 UsePedagogicalGuide: UsePedagogicalGuide,
                 CurrentDate: DateTime.Now.ToString("yyyy-MM-dd"),
                 Language: appSettings.Ui.Language,
-                DocumentLength: DocumentLengthKey
+                DocumentLength: DocumentLengthKey,
+                DurationMinutes: DurationMinutes
             );
 
             ResultViewModel.SetGenerationPhase(1, "Structuration de l'évaluation et du barème…", opId);

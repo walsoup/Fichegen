@@ -20,7 +20,7 @@
             <StackPanel x:Name="IdlePanel" Orientation="Horizontal" Spacing="9"
                         HorizontalAlignment="Center" Padding="18,9">
                 <FontIcon Glyph="&#xE99A;" FontSize="15"/>
-                <TextBlock x:Uid="CTA_IdleLabel" Text="Générer avec l’IA" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="IdleLabel" x:Uid="CTA_IdleLabel" Text="Générer avec l’IA" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <TextBlock x:Uid="CTA_ShortcutIdle" Text="Ctrl+G" FontSize="11" FontWeight="SemiBold" Opacity="0.72"
                            VerticalAlignment="Center"/>
             </StackPanel>
@@ -29,7 +29,7 @@
             <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="9"
                         HorizontalAlignment="Center" Padding="18,9" Visibility="Collapsed">
                 <ProgressRing Width="16" Height="16" IsActive="True"/>
-                <TextBlock x:Uid="CTA_BusyLabel" Text="Arrêter la génération" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="BusyLabel" x:Uid="CTA_BusyLabel" Text="Arrêter la génération" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <TextBlock x:Uid="CTA_ShortcutBusy" Text="Échap" FontSize="11" FontWeight="SemiBold" Opacity="0.72"
                            VerticalAlignment="Center"/>
             </StackPanel>

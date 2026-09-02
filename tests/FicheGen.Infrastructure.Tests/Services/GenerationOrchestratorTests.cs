@@ -12,23 +12,214 @@ public class GenerationOrchestratorTests
 {
     private class MockLlmClient : ILlmClient
     {
-        private readonly string _responseToReturn;
+        private readonly Queue<string> _responsesToReturn;
 
-        public MockLlmClient(string responseToReturn)
+        public List<LlmRequest> ReceivedRequests { get; } = new();
+
+        public MockLlmClient(params string[] responsesToReturn)
         {
-            _responseToReturn = responseToReturn;
+            _responsesToReturn = new Queue<string>(responsesToReturn);
         }
+
+        private string NextResponse()
+            => _responsesToReturn.Count > 1 ? _responsesToReturn.Dequeue() : _responsesToReturn.Peek();
 
         public Task<string> GenerateAsync(LlmRequest req, AiRequestConfig cfg, CancellationToken ct)
         {
-            return Task.FromResult(_responseToReturn);
+            ReceivedRequests.Add(req);
+            return Task.FromResult(NextResponse());
         }
 
         public async IAsyncEnumerable<string> GenerateStreamAsync(LlmRequest req, AiRequestConfig cfg, [EnumeratorCancellation] CancellationToken ct)
         {
-            yield return _responseToReturn;
+            ReceivedRequests.Add(req);
+            yield return NextResponse();
             await Task.CompletedTask;
         }
+    }
+
+    private static string BuildEvaluationJson(params (string Title, string Points)[] exercises)
+    {
+        var blocks = string.Join(",\n", exercises.Select(e => $@"{{ ""$type"": ""heading"", ""level"": 1, ""runs"": [{{ ""text"": ""{e.Title} ({e.Points} points)"" }}] }}"));
+        return $@"{{
+          ""metadata"": {{ ""title"": ""Évaluation Fractions"", ""classLevel"": ""CM2"", ""docType"": ""evaluation"" }},
+          ""blocks"": [
+            {blocks}
+          ]
+        }}";
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_TooFewExercisesForExhaustif_RequestsExpansionAndReturnsExpandedDocument()
+    {
+        var shortDoc = BuildEvaluationJson(("Exercice 1", "20"));
+        var expandedDoc = BuildEvaluationJson(("Exercice 1", "6"), ("Exercice 2", "5"), ("Exercice 3", "4"), ("Exercice 4", "3"), ("Exercice 5", "1"), ("Exercice 6", "1"));
+        var mockLlm = new MockLlmClient(shortDoc, expandedDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(2);
+        mockLlm.ReceivedRequests[1].UserPrompt.Should().Contain("Conserve intégralement");
+        EvaluationSpec.CountExercises(result.Document).Should().Be(6);
+        result.PreviewHtml.Should().Contain("Exercice 6");
+        result.IsFallback.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_EnoughExercises_MakesSingleLlmCall()
+    {
+        var fullDoc = BuildEvaluationJson(
+            ("Exercice 1", "4"), ("Exercice 2", "4"), ("Exercice 3", "4"),
+            ("Exercice 4", "4"), ("Exercice 5", "2"), ("Exercice 6", "2"));
+        var mockLlm = new MockLlmClient(fullDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(1);
+        EvaluationSpec.CountExercises(result.Document).Should().Be(6);
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_ExpansionReturnsInvalidJson_KeepsOriginalDocument()
+    {
+        var shortDoc = BuildEvaluationJson(("Exercice 1", "20"));
+        var mockLlm = new MockLlmClient(shortDoc, "Ceci n'est pas du JSON valide.");
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(2);
+        EvaluationSpec.CountExercises(result.Document).Should().Be(1);
+        result.Document.Metadata.Title.Should().Be("Évaluation Fractions");
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_ExpansionReturnsFewerThanTarget_KeepsPartialImprovement()
+    {
+        var shortDoc = BuildEvaluationJson(("Exercice 1", "20"));
+        var improvedDoc = BuildEvaluationJson(("Exercice 1", "18"), ("Exercice 2", "2"));
+        var mockLlm = new MockLlmClient(shortDoc, improvedDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        // The expansion didn't reach the target but still adds exercises:
+        // the improvement is kept rather than discarded.
+        EvaluationSpec.CountExercises(result.Document).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_ExpansionReturnsSameExerciseCount_KeepsOriginalDocument()
+    {
+        var shortDoc = BuildEvaluationJson(("Exercice 1", "20"));
+        var mockLlm = new MockLlmClient(shortDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        // The (single-response) mock returns the same document for the
+        // expansion call, which adds nothing: original is kept.
+        EvaluationSpec.CountExercises(result.Document).Should().Be(1);
+        result.IsFallback.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationStreamingAsync_TooFewExercises_RequestsExpansion()
+    {
+        var shortDoc = BuildEvaluationJson(("Exercice 1", "20"));
+        var expandedDoc = BuildEvaluationJson(
+            ("Exercice 1", "4"), ("Exercice 2", "4"), ("Exercice 3", "3"),
+            ("Exercice 4", "3"), ("Exercice 5", "3"), ("Exercice 6", "3"));
+        var mockLlm = new MockLlmClient(shortDoc, expandedDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationStreamingAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Exhaustif"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: false);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(2);
+        EvaluationSpec.CountExercises(result.Document).Should().Be(6);
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_PipelineSuccess_GeneratesPlanAndExercises()
+    {
+        var planJson = @"{
+          ""title"": ""Évaluation Fractions"",
+          ""exercises"": [
+            { ""title"": ""Exercice 1"", ""points"": 10, ""competences"": ""Fractions simples"" },
+            { ""title"": ""Exercice 2"", ""points"": 10, ""competences"": ""Calculs"" }
+          ]
+        }";
+
+        var ex1Draft = @"{
+          ""consigne"": ""Consigne 1"",
+          ""questions"": [""a) Question 1""],
+          ""corrige"": [""a) Réponse 1 (10 pts)""]
+        }";
+
+        var ex2Draft = @"{
+          ""consigne"": ""Consigne 2"",
+          ""questions"": [""a) Question 2""],
+          ""corrige"": [""a) Réponse 2 (10 pts)""]
+        }";
+
+        var mockLlm = new MockLlmClient(planJson, ex1Draft, ex2Draft);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Bref"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: true);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(3);
+        EvaluationSpec.CountExercises(result.Document).Should().Be(2);
+        result.IsFallback.Should().BeFalse();
+        result.PreviewHtml.Should().Contain("Exercice 1");
+        result.PreviewHtml.Should().Contain("Exercice 2");
+    }
+
+    [Fact]
+    public async Task GenerateEvaluationAsync_PipelineFails_FallsBackToSingleShot()
+    {
+        var singleShotDoc = BuildEvaluationJson(("Exercice 1", "10"), ("Exercice 2", "10"));
+        var mockLlm = new MockLlmClient("Invalid Plan JSON", singleShotDoc);
+        var orchestrator = new GenerationOrchestrator(mockLlm);
+
+        var result = await orchestrator.GenerateEvaluationAsync(
+            new EvalParameters("CM2", "Mathématiques", "Fractions", TargetPoints: 20, DocumentLength: "Bref"),
+            CreateConfig(),
+            ct: CancellationToken.None,
+            enablePipeline: true);
+
+        mockLlm.ReceivedRequests.Should().HaveCount(2);
+        EvaluationSpec.CountExercises(result.Document).Should().Be(2);
+        result.IsFallback.Should().BeFalse();
     }
 
     [Fact]

@@ -30,7 +30,13 @@ public sealed partial class GenerateCta : UserControl
     public GenerateCta()
     {
         InitializeComponent();
+        Services.L10n.LanguageChanged += OnLanguageChanged;
         UpdateVisual();
+    }
+
+    private void OnLanguageChanged(object? sender, string lang)
+    {
+        DispatcherQueue?.TryEnqueue(UpdateVisual);
     }
 
     private static void OnIsGeneratingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -43,6 +49,12 @@ public sealed partial class GenerateCta : UserControl
         IdlePanel.Visibility = busy ? Visibility.Collapsed : Visibility.Visible;
         BusyPanel.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         ActionButton.Style = (Style)Application.Current.Resources[busy ? "DefaultButtonStyle" : "AccentButtonStyle"];
+
+        if (IdleLabel != null)
+            IdleLabel.Text = Services.L10n.Get("CTA_IdleLabel", "Générer avec l’IA");
+
+        if (BusyLabel != null)
+            BusyLabel.Text = Services.L10n.Get("CTA_BusyLabel", "Arrêter la génération");
 
         AutomationProperties.SetName(ActionButton, busy
             ? Services.L10n.Get("CTA_Name_Busy")

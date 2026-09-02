@@ -8,12 +8,14 @@ public static class HtmlRenderer
     {
         if (doc == null) return string.Empty;
 
+        var labels = DocumentLabelsResolver.Resolve(doc.Metadata.DocType, doc.Metadata.Language);
+
         var sb = new StringBuilder();
         sb.AppendLine("<article class=\"fiche-content\">");
 
         // Header Metadata
         sb.AppendLine("  <header class=\"document-header\">");
-        sb.AppendLine("    <div class=\"doc-kicker\">Fiche Pédagogique</div>");
+        sb.AppendLine($"    <div class=\"doc-kicker\">{EncodeText(labels.Kicker)}</div>");
         if (!string.IsNullOrWhiteSpace(doc.Metadata.Title))
         {
             var titleSuffix = isStudentVersion ? " — Version Élève" : string.Empty;
@@ -26,11 +28,11 @@ public static class HtmlRenderer
 
         var metaBadges = new List<string>();
         if (!string.IsNullOrWhiteSpace(doc.Metadata.ClassLevel))
-            metaBadges.Add($"<span class=\"badge level-badge\">Niveau: {EncodeText(doc.Metadata.ClassLevel)}</span>");
+            metaBadges.Add($"<span class=\"badge level-badge\">{EncodeText(labels.Level)}: {EncodeText(doc.Metadata.ClassLevel)}</span>");
         if (!string.IsNullOrWhiteSpace(doc.Metadata.Subject))
-            metaBadges.Add($"<span class=\"badge subject-badge\">Discipline: {EncodeText(doc.Metadata.Subject)}</span>");
+            metaBadges.Add($"<span class=\"badge subject-badge\">{EncodeText(labels.Discipline)}: {EncodeText(doc.Metadata.Subject)}</span>");
         if (doc.Metadata.Duration.HasValue && doc.Metadata.Duration.Value > 0)
-            metaBadges.Add($"<span class=\"badge duration-badge\">Durée: {doc.Metadata.Duration.Value} min</span>");
+            metaBadges.Add($"<span class=\"badge duration-badge\">{EncodeText(labels.Duration)}: {doc.Metadata.Duration.Value} min</span>");
         if (!string.IsNullOrWhiteSpace(doc.Metadata.Date))
             metaBadges.Add($"<span class=\"badge date-badge\">{EncodeText(doc.Metadata.Date)}</span>");
 
@@ -47,8 +49,8 @@ public static class HtmlRenderer
         if (isStudentVersion)
         {
             sb.AppendLine("    <div class=\"student-header-box\">");
-            sb.AppendLine("      <div><strong>Nom :</strong> .......................................... &nbsp;&nbsp; <strong>Prénom :</strong> ..........................................</div>");
-            sb.AppendLine("      <div><strong>Classe :</strong> ................ &nbsp;&nbsp; <strong>Date :</strong> ................ &nbsp;&nbsp; <strong>Note :</strong> .............</div>");
+            sb.AppendLine($"      <div><strong>{EncodeText(labels.Name)} :</strong> .......................................... &nbsp;&nbsp; <strong>{EncodeText(labels.FirstName)} :</strong> ..........................................</div>");
+            sb.AppendLine($"      <div><strong>{EncodeText(labels.Class)} :</strong> ................ &nbsp;&nbsp; <strong>{EncodeText(labels.Date)} :</strong> ................ &nbsp;&nbsp; <strong>{EncodeText(labels.Grade)} :</strong> .............</div>");
             sb.AppendLine("    </div>");
         }
 
@@ -62,6 +64,14 @@ public static class HtmlRenderer
         {
             if (isStudentVersion)
             {
+                if (block is KeyValueGridBlock kv &&
+                    kv.Pairs.Any(p => p.Key.Contains(labels.Name, StringComparison.OrdinalIgnoreCase) ||
+                                      p.Key.Contains(labels.Grade, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Skip redundant identity grid block since student-header-box is rendered in header
+                    continue;
+                }
+
                 if (block is HeadingBlock hb)
                 {
                     var headingText = string.Concat(hb.Runs.Select(r => r.Text)).ToLowerInvariant();

@@ -67,12 +67,13 @@ public sealed record DocumentMetadata(
     string? Subject = null,
     int? Duration = null,
     string? Date = null,
-    string DocType = "fiche");
+    string DocType = "fiche",
+    string? Language = null);
 
 public sealed record GeneratedDocument(
     DocumentMetadata Metadata,
     IReadOnlyList<Block> Blocks,
-    string? SourceJson = null)
+    [property: JsonIgnore] string? SourceJson = null)
 {
     public string ToPlainText()
     {

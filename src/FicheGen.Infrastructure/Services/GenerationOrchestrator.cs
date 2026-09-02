@@ -60,7 +60,8 @@ public sealed class GenerationOrchestrator
         EvalParameters parameters,
         AiRequestConfig config,
         string? guidesDir = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool enablePipeline = true)
     {
         var sw = Stopwatch.StartNew();
         string? lessonContext = null;
@@ -70,8 +71,19 @@ public sealed class GenerationOrchestrator
             lessonContext = await ResolveGuideContextAsync(parameters.ClassLevel, parameters.Topic, guidesDir, _guideService, ct).ConfigureAwait(false);
         }
 
+        if (enablePipeline)
+        {
+            var pipelineResult = await TryGenerateEvaluationViaPipelineAsync(parameters, config, lessonContext, sw, chunkProgress: null, ct).ConfigureAwait(false);
+            if (pipelineResult != null)
+            {
+                return FinalizeEvaluationResult(pipelineResult, parameters.TargetPoints);
+            }
+        }
+
         var req = PromptBuilder.BuildEvalPrompt(parameters, lessonContext);
         var result = await ProcessGenerationAsync(req, config, parameters.Topic, lessonContext, sw, ct).ConfigureAwait(false);
+
+        result = await EnsureExerciseCoverageAsync(result, parameters, config, ct).ConfigureAwait(false);
 
         // Normalize barème if evaluation
         return FinalizeEvaluationResult(result, parameters.TargetPoints);
@@ -82,7 +94,8 @@ public sealed class GenerationOrchestrator
         AiRequestConfig config,
         string? guidesDir = null,
         IProgress<string>? chunkProgress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool enablePipeline = true)
     {
         var sw = Stopwatch.StartNew();
         string? lessonContext = null;
@@ -92,8 +105,19 @@ public sealed class GenerationOrchestrator
             lessonContext = await ResolveGuideContextAsync(parameters.ClassLevel, parameters.Topic, guidesDir, _guideService, ct).ConfigureAwait(false);
         }
 
+        if (enablePipeline)
+        {
+            var pipelineResult = await TryGenerateEvaluationViaPipelineAsync(parameters, config, lessonContext, sw, chunkProgress, ct).ConfigureAwait(false);
+            if (pipelineResult != null)
+            {
+                return FinalizeEvaluationResult(pipelineResult, parameters.TargetPoints);
+            }
+        }
+
         var req = PromptBuilder.BuildEvalPrompt(parameters, lessonContext);
         var result = await ProcessStreamingGenerationAsync(req, config, parameters.Topic, lessonContext, sw, chunkProgress, ct).ConfigureAwait(false);
+
+        result = await EnsureExerciseCoverageAsync(result, parameters, config, ct).ConfigureAwait(false);
 
         return FinalizeEvaluationResult(result, parameters.TargetPoints);
     }
@@ -269,7 +293,7 @@ public sealed class GenerationOrchestrator
             for (var col = 0; col < table.Headers.Count; col++)
             {
                 var header = NormalizeAccents(table.Headers[col]).ToLowerInvariant();
-                var isBaremeColumn = header.Contains("bareme") || header.Contains("point") || header.Contains("note");
+                var isBaremeColumn = header.Contains("bareme") || header.Contains("point") || header.Contains("note") || header.Contains("السلم");
                 if (!isBaremeColumn)
                     continue;
 
@@ -298,6 +322,173 @@ public sealed class GenerationOrchestrator
         }
 
         return doc;
+    }
+
+    /// <summary>
+    /// Two-stage evaluation pipeline: a fast planning call fixes the exercise
+    /// list and barème (validated and repaired in code), then one focused call
+    /// per exercise writes its content, and the document is assembled
+    /// deterministically. Returns null when the planning stage cannot produce
+    /// a usable structure, letting the caller fall back to the single-shot
+    /// prompt path.
+    /// </summary>
+    private async Task<GenerationResult?> TryGenerateEvaluationViaPipelineAsync(
+        EvalParameters parameters,
+        AiRequestConfig config,
+        string? lessonContext,
+        Stopwatch sw,
+        IProgress<string>? chunkProgress,
+        CancellationToken ct)
+    {
+        try
+        {
+            var (minExercises, maxExercises) = EvaluationSpec.GetExerciseCount(parameters.DocumentLength, parameters.TargetPoints);
+
+            var planRequest = PromptBuilder.BuildEvalPlanPrompt(parameters, minExercises, maxExercises, lessonContext);
+            var planResponse = await _llmClient.GenerateAsync(planRequest, config, ct).ConfigureAwait(false);
+            if (!EvalPlanParser.TryParse(planResponse, out var plan) || plan == null)
+            {
+                return null;
+            }
+
+            plan = EvalPlanNormalizer.Normalize(plan, parameters.TargetPoints, minExercises, maxExercises);
+
+            var gradedCount = plan.Exercises.Count(e => !e.HorsBareme);
+            if (gradedCount < minExercises)
+            {
+                // One corrective retry: the model under-planned the structure.
+                planResponse = await _llmClient.GenerateAsync(planRequest, config, ct).ConfigureAwait(false);
+                if (!EvalPlanParser.TryParse(planResponse, out var retryPlan) || retryPlan == null)
+                {
+                    return null;
+                }
+
+                plan = EvalPlanNormalizer.Normalize(retryPlan, parameters.TargetPoints, minExercises, maxExercises);
+                gradedCount = plan.Exercises.Count(e => !e.HorsBareme);
+                if (gradedCount < Math.Min(2, minExercises))
+                {
+                    return null;
+                }
+            }
+
+            var prompts = new List<string> { $"[PLAN]\n{planRequest.UserPrompt}" };
+            var drafts = new List<EvalExerciseDraft>();
+            var draftsJson = new List<string> { planResponse };
+            var total = plan.Exercises.Count;
+
+            for (var i = 0; i < total; i++)
+            {
+                var exercise = plan.Exercises[i];
+                ct.ThrowIfCancellationRequested();
+
+                var exerciseRequest = PromptBuilder.BuildEvalExercisePrompt(parameters, exercise, i + 1, total, lessonContext);
+                prompts.Add($"[EXERCICE {i + 1}]\n{exerciseRequest.UserPrompt}");
+
+                var exerciseResponse = await _llmClient.GenerateAsync(exerciseRequest, config, ct).ConfigureAwait(false);
+                if (!EvalExerciseParser.TryParse(exerciseResponse, out var draft) || draft == null)
+                {
+                    exerciseResponse = await _llmClient.GenerateAsync(exerciseRequest, config, ct).ConfigureAwait(false);
+                    if (!EvalExerciseParser.TryParse(exerciseResponse, out draft) || draft == null)
+                    {
+                        // Keep the assembled structure and barème intact; the
+                        // exercise body is flagged for manual regeneration.
+                        draft = new EvalExerciseDraft(
+                            $"{exercise.Title} — {exercise.Competences}",
+                            new[] { "(exercice non généré par le modèle — relancez la génération)" },
+                            Array.Empty<string>());
+                    }
+                }
+
+                drafts.Add(draft);
+                draftsJson.Add(exerciseResponse);
+            }
+
+            var document = EvaluationAssembler.Assemble(parameters, plan, drafts, fallbackTitle: parameters.Topic);
+            sw.Stop();
+
+            return new GenerationResult(
+                Document: document,
+                PreviewHtml: HtmlRenderer.RenderToFullHtml(document),
+                RawResponse: string.Join("\n", draftsJson),
+                Elapsed: sw.Elapsed,
+                LessonContextUsed: lessonContext,
+                IsFallback: false,
+                WarningMessage: null,
+                RawPrompt: string.Join("\n\n", prompts));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Any network or unhandled failure in the multi-stage pipeline
+            // cleanly degrades back to the single-shot prompt pathway.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Guards against short evaluations: when the generated document contains
+    /// fewer exercises than the volume tier requires, one best-effort expansion
+    /// call asks the model to extend the document while keeping existing
+    /// exercises and the barème target. The original result is kept whenever
+    /// the expansion fails, parses incorrectly, or adds nothing.
+    /// </summary>
+    private async Task<GenerationResult> EnsureExerciseCoverageAsync(
+        GenerationResult result,
+        EvalParameters parameters,
+        AiRequestConfig config,
+        CancellationToken ct)
+    {
+        if (result.IsFallback || result.Document?.Blocks is null)
+            return result;
+
+        var minimum = EvaluationSpec.GetMinimumExerciseCount(parameters.DocumentLength, parameters.TargetPoints);
+        var current = EvaluationSpec.CountExercises(result.Document);
+        if (current >= minimum)
+            return result;
+
+        var expansionRequest = PromptBuilder.BuildEvalExpansionPrompt(
+            result.Document,
+            parameters.Topic,
+            parameters.ClassLevel,
+            current,
+            minimum,
+            parameters.TargetPoints,
+            parameters.DocumentLength);
+
+        try
+        {
+            var expandedResponse = await _llmClient.GenerateAsync(expansionRequest, config, ct).ConfigureAwait(false);
+            if (!JsonCleaner.TryDeserializeDocument(expandedResponse, out var expandedDoc) || expandedDoc is null)
+                return result;
+
+            var expandedCount = EvaluationSpec.CountExercises(expandedDoc);
+            if (expandedCount <= current)
+                return result;
+
+            var doc = string.IsNullOrEmpty(expandedDoc.SourceJson)
+                ? expandedDoc with { SourceJson = System.Text.Json.JsonSerializer.Serialize(expandedDoc) }
+                : expandedDoc;
+
+            return result with
+            {
+                Document = doc,
+                PreviewHtml = HtmlRenderer.RenderToFullHtml(doc),
+                RawResponse = expandedResponse
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Expansion is best-effort: keep the original evaluation on any
+            // transport or provider failure rather than failing the request.
+            return result;
+        }
     }
 
     private static GenerationResult FinalizeEvaluationResult(GenerationResult result, double targetTotal)
