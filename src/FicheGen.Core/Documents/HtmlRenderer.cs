@@ -549,6 +549,60 @@ public static class HtmlRenderer
             border-radius: 4px;
             margin-bottom: 8px;
         }
+        .callout-memo, .callout-synthese, .callout-retenir {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            border-left: 4px solid #3b82f6;
+        }
+        .callout-memo::before, .callout-synthese::before, .callout-retenir::before {
+            content: 'À RETENIR ABSOLUMENT';
+            display: inline-block;
+            font-weight: 800;
+            font-size: 0.66rem;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #1d4ed8;
+            background: #dbeafe;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .callout-vocabulaire, .callout-lexique {
+            background: #f0fdfa;
+            border-color: #99f6e4;
+            border-left: 4px solid #0d9488;
+        }
+        .callout-vocabulaire::before, .callout-lexique::before {
+            content: 'VOCABULAIRE & LEXIQUE';
+            display: inline-block;
+            font-weight: 800;
+            font-size: 0.66rem;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #0f766e;
+            background: #ccfbf1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .callout-prolongement, .callout-devoirs {
+            background: #fdf4ff;
+            border-color: #f5d0fe;
+            border-left: 4px solid #c026d3;
+        }
+        .callout-prolongement::before, .callout-devoirs::before {
+            content: 'POUR ALLER PLUS LOIN / DEVOIRS';
+            display: inline-block;
+            font-weight: 800;
+            font-size: 0.66rem;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #a21caf;
+            background: #fae8ff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
 
         /* ── Version élève ─────────────────────────────────────────��─── */
         .student-header-box {

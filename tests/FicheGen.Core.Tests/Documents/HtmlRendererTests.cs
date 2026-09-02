@@ -339,4 +339,27 @@ public class HtmlRendererTests
 
         fullHtml.Should().Contain("<html lang=\"ar\" dir=\"rtl\">");
     }
+
+    [Fact]
+    public void RenderToFullHtml_IncludesPedagogicalCalloutStyles()
+    {
+        var doc = new GeneratedDocument(
+            Metadata: new DocumentMetadata("Fiche avec blocs modulaires", ClassLevel: "CM2", Subject: "Français"),
+            Blocks: new List<Block>
+            {
+                new CalloutBoxBlock("memo", new List<Block> { new ParagraphBlock("Règle d'or") }),
+                new CalloutBoxBlock("vocabulaire", new List<Block> { new ParagraphBlock("Définition clé") }),
+                new CalloutBoxBlock("prolongement", new List<Block> { new ParagraphBlock("Pour aller plus loin") })
+            }
+        );
+
+        var html = HtmlRenderer.RenderToFullHtml(doc);
+
+        html.Should().Contain(".callout-memo");
+        html.Should().Contain(".callout-vocabulaire");
+        html.Should().Contain(".callout-prolongement");
+        html.Should().Contain("<div class=\"callout callout-memo\">");
+        html.Should().Contain("<div class=\"callout callout-vocabulaire\">");
+        html.Should().Contain("<div class=\"callout callout-prolongement\">");
+    }
 }

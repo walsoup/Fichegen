@@ -132,6 +132,13 @@ public sealed partial class StylePresetItem : ObservableObject
     public Visibility BuiltInVisibility => IsCustom ? Visibility.Collapsed : Visibility.Visible;
     public Visibility DefaultBadgeVisibility => IsDefault ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NotDefaultVisibility => IsDefault ? Visibility.Collapsed : Visibility.Visible;
+    public string HeaderLayoutBadge => HeaderLayout switch
+    {
+        FicheGen.Core.Documents.StylePreset.HeaderBand => "Bandeau",
+        FicheGen.Core.Documents.StylePreset.HeaderCentered => "Centré",
+        FicheGen.Core.Documents.StylePreset.HeaderMinimal => "Minimal",
+        _ => "Filet"
+    };
 
     public StylePresetItem(string id, string name, string description, string icon,
         string primaryHex, string secondaryHex, string accentHex, string fontFamily, double cornerRadius,
@@ -146,6 +153,53 @@ public sealed partial class StylePresetItem : ObservableObject
         MarginTop = marginTop; MarginBottom = marginBottom; MarginLeft = marginLeft; MarginRight = marginRight;
     }
 }
+
+public sealed partial class DocumentTileItem : ObservableObject
+{
+    public string Id { get; set; }
+    [ObservableProperty] public partial string Kind { get; set; }
+    [ObservableProperty] public partial string Title { get; set; }
+    [ObservableProperty] public partial string Subtitle { get; set; }
+    [ObservableProperty] public partial string Icon { get; set; }
+    [ObservableProperty] public partial string Tag { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleOpacity))]
+    [NotifyPropertyChangedFor(nameof(VisibilityIconGlyph))]
+    public partial bool IsVisible { get; set; } = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemovableVisibility))]
+    public partial bool IsRemovable { get; set; } = true;
+    [ObservableProperty] public partial string AccentTag { get; set; } = "default";
+
+    public double VisibleOpacity => IsVisible ? 1.0 : 0.42;
+    public string VisibilityIconGlyph => IsVisible ? "\uE890" : "\uE733";
+    public Visibility RemovableVisibility => IsRemovable ? Visibility.Visible : Visibility.Collapsed;
+
+    public DocumentTileItem(string id, string kind, string title, string subtitle, string icon, string tag,
+        bool isVisible = true, bool isRemovable = true, string accentTag = "default")
+    {
+        Id = id;
+        Kind = kind;
+        Title = title;
+        Subtitle = subtitle;
+        Icon = icon;
+        Tag = tag;
+        IsVisible = isVisible;
+        IsRemovable = isRemovable;
+        AccentTag = accentTag;
+    }
+}
+
+public sealed record DocumentTileDto(
+    string Id,
+    string Kind,
+    string Title,
+    string Subtitle,
+    string Icon,
+    string Tag,
+    bool IsVisible = true,
+    bool IsRemovable = true,
+    string AccentTag = "default");
 
 public partial class ModelRoutingItem : ObservableObject
 {
@@ -504,6 +558,11 @@ public partial class SettingsViewModel : ObservableObject
                 ApplyPresetsOrderFromJson(orderJson);
             }
 
+            if (s.Ai.Models.TryGetValue("document.tiles.json", out var tilesJson) && !string.IsNullOrWhiteSpace(tilesJson))
+            {
+                LoadDocumentTilesFromJson(tilesJson);
+            }
+
             if (s.Ai.Models.TryGetValue("style.builder.json", out var builderJson))
             {
                 var b = JsonSerializer.Deserialize<StyleBuilderDto>(builderJson);
@@ -631,6 +690,7 @@ public partial class SettingsViewModel : ObservableObject
                 BuilderHeaderLayout));
             s.Ai.Models["styles.custom.json"] = GetCustomPresetsJson();
             s.Ai.Models["styles.order.json"] = GetPresetsOrderJson();
+            s.Ai.Models["document.tiles.json"] = GetDocumentTilesJson();
             s.Defaults.StylePresetId = SelectedStylePresetId;
             s.Ai.Models["prompts.json"] = JsonSerializer.Serialize(
                 PromptTemplates.Select(p => new PromptDto(p.Name, p.Content)));
@@ -709,6 +769,8 @@ public partial class SettingsViewModel : ObservableObject
 
         BuildRoutingMatrixDefaults();
 
+        ResetThemesToDefault();
+        ResetDocumentTiles();
         SelectedPreset = StylePresets[0];
         BuilderMarginTop = 18; BuilderMarginBottom = 18; BuilderMarginLeft = 20; BuilderMarginRight = 20;
         BuilderHeaderLayout = FicheGen.Core.Documents.StylePreset.HeaderRule;

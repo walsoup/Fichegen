@@ -158,6 +158,11 @@ public sealed partial class SettingsPage : Page, ILocalizablePage
         {
             SettingsScrollViewer.Visibility = Visibility.Collapsed;
             PanelStyles.Visibility = Visibility.Visible;
+            if (StylesSubTabs != null && StylesSubTabs.SelectedItem == null)
+            {
+                StylesSubTabs.SelectedItem = SubTabBlocks;
+            }
+            SwitchStylesSubPanels(StylesSubTabs?.SelectedItem as SelectorBarItem);
             FicheGen.App.Services.UiMotion.FadeUp(PanelStyles, 12);
             UpdateStylePreviewVisibility(true);
             return;
@@ -190,6 +195,28 @@ public sealed partial class SettingsPage : Page, ILocalizablePage
                 panel.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
             }
         }
+    }
+
+    private void StylesSubTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        SwitchStylesSubPanels(StylesSubTabs.SelectedItem as SelectorBarItem);
+    }
+
+    private void SwitchStylesSubPanels(SelectorBarItem? selected)
+    {
+        if (PanelSubBlocks is null || PanelSubThemes is null || PanelSubDesign is null) return;
+
+        var isBlocks = selected == null || ReferenceEquals(selected, SubTabBlocks);
+        var isThemes = ReferenceEquals(selected, SubTabThemes);
+        var isDesign = ReferenceEquals(selected, SubTabDesign);
+
+        PanelSubBlocks.Visibility = isBlocks ? Visibility.Visible : Visibility.Collapsed;
+        PanelSubThemes.Visibility = isThemes ? Visibility.Visible : Visibility.Collapsed;
+        PanelSubDesign.Visibility = isDesign ? Visibility.Visible : Visibility.Collapsed;
+
+        if (isBlocks) FicheGen.App.Services.UiMotion.FadeUp(PanelSubBlocks, 10);
+        else if (isThemes) FicheGen.App.Services.UiMotion.FadeUp(PanelSubThemes, 10);
+        else if (isDesign) FicheGen.App.Services.UiMotion.FadeUp(PanelSubDesign, 10);
     }
 
     /// <summary>
@@ -560,6 +587,96 @@ public sealed partial class SettingsPage : Page, ILocalizablePage
     {
         var item = (sender as FrameworkElement)?.Tag as StylePresetItem ?? (sender as FrameworkElement)?.DataContext as StylePresetItem;
         if (item != null) ViewModel.DeleteThemeCommand.Execute(item);
+    }
+
+    private DocumentTileItem? _draggedTile;
+
+    private void TileBorder_DragStarting(UIElement sender, DragStartingEventArgs args)
+    {
+        var tile = (sender as FrameworkElement)?.DataContext as DocumentTileItem
+                ?? (sender as FrameworkElement)?.Tag as DocumentTileItem;
+        if (tile != null)
+        {
+            _draggedTile = tile;
+            args.Data.SetText(tile.Id);
+            args.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        }
+    }
+
+    private void TileBorder_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+            border.BorderThickness = new Thickness(2);
+        }
+    }
+
+    private void TileBorder_DragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+            border.BorderThickness = new Thickness(1);
+        }
+    }
+
+    private void TileBorder_Drop(object sender, DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            border.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+            border.BorderThickness = new Thickness(1);
+        }
+
+        var targetTile = (sender as FrameworkElement)?.DataContext as DocumentTileItem
+                      ?? (sender as FrameworkElement)?.Tag as DocumentTileItem;
+        if (_draggedTile != null && targetTile != null && !ReferenceEquals(_draggedTile, targetTile))
+        {
+            ViewModel.ReorderTile(_draggedTile, targetTile);
+        }
+        _draggedTile = null;
+    }
+
+    private void MoveTileUp_Click(object sender, RoutedEventArgs e)
+    {
+        var tile = (sender as FrameworkElement)?.Tag as DocumentTileItem
+                ?? (sender as FrameworkElement)?.DataContext as DocumentTileItem;
+        if (tile != null) ViewModel.MoveTileUp(tile);
+    }
+
+    private void MoveTileDown_Click(object sender, RoutedEventArgs e)
+    {
+        var tile = (sender as FrameworkElement)?.Tag as DocumentTileItem
+                ?? (sender as FrameworkElement)?.DataContext as DocumentTileItem;
+        if (tile != null) ViewModel.MoveTileDown(tile);
+    }
+
+    private void ToggleTileVisibility_Click(object sender, RoutedEventArgs e)
+    {
+        var tile = (sender as FrameworkElement)?.Tag as DocumentTileItem
+                ?? (sender as FrameworkElement)?.DataContext as DocumentTileItem;
+        if (tile != null) ViewModel.ToggleTileVisibility(tile);
+    }
+
+    private void DeleteTile_Click(object sender, RoutedEventArgs e)
+    {
+        var tile = (sender as FrameworkElement)?.Tag as DocumentTileItem
+                ?? (sender as FrameworkElement)?.DataContext as DocumentTileItem;
+        if (tile != null) ViewModel.DeleteTile(tile);
+    }
+
+    private void AddBlockChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string blockKind })
+        {
+            ViewModel.AddDocumentBlock(blockKind);
+            if (AddBlockButton?.Flyout is Flyout flyout)
+            {
+                flyout.Hide();
+            }
+        }
     }
 
     private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

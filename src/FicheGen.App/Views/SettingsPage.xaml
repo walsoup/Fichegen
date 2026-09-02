@@ -36,11 +36,16 @@
             <Setter Property="Padding" Value="10,3"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-        <!-- Manquant en 1.4.1 — utilisé dans la galerie de thèmes Styles -->
+        <!-- Bouton d'action barre d'outils -->
         <Style x:Key="ToolbarIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="28"/>
+        </Style>
+        <Style x:Key="BlockCatalogButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="10,8"/>
         </Style>
     </Page.Resources>
 
@@ -1008,162 +1013,438 @@
         <!-- ═══════════════════════════════════════════════════════ -->
         <Grid x:Name="PanelStyles" Grid.Row="2" Margin="24,8,24,14" ColumnSpacing="20" Visibility="Collapsed">
             <Grid.ColumnDefinitions>
-                <!-- Colonne gauche : Thèmes & Personnalisation (480px) -->
-                <ColumnDefinition Width="480" MinWidth="400" MaxWidth="560"/>
+                <!-- Colonne gauche : Studio Canva & Styles (520px) -->
+                <ColumnDefinition Width="520" MinWidth="440" MaxWidth="640"/>
                 <!-- Colonne droite : Aperçu en direct temps réel (*) -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ── COLONNE GAUCHE (Scrollable) ── -->
-            <ScrollViewer Grid.Column="0" Padding="0,0,12,12">
-                <StackPanel Spacing="14">
+            <!-- ── COLONNE GAUCHE (Studio de Styles) ── -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                    <!-- En-tête de section -->
+                <!-- En-tête et sous-onglets Studio -->
+                <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
+                    <TextBlock Text="Studio de Styles &amp; Agencement" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
+                    <TextBlock Text="Agencement modulaire (Canva), thèmes graphiques et typographie en direct."
+                               Style="{StaticResource CaptionNoteStyle}" Margin="0,0,0,8"/>
+
+                    <SelectorBar x:Name="StylesSubTabs" SelectionChanged="StylesSubTabs_SelectionChanged">
+                        <SelectorBarItem x:Name="SubTabBlocks" Text="Disposition &amp; Blocs" ToolTipService.ToolTip="Agencer, réorganiser et ajouter des blocs (style Canva)">
+                            <SelectorBarItem.Icon><FontIcon Glyph="&#xE74C;" FontSize="13"/></SelectorBarItem.Icon>
+                        </SelectorBarItem>
+                        <SelectorBarItem x:Name="SubTabThemes" Text="Thèmes &amp; Palettes" ToolTipService.ToolTip="Galerie de thèmes et harmonies de couleurs">
+                            <SelectorBarItem.Icon><FontIcon Glyph="&#xE790;" FontSize="13"/></SelectorBarItem.Icon>
+                        </SelectorBarItem>
+                        <SelectorBarItem x:Name="SubTabDesign" Text="Typographie &amp; Format" ToolTipService.ToolTip="Polices, arrondis, en-têtes et marges">
+                            <SelectorBarItem.Icon><FontIcon Glyph="&#xE8D2;" FontSize="13"/></SelectorBarItem.Icon>
+                        </SelectorBarItem>
+                    </SelectorBar>
+                </StackPanel>
+
+                <!-- Contenu défilable des sous-onglets -->
+                <ScrollViewer Grid.Row="1" Padding="0,0,12,12">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock x:Uid="SP_ThemeGallery" Text="Galerie de thèmes" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
-                            <TextBlock x:Uid="SP_ThemeGallerySubtitle" Text="Glissez-déposez pour réorganiser, personnalisez les couleurs et créez vos propres styles."
-                                       Style="{StaticResource CaptionNoteStyle}"/>
-                        </StackPanel>
-                        <Button Grid.Column="1" Style="{ThemeResource SubtleButtonStyle}" Margin="0,0,6,0"
-                                Command="{x:Bind ViewModel.ResetThemesToDefaultCommand}"
-                                ToolTipService.ToolTip="Rétablir les thèmes par défaut d'origine"
-                                AutomationProperties.Name="Rétablir les thèmes d'usine">
-                            <FontIcon Glyph="&#xE72C;" FontSize="13"/>
-                        </Button>
-                        <Button Grid.Column="2" Style="{ThemeResource AccentButtonStyle}"
-                                Command="{x:Bind ViewModel.CreateNewThemeCommand}"
-                                ToolTipService.ToolTip="Créer un nouveau thème sur-mesure"
-                                AutomationProperties.Name="Créer un nouveau thème">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE710;" FontSize="12"/>
-                                <TextBlock Text="Nouveau thème" FontSize="12" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
+                        <!-- ══════════════════════════════════════════════ -->
+                        <!-- SOUS-PANNEAU 1 : DISPOSITION & BLOCS (CANVA)   -->
+                        <!-- ══════════════════════════════════════════════ -->
+                        <StackPanel x:Name="PanelSubBlocks" Spacing="10" Visibility="Visible">
+                            <!-- Barre d'outils des blocs -->
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Structure du document" FontWeight="SemiBold" FontSize="13.5"/>
+                                    <TextBlock Text="Glissez pour réorganiser, modifiez ou ajoutez des blocs." FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{ThemeResource SubtleButtonStyle}" Margin="0,0,6,0"
+                                        Command="{x:Bind ViewModel.ResetDocumentTilesCommand}"
+                                        ToolTipService.ToolTip="Rétablir la structure pédagogique par défaut"
+                                        AutomationProperties.Name="Rétablir les blocs par défaut">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="11"/>
+                                        <TextBlock Text="Réinitialiser" FontSize="11.5"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="AddBlockButton" Grid.Column="2" Style="{ThemeResource AccentButtonStyle}"
+                                        ToolTipService.ToolTip="Ajouter une section ou un bloc au document"
+                                        AutomationProperties.Name="Ajouter un bloc">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE710;" FontSize="12"/>
+                                        <TextBlock Text="Ajouter un bloc" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="6" Width="290">
+                                                <TextBlock Text="Ajouter une section au document" FontWeight="Bold" FontSize="12.5" Margin="4,2,4,4"/>
+                                                <TextBlock Text="Sélectionnez un bloc modulaire à insérer :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="4,0,4,6"/>
 
-                    <!-- Galerie de thèmes — glisser-déposer interactif -->
-                    <GridView x:Name="ThemeGridView"
-                              ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
-                              SelectedItem="{x:Bind ViewModel.SelectedPreset, Mode=TwoWay}"
-                              SelectionMode="Single" IsItemClickEnabled="False">
-                        <GridView.ItemTemplate>
-                            <DataTemplate x:DataType="viewmodels:StylePresetItem">
-                                <Border Width="144" Height="184" CornerRadius="8" BorderThickness="1"
-                                        Opacity="{x:Bind VisibleOpacity, Mode=OneWay}"
-                                        CanDrag="True" AllowDrop="True"
-                                        DragStarting="ThemeCard_DragStarting"
-                                        DragOver="ThemeCard_DragOver"
-                                        DragLeave="ThemeCard_DragLeave"
-                                        Drop="ThemeCard_Drop"
-                                        Tapped="ThemeCard_Tapped"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="52"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        
-                                        <!-- En-tête de tuile avec icône, nom et poignée de glissement -->
-                                        <Border Grid.Row="0" CornerRadius="7,7,0,0" Background="{x:Bind PrimaryBrush, Mode=OneWay}">
-                                            <Grid Padding="6,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Top" HorizontalAlignment="Left">
-                                                    <TextBlock Text="{x:Bind Icon, Mode=OneWay}" FontSize="15" VerticalAlignment="Center"/>
-                                                    <Border Visibility="{x:Bind DefaultBadgeVisibility, Mode=OneWay}"
-                                                            Background="#E6FFFFFF" CornerRadius="4" Padding="3,1" VerticalAlignment="Center">
-                                                        <TextBlock Text="★" FontSize="9" FontWeight="Bold" Foreground="#1E3A8A"/>
-                                                    </Border>
-                                                </StackPanel>
-                                                
-                                                <!-- Poignée de glisser-déposer -->
-                                                <FontIcon Glyph="&#xE700;" FontSize="10" Foreground="White" Opacity="0.7"
-                                                          HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"/>
+                                                <!-- Mémo / Synthèse -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="memo">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="💡" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="À retenir absolument" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Encadré mémo des règles et notions clés" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
 
-                                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" Foreground="White" FontWeight="SemiBold" FontSize="11.5"
-                                                           VerticalAlignment="Bottom" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis"/>
-                                            </Grid>
-                                        </Border>
+                                                <!-- Vocabulaire -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="vocabulaire">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="📖" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Vocabulaire &amp; Lexique" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Définitions incontournables et lexique" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
 
-                                        <!-- Description et aperçu de palette -->
-                                        <StackPanel Grid.Row="1" Padding="6,4" Spacing="2">
-                                            <TextBlock Text="{x:Bind Description, Mode=OneWay}" FontSize="10" TextWrapping="Wrap" MaxHeight="36"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,0" VerticalAlignment="Bottom">
-                                                <Ellipse Width="8" Height="8" Fill="{x:Bind PrimaryBrush, Mode=OneWay}"/>
-                                                <Ellipse Width="8" Height="8" Fill="{x:Bind SecondaryBrush, Mode=OneWay}"/>
-                                                <Ellipse Width="8" Height="8" Fill="{x:Bind AccentBrush, Mode=OneWay}"/>
+                                                <!-- Pour aller plus loin / Devoirs -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="prolongement">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="🚀" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Pour aller plus loin / Devoirs" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Activités d'approfondissement ou devoirs" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+
+                                                <!-- Vigilance & Pièges -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="warning">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="⚠️" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Point de vigilance &amp; Pièges" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Erreurs fréquentes et astuces préventives" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+
+                                                <!-- Ateliers & Groupes -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="atelier">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="👥" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Ateliers autonomes" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Rotations en îlots ou travail en binômes" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+
+                                                <!-- Évaluation & Barème -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="evaluation">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="🎯" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Critères d'évaluation &amp; Barème" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Grille d'évaluation sommative ou formative" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+
+                                                <!-- Bloc sur-mesure -->
+                                                <Button Style="{StaticResource BlockCatalogButtonStyle}" Click="AddBlockChip_Click" Tag="custom">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="✨" FontSize="16" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="Encadré personnalisé" FontWeight="SemiBold" FontSize="12"/>
+                                                            <TextBlock Text="Section personnalisée selon vos besoins" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
                                             </StackPanel>
-                                        </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
 
-                                        <!-- Barre d'outils de la tuile (Déplacer, Par défaut, Masquer, Dupliquer, Supprimer) -->
-                                        <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="0,0,7,7" Padding="2,2">
-                                            <Grid>
+                            <!-- Indication interactive -->
+                            <Border Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="6" Padding="10,6"
+                                    BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE700;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Glissez-déposez les tuiles pour réordonner, ou cliquez sur ▲ ▼. La prévisualisation s'actualise en direct."
+                                               FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Liste réordonnable des tuiles de blocs -->
+                            <ListView x:Name="DocumentTilesListView"
+                                      ItemsSource="{x:Bind ViewModel.DocumentTiles, Mode=OneWay}"
+                                      SelectedItem="{x:Bind ViewModel.SelectedDocumentTile, Mode=TwoWay}"
+                                      SelectionMode="Single"
+                                      CanReorderItems="True" CanDragItems="True" AllowDrop="True">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:DocumentTileItem">
+                                        <Border CornerRadius="8" BorderThickness="1" Margin="0,3" Padding="10,8"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                Opacity="{x:Bind VisibleOpacity, Mode=OneWay}"
+                                                CanDrag="True" AllowDrop="True"
+                                                DragStarting="TileBorder_DragStarting"
+                                                DragOver="TileBorder_DragOver"
+                                                DragLeave="TileBorder_DragLeave"
+                                                Drop="TileBorder_Drop">
+                                            <Grid ColumnSpacing="10">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Button Grid.Column="0" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="MoveThemeLeft_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la gauche"
-                                                        AutomationProperties.Name="Déplacer vers la gauche">
-                                                    <FontIcon Glyph="&#xE76B;" FontSize="10"/>
-                                                </Button>
-                                                <Button Grid.Column="1" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="MoveThemeRight_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la droite"
-                                                        AutomationProperties.Name="Déplacer vers la droite">
-                                                    <FontIcon Glyph="&#xE76C;" FontSize="10"/>
-                                                </Button>
-                                                <Button Grid.Column="3" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="SetAsDefaultTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Définir comme style par défaut"
-                                                        AutomationProperties.Name="Définir par défaut">
-                                                    <FontIcon Glyph="&#xE734;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                                                </Button>
-                                                <Button Grid.Column="4" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="DuplicateTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Dupliquer ce thème"
-                                                        AutomationProperties.Name="Dupliquer le thème">
-                                                    <FontIcon Glyph="&#xE8C8;" FontSize="10"/>
-                                                </Button>
-                                                <Button Grid.Column="5" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="ToggleThemeVisibility_Click" Tag="{Binding}" ToolTipService.ToolTip="Afficher / Masquer"
-                                                        AutomationProperties.Name="Afficher ou masquer la tuile">
-                                                    <FontIcon Glyph="&#xE890;" FontSize="10"/>
-                                                </Button>
-                                                <Button Grid.Column="6" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
-                                                        Click="DeleteTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Supprimer ce thème"
-                                                        Visibility="{x:Bind CustomVisibility, Mode=OneWay}"
-                                                        AutomationProperties.Name="Supprimer le thème personnalisé">
-                                                    <FontIcon Glyph="&#xE74D;" FontSize="10" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                                                </Button>
+
+                                                <!-- Poignée de glissement -->
+                                                <FontIcon Grid.Column="0" Glyph="&#xE700;" FontSize="12"
+                                                          Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                          VerticalAlignment="Center" Margin="0,0,2,0"/>
+
+                                                <!-- Pastille Icône -->
+                                                <Border Grid.Column="1" Width="34" Height="34" CornerRadius="6"
+                                                        Background="{ThemeResource LayerFillColorAltBrush}"
+                                                        BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{x:Bind Icon, Mode=OneWay}" FontSize="16"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Titre, Sous-titre & Badge -->
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontWeight="SemiBold" FontSize="12.5"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        <Border CornerRadius="4" Padding="5,1" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="{x:Bind Tag, Mode=OneWay}" FontSize="9.5" FontWeight="SemiBold"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" FontSize="10.5"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+
+                                                <!-- Barre d'outils de la tuile -->
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                    <!-- Monter ▲ -->
+                                                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                                                            Click="MoveTileUp_Click" Tag="{Binding}" ToolTipService.ToolTip="Monter la section"
+                                                            AutomationProperties.Name="Monter la section">
+                                                        <FontIcon Glyph="&#xE74A;" FontSize="10"/>
+                                                    </Button>
+                                                    <!-- Descendre ▼ -->
+                                                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                                                            Click="MoveTileDown_Click" Tag="{Binding}" ToolTipService.ToolTip="Descendre la section"
+                                                            AutomationProperties.Name="Descendre la section">
+                                                        <FontIcon Glyph="&#xE74B;" FontSize="10"/>
+                                                    </Button>
+                                                    <!-- Personnaliser / Renommer -->
+                                                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                                                            ToolTipService.ToolTip="Modifier le titre et la description"
+                                                            AutomationProperties.Name="Modifier la section">
+                                                        <Button.Flyout>
+                                                            <Flyout Placement="Left">
+                                                                <StackPanel Spacing="8" Width="230">
+                                                                    <TextBlock Text="Personnaliser cette section" FontWeight="SemiBold" FontSize="12"/>
+                                                                    <TextBox Header="Titre affiché" Text="{x:Bind Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                    <TextBox Header="Sous-titre / Description" Text="{x:Bind Subtitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                </StackPanel>
+                                                            </Flyout>
+                                                        </Button.Flyout>
+                                                        <FontIcon Glyph="&#xE70F;" FontSize="10"/>
+                                                    </Button>
+                                                    <!-- Afficher / Masquer -->
+                                                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                                                            Click="ToggleTileVisibility_Click" Tag="{Binding}"
+                                                            ToolTipService.ToolTip="Afficher ou masquer dans le document"
+                                                            AutomationProperties.Name="Afficher ou masquer la section">
+                                                        <FontIcon Glyph="{x:Bind VisibilityIconGlyph, Mode=OneWay}" FontSize="10"/>
+                                                    </Button>
+                                                    <!-- Supprimer -->
+                                                    <Button Style="{StaticResource ToolbarIconButtonStyle}"
+                                                            Click="DeleteTile_Click" Tag="{Binding}" ToolTipService.ToolTip="Supprimer du document"
+                                                            Visibility="{x:Bind RemovableVisibility, Mode=OneWay}"
+                                                            AutomationProperties.Name="Supprimer la section">
+                                                        <FontIcon Glyph="&#xE74D;" FontSize="10" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                    </Button>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </GridView.ItemTemplate>
-                    </GridView>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
 
-                    <!-- Info Style par défaut -->
-                    <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
-                             x:Uid="SP_DefaultStyleTitle" Title="Style par défaut pour les futures fiches :"
-                             Message="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}"/>
+                        <!-- ══════════════════════════════════════════════ -->
+                        <!-- SOUS-PANNEAU 2 : THÈMES & PALETTES             -->
+                        <!-- ═════════════════════════════════���════════════ -->
+                        <StackPanel x:Name="PanelSubThemes" Spacing="14" Visibility="Collapsed">
+                            <!-- En-tête de section -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock x:Uid="SP_ThemeGallery" Text="Galerie de thèmes" Style="{StaticResource SectionHeaderStyle}" Margin="0"/>
+                                    <TextBlock x:Uid="SP_ThemeGallerySubtitle" Text="Glissez pour réorganiser, personnalisez les couleurs et créez vos propres styles."
+                                               Style="{StaticResource CaptionNoteStyle}"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{ThemeResource SubtleButtonStyle}" Margin="0,0,6,0"
+                                        Command="{x:Bind ViewModel.ResetThemesToDefaultCommand}"
+                                        ToolTipService.ToolTip="Rétablir les thèmes par défaut d'origine"
+                                        AutomationProperties.Name="Rétablir les thèmes d'usine">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="13"/>
+                                </Button>
+                                <Button Grid.Column="2" Style="{ThemeResource AccentButtonStyle}"
+                                        Command="{x:Bind ViewModel.CreateNewThemeCommand}"
+                                        ToolTipService.ToolTip="Créer un nouveau thème sur-mesure"
+                                        AutomationProperties.Name="Créer un nouveau thème">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE710;" FontSize="12"/>
+                                        <TextBlock Text="Nouveau thème" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
 
-                    <!-- ───── StyleBuilder — Personnalisation complète ───── -->
-                    <controls:SettingsExpander x:Uid="SP_StyleBuilder" Header="StyleBuilder — Personnalisation du thème"
-                                               Description="Personnalisez couleurs, typographie, en-tête et marges du thème sélectionné."
-                                               IsExpanded="True">
-                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE790;"/></controls:SettingsExpander.HeaderIcon>
-                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
+                            <!-- Galerie de thèmes — cartes enrichies -->
+                            <GridView x:Name="ThemeGridView"
+                                      ItemsSource="{x:Bind ViewModel.StylePresets, Mode=OneWay}"
+                                      SelectedItem="{x:Bind ViewModel.SelectedPreset, Mode=TwoWay}"
+                                      SelectionMode="Single" IsItemClickEnabled="False"
+                                      CanReorderItems="True" CanDragItems="True" AllowDrop="True">
+                                <GridView.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:StylePresetItem">
+                                        <Border Width="216" Height="148" CornerRadius="8" BorderThickness="1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                Opacity="{x:Bind VisibleOpacity, Mode=OneWay}"
+                                                CanDrag="True" AllowDrop="True"
+                                                DragStarting="ThemeCard_DragStarting"
+                                                DragOver="ThemeCard_DragOver"
+                                                DragLeave="ThemeCard_DragLeave"
+                                                Drop="ThemeCard_Drop"
+                                                Tapped="ThemeCard_Tapped">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="38"/>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- En-tête de tuile avec couleur primaire -->
+                                                <Border Grid.Row="0" CornerRadius="7,7,0,0" Background="{x:Bind PrimaryBrush, Mode=OneWay}" Padding="8,4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind Icon, Mode=OneWay}" FontSize="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <Border Visibility="{x:Bind DefaultBadgeVisibility, Mode=OneWay}"
+                                                                    Background="#E6FFFFFF" CornerRadius="4" Padding="4,1">
+                                                                <TextBlock Text="★ DÉFAUT" FontSize="8.5" FontWeight="Bold" Foreground="#1E3A8A"/>
+                                                            </Border>
+                                                            <Border Visibility="{x:Bind CustomVisibility, Mode=OneWay}"
+                                                                    Background="#33FFFFFF" CornerRadius="4" Padding="4,1">
+                                                                <TextBlock Text="PERSO" FontSize="8.5" FontWeight="Bold" Foreground="White"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Description, police et pastilles chromatiques -->
+                                                <Grid Grid.Row="1" Padding="8,6">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="{x:Bind Description, Mode=OneWay}" FontSize="10.5" TextWrapping="Wrap" MaxHeight="38"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <Grid Grid.Row="1" Margin="0,4,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind FontFamily, Mode=OneWay}" FontSize="9.5"
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <Ellipse Width="10" Height="10" Fill="{x:Bind PrimaryBrush, Mode=OneWay}"/>
+                                                            <Ellipse Width="10" Height="10" Fill="{x:Bind SecondaryBrush, Mode=OneWay}"/>
+                                                            <Ellipse Width="10" Height="10" Fill="{x:Bind AccentBrush, Mode=OneWay}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
+
+                                                <!-- Barre d'outils du thème -->
+                                                <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="0,0,7,7" Padding="4,3">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Grid.Column="0" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                                Click="MoveThemeLeft_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la gauche"
+                                                                AutomationProperties.Name="Déplacer vers la gauche">
+                                                            <FontIcon Glyph="&#xE76B;" FontSize="9.5"/>
+                                                        </Button>
+                                                        <Button Grid.Column="1" Style="{StaticResource ToolbarIconButtonStyle}" Padding="3,2" MinWidth="22" MinHeight="22"
+                                                                Click="MoveThemeRight_Click" Tag="{Binding}" ToolTipService.ToolTip="Déplacer vers la droite"
+                                                                AutomationProperties.Name="Déplacer vers la droite">
+                                                            <FontIcon Glyph="&#xE76C;" FontSize="9.5"/>
+                                                        </Button>
+                                                        <Button Grid.Column="3" Style="{StaticResource ToolbarIconButtonStyle}" Padding="4,2" MinWidth="22" MinHeight="22"
+                                                                Click="SetAsDefaultTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Définir par défaut"
+                                                                AutomationProperties.Name="Définir comme style par défaut">
+                                                            <FontIcon Glyph="&#xE734;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                        </Button>
+                                                        <Button Grid.Column="4" Style="{StaticResource ToolbarIconButtonStyle}" Padding="4,2" MinWidth="22" MinHeight="22"
+                                                                Click="DuplicateTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Dupliquer le thème"
+                                                                AutomationProperties.Name="Dupliquer le thème">
+                                                            <FontIcon Glyph="&#xE8C8;" FontSize="10"/>
+                                                        </Button>
+                                                        <Button Grid.Column="5" Style="{StaticResource ToolbarIconButtonStyle}" Padding="4,2" MinWidth="22" MinHeight="22"
+                                                                Click="DeleteTheme_Click" Tag="{Binding}" ToolTipService.ToolTip="Supprimer"
+                                                                Visibility="{x:Bind CustomVisibility, Mode=OneWay}"
+                                                                AutomationProperties.Name="Supprimer le thème personnalisé">
+                                                            <FontIcon Glyph="&#xE74D;" FontSize="10" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </GridView.ItemTemplate>
+                            </GridView>
+
+                            <!-- Info Style par défaut -->
+                            <InfoBar Severity="Informational" IsOpen="True" IsClosable="False"
+                                     x:Uid="SP_DefaultStyleTitle" Title="Style par défaut pour les futures fiches :"
+                                     Message="{x:Bind ViewModel.DefaultStyleLabel, Mode=OneWay}"/>
 
                             <!-- Édition du nom et de l'icône (si thème personnalisé) -->
                             <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.IsSelectedThemeCustom, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
@@ -1196,8 +1477,65 @@
                                 </Grid>
                             </StackPanel>
 
+                            <!-- Harmonies de couleurs suggérées -->
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Uid="SP_PaletteSuggestions" Text="Harmonies chromatiques suggérées :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ocean" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#1E3A8A"/><Ellipse Width="10" Height="10" Fill="#2563EB"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Océan" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="forest" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#064E3B"/><Ellipse Width="10" Height="10" Fill="#059669"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Émeraude" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="purple" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#311042"/><Ellipse Width="10" Height="10" Fill="#6D28D9"/><Ellipse Width="10" Height="10" Fill="#F59E0B"/>
+                                                <TextBlock Text="Pourpre" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="terracotta" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#7C2D12"/><Ellipse Width="10" Height="10" Fill="#C2410C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Terracotta" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="slate" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#0F172A"/><Ellipse Width="10" Height="10" Fill="#334155"/><Ellipse Width="10" Height="10" Fill="#0284C7"/>
+                                                <TextBlock Text="Ardoise" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ruby" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#881337"/><Ellipse Width="10" Height="10" Fill="#BE123C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
+                                                <TextBlock Text="Rubis" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="pastel" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#1E40AF"/><Ellipse Width="10" Height="10" Fill="#3B82F6"/><Ellipse Width="10" Height="10" Fill="#EC4899"/>
+                                                <TextBlock Text="Pastel" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="mono" Style="{ThemeResource SubtleButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="10" Height="10" Fill="#111827"/><Ellipse Width="10" Height="10" Fill="#374151"/><Ellipse Width="10" Height="10" Fill="#6B7280"/>
+                                                <TextBlock Text="Noir &amp; Blanc" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </StackPanel>
+
                             <!-- Palette de 3 couleurs harmoniques -->
-                            <TextBlock x:Uid="SP_ColorPalette" Text="Palette chromatique" FontWeight="SemiBold" FontSize="13"/>
+                            <TextBlock x:Uid="SP_ColorPalette" Text="Palette chromatique personnalisée" FontWeight="SemiBold" FontSize="13"/>
                             
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -1300,65 +1638,25 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Palettes rapides harmonieuses -->
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Uid="SP_PaletteSuggestions" Text="Harmonies chromatiques suggérées :" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <!-- Actions du StyleBuilder -->
+                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                                <Button Style="{ThemeResource AccentButtonStyle}" Padding="14,6"
+                                        Command="{x:Bind ViewModel.SetAsDefaultThemeCommand}"
+                                        CommandParameter="{x:Bind ViewModel.SelectedPreset, Mode=OneWay}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ocean" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#1E3A8A"/><Ellipse Width="10" Height="10" Fill="#2563EB"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
-                                                <TextBlock Text="Océan" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="forest" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#064E3B"/><Ellipse Width="10" Height="10" Fill="#059669"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
-                                                <TextBlock Text="Émeraude" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="purple" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#311042"/><Ellipse Width="10" Height="10" Fill="#6D28D9"/><Ellipse Width="10" Height="10" Fill="#F59E0B"/>
-                                                <TextBlock Text="Pourpre" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="terracotta" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#7C2D12"/><Ellipse Width="10" Height="10" Fill="#C2410C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
-                                                <TextBlock Text="Terracotta" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="slate" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#0F172A"/><Ellipse Width="10" Height="10" Fill="#334155"/><Ellipse Width="10" Height="10" Fill="#0284C7"/>
-                                                <TextBlock Text="Ardoise" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="ruby" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#881337"/><Ellipse Width="10" Height="10" Fill="#BE123C"/><Ellipse Width="10" Height="10" Fill="#D97706"/>
-                                                <TextBlock Text="Rubis" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="pastel" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#1E40AF"/><Ellipse Width="10" Height="10" Fill="#3B82F6"/><Ellipse Width="10" Height="10" Fill="#EC4899"/>
-                                                <TextBlock Text="Pastel" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Padding="8,4" Click="PaletteChip_Click" Tag="mono" Style="{ThemeResource SubtleButtonStyle}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Ellipse Width="10" Height="10" Fill="#111827"/><Ellipse Width="10" Height="10" Fill="#374151"/><Ellipse Width="10" Height="10" Fill="#6B7280"/>
-                                                <TextBlock Text="Noir &amp; Blanc" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
+                                        <FontIcon Glyph="&#xE734;" FontSize="12"/>
+                                        <TextBlock Text="Définir comme style par défaut" FontSize="12" FontWeight="SemiBold"/>
                                     </StackPanel>
-                                </ScrollViewer>
+                                </Button>
                             </StackPanel>
+                        </StackPanel>
 
+                        <!-- ══════════════════════════════════════════════ -->
+                        <!-- SOUS-PANNEAU 3 : TYPOGRAPHIE & FORMAT          -->
+                        <!-- ══════════════════════════════════════════════ -->
+                        <StackPanel x:Name="PanelSubDesign" Spacing="14" Visibility="Collapsed">
                             <!-- Traitement d'en-tête -->
-                            <TextBlock x:Uid="SP_HeaderStyle" Text="Style de l'en-tête du document" FontWeight="SemiBold" FontSize="13" Margin="0,4,0,0"/>
+                            <TextBlock x:Uid="SP_HeaderStyle" Text="Style de l'en-tête du document" FontWeight="SemiBold" FontSize="13"/>
                             <ComboBox HorizontalAlignment="Stretch"
                                       ItemsSource="{x:Bind ViewModel.HeaderLayoutOptions, Mode=OneWay}"
                                       SelectedValue="{x:Bind ViewModel.BuilderHeaderLayout, Mode=TwoWay}"
@@ -1389,6 +1687,20 @@
                                            SpinButtonPlacementMode="Inline"
                                            Value="{x:Bind ViewModel.BuilderCornerRadius, Mode=TwoWay}"/>
                             </Grid>
+
+                            <!-- Puces d'arrondi rapide -->
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="0 px" FontSize="11" Padding="8,2" Style="{ThemeResource SubtleButtonStyle}"
+                                        Command="{x:Bind ViewModel.ApplyQuickCornerRadiusCommand}" CommandParameter="0"/>
+                                <Button Content="4 px" FontSize="11" Padding="8,2" Style="{ThemeResource SubtleButtonStyle}"
+                                        Command="{x:Bind ViewModel.ApplyQuickCornerRadiusCommand}" CommandParameter="4"/>
+                                <Button Content="8 px (Standard)" FontSize="11" Padding="8,2" Style="{ThemeResource SubtleButtonStyle}"
+                                        Command="{x:Bind ViewModel.ApplyQuickCornerRadiusCommand}" CommandParameter="8"/>
+                                <Button Content="12 px" FontSize="11" Padding="8,2" Style="{ThemeResource SubtleButtonStyle}"
+                                        Command="{x:Bind ViewModel.ApplyQuickCornerRadiusCommand}" CommandParameter="12"/>
+                                <Button Content="16 px (Doux)" FontSize="11" Padding="8,2" Style="{ThemeResource SubtleButtonStyle}"
+                                        Command="{x:Bind ViewModel.ApplyQuickCornerRadiusCommand}" CommandParameter="16"/>
+                            </StackPanel>
 
                             <!-- Marges de page -->
                             <Grid Margin="0,4,0,0">
@@ -1421,44 +1733,33 @@
                                            Value="{x:Bind ViewModel.BuilderMarginRight, Mode=TwoWay}"/>
                             </Grid>
 
-                            <!-- Actions du StyleBuilder -->
-                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
-                                <Button Style="{ThemeResource AccentButtonStyle}" Padding="14,6"
-                                        Command="{x:Bind ViewModel.SetAsDefaultThemeCommand}"
-                                        CommandParameter="{x:Bind ViewModel.SelectedPreset, Mode=OneWay}">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon Glyph="&#xE734;" FontSize="12"/>
-                                        <TextBlock Text="Définir comme style par défaut" FontSize="12" FontWeight="SemiBold"/>
+                            <!-- ───── Générateur de style par IA ───── -->
+                            <controls:SettingsExpander x:Uid="SP_InferStylePdf" Header="✨ Suggérer une palette depuis un PDF"
+                                                       Description="Applique une harmonie de couleurs et typographie extraite d'un document."
+                                                       Margin="0,8,0,0">
+                                <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsExpander.HeaderIcon>
+                                <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
+                                    <TextBlock x:Uid="SP_InferStylePdfNote" Style="{StaticResource CaptionNoteStyle}"
+                                               Text="Sélectionnez un document modèle pour charger une palette harmonieuse."/>
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Button x:Uid="SP_AnalyzePdfBtn" Content="🎨 Analyser un PDF…" Click="AnalyzeStylePdf_Click"
+                                                Style="{ThemeResource DefaultButtonStyle}"/>
+                                        <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsAnalyzingStyle, Mode=OneWay}"/>
+                                        <TextBlock Text="{x:Bind ViewModel.StyleAnalysisStatus, Mode=OneWay}"
+                                                   FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                     </StackPanel>
-                                </Button>
-                            </StackPanel>
+                                    <TextBox Text="{x:Bind ViewModel.GeneratedCss, Mode=OneWay}" IsReadOnly="True"
+                                             FontFamily="Cascadia Code, Consolas" FontSize="12" AcceptsReturn="True"
+                                             TextWrapping="NoWrap" MinHeight="100"
+                                             Visibility="{x:Bind ViewModel.HasGeneratedCss, Mode=OneWay}"
+                                             x:Uid="SP_GeneratedStyleSheet" Header="Feuille de style générée"/>
+                                </StackPanel>
+                            </controls:SettingsExpander>
                         </StackPanel>
-                    </controls:SettingsExpander>
-
-                    <!-- ───── Générateur de style par IA ───── -->
-                    <controls:SettingsExpander x:Uid="SP_InferStylePdf" Header="✨ Suggérer une palette de style"
-                                               Description="Applique une harmonie de couleurs et typographie prédéfinie au StyleBuilder.">
-                        <controls:SettingsExpander.HeaderIcon><FontIcon Glyph="&#xE99A;"/></controls:SettingsExpander.HeaderIcon>
-                        <StackPanel Style="{StaticResource ExpanderInnerPanelStyle}">
-                            <TextBlock x:Uid="SP_InferStylePdfNote" Style="{StaticResource CaptionNoteStyle}"
-                                       Text="Sélectionnez un document modèle ou activez la suggestion pour charger une palette harmonieuse."/>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button x:Uid="SP_AnalyzePdfBtn" Content="🎨 Suggérer une palette…" Click="AnalyzeStylePdf_Click"
-                                        Style="{ThemeResource DefaultButtonStyle}"/>
-                                <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.IsAnalyzingStyle, Mode=OneWay}"/>
-                                <TextBlock Text="{x:Bind ViewModel.StyleAnalysisStatus, Mode=OneWay}"
-                                           FontSize="12" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                            </StackPanel>
-                            <TextBox Text="{x:Bind ViewModel.GeneratedCss, Mode=OneWay}" IsReadOnly="True"
-                                     FontFamily="Cascadia Code, Consolas" FontSize="12" AcceptsReturn="True"
-                                     TextWrapping="NoWrap" MinHeight="120"
-                                     Visibility="{x:Bind ViewModel.HasGeneratedCss, Mode=OneWay}"
-                                     x:Uid="SP_GeneratedStyleSheet" Header="Feuille de style générée"/>
-                        </StackPanel>
-                    </controls:SettingsExpander>
-                </StackPanel>
-            </ScrollViewer>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
 
             <!-- ── COLONNE DROITE : APERÇU TEMPS RÉEL ── -->
             <Border Grid.Column="1" CornerRadius="10" BorderThickness="1"
