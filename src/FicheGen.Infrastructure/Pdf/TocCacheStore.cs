@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using FicheGen.Core.Abstractions;
 using FicheGen.Core.Toc;
+using Serilog;
 
 namespace FicheGen.Infrastructure.Pdf;
 
@@ -29,6 +30,7 @@ public sealed class ToCEntryDto
 public sealed class TocCacheStore
 {
     private readonly string _cacheDirectory;
+    private readonly object _syncLock = new();
 
     public TocCacheStore(string? cacheDir = null)
     {
@@ -37,6 +39,29 @@ public sealed class TocCacheStore
             "FicheGen", "cache", "toc");
 
         Directory.CreateDirectory(_cacheDirectory);
+        CleanOrphanedTempFiles();
+    }
+
+    private void CleanOrphanedTempFiles()
+    {
+        try
+        {
+            var tmpFiles = Directory.EnumerateFiles(_cacheDirectory, "*.tmp");
+            foreach (var file in tmpFiles)
+            {
+                try
+                {
+                    var info = new FileInfo(file);
+                    // Only delete abandoned temp files older than 5 minutes to avoid racing active writes
+                    if (DateTime.UtcNow - info.LastWriteTimeUtc > TimeSpan.FromMinutes(5))
+                    {
+                        File.Delete(file);
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
     }
 
     public static string ComputePdfHash(string pdfPath)
@@ -67,7 +92,13 @@ public sealed class TocCacheStore
 
         try
         {
-            var json = File.ReadAllText(cachePath);
+            string json;
+            using (var stream = new FileStream(cachePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            {
+                json = reader.ReadToEnd();
+            }
+
             var dto = JsonSerializer.Deserialize<TocCacheDto>(json);
             if (dto == null || dto.Version != 2)
                 return null;
@@ -88,15 +119,22 @@ public sealed class TocCacheStore
                 entries
             );
         }
-        catch (Exception)
+        catch (JsonException ex)
         {
-            // Quarantine corrupt file
+            // Quarantine corrupt file only when deserialization fails (invalid/corrupted JSON)
+            Log.Warning(ex, "Cache ToC corrompu pour {PdfPath}, mise en quarantaine.", pdfPath);
             try
             {
                 var corruptPath = $"{cachePath}.corrupt-{DateTime.UtcNow.Ticks}";
                 File.Move(cachePath, corruptPath, overwrite: true);
             }
             catch { }
+            return null;
+        }
+        catch (Exception ex)
+        {
+            // Transient read or file sharing exception
+            Log.Debug(ex, "Impossible de lire le cache ToC pour {PdfPath}.", pdfPath);
             return null;
         }
     }
@@ -123,9 +161,47 @@ public sealed class TocCacheStore
         };
 
         var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
-        var tmpPath = $"{cachePath}.tmp";
+        // Use a unique temporary filename per write so concurrent operations never collide
+        var tmpPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
 
-        File.WriteAllText(tmpPath, json, Encoding.UTF8);
-        File.Move(tmpPath, cachePath, overwrite: true);
+        try
+        {
+            Directory.CreateDirectory(_cacheDirectory);
+            File.WriteAllText(tmpPath, json, Encoding.UTF8);
+
+            // Retry briefly on transient file locks when moving the file into place
+            const int maxRetries = 3;
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    lock (_syncLock)
+                    {
+                        File.Move(tmpPath, cachePath, overwrite: true);
+                    }
+                    break;
+                }
+                catch (IOException) when (attempt < maxRetries)
+                {
+                    Thread.Sleep(20 * attempt);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Cache saving is an optimization and must never crash the application.
+            Log.Debug(ex, "Échec de l'enregistrement dans le cache ToC pour {PdfPath}.", result.PdfPath);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tmpPath))
+                {
+                    File.Delete(tmpPath);
+                }
+            }
+            catch { }
+        }
     }
 }

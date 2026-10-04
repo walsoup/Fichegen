@@ -867,6 +867,9 @@
   <data name="AP_ModeAuto_Caption" xml:space="preserve">
     <value>يتكيف المساعد تلقائيًا مع سياق عملك الحالي.</value>
   </data>
+  <data name="AP_ModeAuto_Prompt" xml:space="preserve">
+    <value>اطلب تعديلاً أو اطرح سؤالاً تربوياً…</value>
+  </data>
   <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve">
     <value>منطقة اختيار دليل الأستاذ أو الكتاب المدرسي PDF</value>
   </data>
@@ -1289,6 +1292,12 @@
   </data>
   <data name="FP_TopicBox.PlaceholderText" xml:space="preserve">
     <value>مثال: الجمع والطرح للأعداد العشرية...</value>
+  </data>
+  <data name="FP_CachedLessons_Header.Text" xml:space="preserve">
+    <value>دروس المستند المرجعي:</value>
+  </data>
+  <data name="FP_CachedLessons_Placeholder.Text" xml:space="preserve">
+    <value>اختر درساً من جدول المحتويات…</value>
   </data>
   <data name="FP_Step3_Header.Text" xml:space="preserve">
     <value>3. الإطار والمدة</value>
@@ -1934,10 +1943,22 @@
     <value>مسارات التخزين</value>
   </data>
   <data name="SP_GuidesFolder.Header" xml:space="preserve">
-    <value>الدلائل والمراجع البيداغوجية (PDF)</value>
+    <value>المستندات المرجعية (أدلة PDF)</value>
   </data>
   <data name="SP_GuidesFolder.Description" xml:space="preserve">
-    <value>المراجع المستخدمة لاستخراج الفهرس والتأطير التربوي.</value>
+    <value>المجلد الذي يحتوي على الكتب والأدلة المرجعية المستخرجة حسب المستوى.</value>
+  </data>
+  <data name="SP_ScanParentDocsFolderBtn.Content" xml:space="preserve">
+    <value>البحث عن المستندات</value>
+  </data>
+  <data name="SP_ScanAllParentDocsBtn.Content" xml:space="preserve">
+    <value>فهرسة الكل</value>
+  </data>
+  <data name="SP_DiscoveredDocsCombo.PlaceholderText" xml:space="preserve">
+    <value>اختر مستنداً لاستخراج جدول محتوياته…</value>
+  </data>
+  <data name="SP_ScanSelectedDocTocBtn.Content" xml:space="preserve">
+    <value>استخراج جدول المحتويات</value>
   </data>
   <data name="SP_NoFolderSelected.PlaceholderText" xml:space="preserve">
     <value>لم يتم تحديد أي مجلد</value>

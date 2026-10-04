@@ -170,8 +170,9 @@ public partial class AssistantViewModel : ObservableObject
 
     public IReadOnlyList<AssistantModeOption> AvailableModes { get; } = new[]
     {
+        new AssistantModeOption("Auto", "Auto", "Détecte automatiquement s'il s'agit d'une question ou d'une modification."),
         new AssistantModeOption("Modifier", "Modifier", "Propose des modifications ciblées sur le document ouvert."),
-        new AssistantModeOption("Question", "Question", "Pose une question sur le document ouvert.")
+        new AssistantModeOption("Question", "Question", "Pose une question sur le document ouvert ou la pédagogie.")
     };
 
     public IReadOnlyList<ShortcutHint> ShortcutHints { get; } = new[]
@@ -199,9 +200,9 @@ public partial class AssistantViewModel : ObservableObject
         _authService = authService;
         _resultViewModel = resultViewModel;
 
-        SelectedMode = "Modifier";
+        SelectedMode = "Auto";
         PromptText = string.Empty;
-        StatusMessage = "Prêt à vous assister sur le document ouvert.";
+        StatusMessage = "Prêt à vous assister sur vos documents et questions pédagogiques.";
         CurrentStatusSeverity = StatusSeverity.Info;
 
         Messages.CollectionChanged += (_, _) =>
@@ -301,13 +302,13 @@ public partial class AssistantViewModel : ObservableObject
                 _resultViewModel.PushSnapshot($"Avant : « {Truncate(userMessage, 40)} »");
 
                 SetStatus("L'assistant modifie le document…", StatusSeverity.Info);
-                assistantMsg.Content = "✍️ Rédaction des modifications pédagogiques en cours…";
+                assistantMsg.Content = "✍️ Rédaction des ajustements sur votre document…";
 
                 var sb = new StringBuilder();
                 await foreach (var chunk in _assistantService.StreamEditAsync(_resultViewModel.CurrentDocument, userMessage, config, currentCts.Token))
                 {
                     sb.Append(chunk);
-                    assistantMsg.Content = sb.ToString();
+                    // Do NOT dump raw JSON into assistantMsg.Content! Keep the pleasant progress status.
                 }
 
                 var editedText = sb.ToString();
@@ -343,13 +344,11 @@ public partial class AssistantViewModel : ObservableObject
 
                     if (editedDoc is null)
                     {
-                        assistantMsg.Content =
-                            "La modification n'a pas pu être convertie en document. " +
-                            "Reformulez votre consigne, plus précisément.";
+                        assistantMsg.Content = "⚠️ L'assistant n'a pas pu structurer la modification sous forme de document.\n\nConseil : précisez quelle section ou quel exercice modifier (ex : « Ajoute un exercice sur... »).";
                     }
                     else
                     {
-                        assistantMsg.Content = "Voici les modifications proposées pour votre document. Vérifiez les ajustements ci-dessous avant d'appliquer :";
+                        assistantMsg.Content = "Voici les ajustements proposés pour votre document. Vous pouvez examiner les modifications ci-dessous avant de les appliquer :";
                         assistantMsg.EditedDocument = editedDoc;
                         var originalPlainText = _resultViewModel.CurrentDocument!.ToPlainText();
                         var newPlainText = editedDoc.ToPlainText();
@@ -358,21 +357,29 @@ public partial class AssistantViewModel : ObservableObject
                     }
                 }
             }
-            else if (hasDocument)
-            {
-                SetStatus("L'assistant analyse le document…", StatusSeverity.Info);
-                var response = await _assistantService.AskQuestionAsync(_resultViewModel.CurrentDocument!, userMessage, config, currentCts.Token);
-                assistantMsg.Content = response;
-            }
             else
             {
-                // General pedagogical question when no document is active
+                // Question / Discussion mode (either explicit or detected via Auto)
                 SetStatus("L'assistant répond à votre question…", StatusSeverity.Info);
-                var dummyDoc = new GeneratedDocument(new DocumentMetadata("Assistant Général", DocType: "assistant"), Array.Empty<Block>());
-                var response = await _assistantService.AskQuestionAsync(dummyDoc, userMessage, config, currentCts.Token);
-                assistantMsg.Content = !string.IsNullOrWhiteSpace(response)
-                    ? response
-                    : "Aucun document n'est actuellement ouvert.\n\nGénérez d'abord une fiche, une évaluation ou un quiz via les onglets dédiés, ou posez-moi vos questions pédagogiques.";
+                var history = Messages
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Content) && m != assistantMsg)
+                    .Select(m => (m.Sender, m.Content))
+                    .ToList();
+
+                var targetDoc = _resultViewModel.CurrentDocument
+                    ?? new GeneratedDocument(new DocumentMetadata("Assistant Général", DocType: "assistant"), Array.Empty<Block>());
+
+                var qSb = new StringBuilder();
+                await foreach (var chunk in _assistantService.StreamQuestionAsync(targetDoc, userMessage, history, config, currentCts.Token))
+                {
+                    qSb.Append(chunk);
+                    assistantMsg.Content = qSb.ToString();
+                }
+
+                if (qSb.Length == 0)
+                {
+                    assistantMsg.Content = "L'assistant n'a renvoyé aucune réponse.";
+                }
             }
 
             assistantMsg.IsStreaming = false;
@@ -608,15 +615,30 @@ public partial class AssistantViewModel : ObservableObject
         if (string.Equals(SelectedMode, "Question", StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.Equals(SelectedMode, "Auto", StringComparison.OrdinalIgnoreCase)) return false;
 
-        return userMessage.StartsWith("modifie", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("remplace", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("corrige", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("supprime", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("ajoute", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("réécris", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("réecris", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("raccourcis", StringComparison.OrdinalIgnoreCase)
-            || userMessage.StartsWith("transforme", StringComparison.OrdinalIgnoreCase);
+        var trimmed = userMessage.TrimStart();
+        return trimmed.StartsWith("modifie", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("remplace", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("corrige", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("supprime", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("ajoute", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("réécris", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("réecris", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("raccourcis", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("transforme", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("simplifie", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("traduis", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("résume", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("resume", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("différencie", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("differencie", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("adapte", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("insère", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("insere", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("change", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("mets", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("met", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("améliore", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("ameliore", StringComparison.OrdinalIgnoreCase);
     }
 
     private void SetStatus(string message, StatusSeverity severity)

@@ -105,6 +105,23 @@ public sealed class AssistantService : IAssistantService
         return _llmClient.GenerateAsync(req, config, ct);
     }
 
+    public IAsyncEnumerable<string> StreamQuestionAsync(
+        GeneratedDocument currentDoc,
+        string question,
+        IReadOnlyList<(string Role, string Content)>? conversationHistory,
+        AiRequestConfig config,
+        CancellationToken ct)
+    {
+        if (_llmClient == null)
+        {
+            throw new InvalidOperationException("Le service Assistant requiert un ILlmClient actif pour les questions.");
+        }
+
+        var docText = currentDoc.ToPlainText();
+        var req = PromptBuilder.BuildQuestionPrompt(docText, question, conversationHistory);
+        return _llmClient.GenerateStreamAsync(req, config, ct);
+    }
+
     public static IntentKind ClassifyIntentHeuristic(string message)
     {
         var msg = message.ToLowerInvariant();

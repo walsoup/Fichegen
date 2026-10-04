@@ -204,7 +204,12 @@ public sealed partial class AssistantPane : UserControl
         }
         else
         {
-            _selectedMode = ModeSegmented.SelectedIndex == 1 ? "Question" : "Modifier";
+            _selectedMode = ModeSegmented.SelectedIndex switch
+            {
+                1 => "Modifier",
+                2 => "Question",
+                _ => "Auto"
+            };
         }
 
         UpdateModeCaption();
@@ -228,12 +233,20 @@ public sealed partial class AssistantPane : UserControl
                 break;
 
             case "Modifier":
-            default:
                 ModeCaptionText.Text =
                     Services.L10n.Get("AP_ModeEdit_Caption");
 
                 PromptTextBox.PlaceholderText =
                     Services.L10n.Get("AP_ModeEdit_Prompt");
+                break;
+
+            case "Auto":
+            default:
+                ModeCaptionText.Text =
+                    Services.L10n.Get("AP_ModeAuto_Caption");
+
+                PromptTextBox.PlaceholderText =
+                    Services.L10n.Get("AP_ModeAuto_Prompt");
                 break;
         }
     }
@@ -385,30 +398,6 @@ public sealed partial class AssistantPane : UserControl
         Clipboard.Flush();
 
         return Task.CompletedTask;
-    }
-
-    private void OnCaretLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is not UIElement caret || !UiMotion.Enabled)
-        {
-            return;
-        }
-
-        var animation = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            Duration = TimeSpan.FromMilliseconds(500),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-
-        Storyboard.SetTarget(animation, caret);
-        Storyboard.SetTargetProperty(animation, "Opacity");
-
-        var storyboard = new Storyboard();
-        storyboard.Children.Add(animation);
-        storyboard.Begin();
     }
 
     private void ScrollToBottom()

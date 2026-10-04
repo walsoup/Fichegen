@@ -170,6 +170,137 @@ public partial class SettingsViewModel
         new DocumentTileItem("tile_corrige", "corrige", "Corrigé & Critères de réussite", "Éléments de réponse et barème enseignant", "✅", "Évaluation", isVisible: true, isRemovable: true, accentTag: "success"),
     };
 
+    public ObservableCollection<DocumentTemplatePreset> DocumentTemplatePresets { get; } = new()
+    {
+        new DocumentTemplatePreset(
+            "preset_cours",
+            "Cours standard",
+            "Séance complète : découverte, manipulation, activités et corrigé.",
+            "🎓",
+            new List<DocumentTileDto>
+            {
+                new("tile_header", "header", "En-tête & Métadonnées", "Titre de leçon, niveau CM2, discipline, durée & date", "🎓", "Structure", true, false, "primary"),
+                new("tile_objectifs", "objectifs", "1. Objectifs d'apprentissage", "Compétences ciblées & fraction comme partage", "🎯", "Pédagogie", true, true, "accent"),
+                new("tile_cours", "cours", "2. Phase de découverte & Notion", "Bandes de papier unité et cadrage théorique", "📘", "Contenu", true, true, "primary"),
+                new("tile_activites", "activites", "Déroulement de la séance", "Tableau chronologique : découverte, manipulation, structuration", "📊", "Déroulement", true, true, "default"),
+                new("tile_materiel", "materiel", "Matériel & Modalités", "Grille organisationnelle, ciseaux, papier, binômes", "📦", "Organisation", true, true, "secondary"),
+                new("tile_differentiation", "differentiation", "Différenciation pédagogique", "Bandes pré-pliées & prolongement vers les quarts", "🧩", "Inclusion", true, true, "accent"),
+                new("tile_corrige", "corrige", "Corrigé & Critères de réussite", "Éléments de réponse et barème enseignant", "✅", "Évaluation", true, true, "success"),
+            }),
+
+        new DocumentTemplatePreset(
+            "preset_ateliers",
+            "Ateliers & Autonomie",
+            "Organisation par îlots tournants avec consignes de groupes et autonomie.",
+            "👥",
+            new List<DocumentTileDto>
+            {
+                new("tile_header", "header", "En-tête & Modalités", "Titre, niveau et organisation des îlots", "🎓", "Structure", true, false, "primary"),
+                new("tile_objectifs", "objectifs", "Objectifs des ateliers", "Compétences travaillées en autonomie et dirigé", "🎯", "Pédagogie", true, true, "accent"),
+                new("tile_materiel", "materiel", "Organisation & Matériel des îlots", "4 îlots de 6 élèves, matériel par table", "📦", "Organisation", true, true, "secondary"),
+                new("tile_atelier_1", "atelier", "Atelier 1 : Manipulation dirigée", "Avec l'enseignant·e : manipulation fine des bandes unités", "👥", "Atelier", true, true, "primary"),
+                new("tile_atelier_2", "atelier", "Atelier 2 : Fiche d'application", "Exercices d'entraînement et repérage", "✏️", "Atelier", true, true, "secondary"),
+                new("tile_prolongement", "prolongement", "Atelier 3 : Défi d'approfondissement", "Pour les binômes ayant terminé en avance", "🚀", "Prolongement", true, true, "accent"),
+                new("tile_memo", "memo", "Bilan & Ce que nous avons appris", "Synthèse collective en fin de séance", "💡", "Synthèse", true, true, "primary"),
+            }),
+
+        new DocumentTemplatePreset(
+            "preset_evaluation",
+            "Évaluation & Bilan",
+            "Grille de compétences, exercices progressifs, conseils et barème.",
+            "🎯",
+            new List<DocumentTileDto>
+            {
+                new("tile_header", "header", "En-tête & Barème global", "Nom de l'élève, date, note / score sur 20", "🎓", "Structure", true, false, "primary"),
+                new("tile_objectifs", "objectifs", "Compétences évaluées du socle", "Grille critériée de validation des acquis", "🎯", "Pédagogie", true, true, "accent"),
+                new("tile_warning", "warning", "Conseils & Vigilance", "Relire attentivement chaque consigne avant d'écrire", "⚠️", "Méthode", true, true, "accent"),
+                new("tile_vocabulaire", "vocabulaire", "Partie 1 : Maîtrise des notions", "Définir numérateur, dénominateur et fractions égales", "📖", "Lexique", true, true, "secondary"),
+                new("tile_cours", "cours", "Partie 2 : Problèmes & Exercices", "Exercices d'application directe et situation-problème", "📘", "Contenu", true, true, "primary"),
+                new("tile_corrige", "corrige", "Grille de correction & Barème", "Éléments attendus et points attribués par question", "✅", "Évaluation", true, true, "success"),
+            }),
+
+        new DocumentTemplatePreset(
+            "preset_memo",
+            "Fiche Mémo Express",
+            "Format ultra-synthétique : règle d'or, lexique clé, pièges et astuces.",
+            "💡",
+            new List<DocumentTileDto>
+            {
+                new("tile_header", "header", "En-tête & Notion clé", "Titre synthétique pour classeur / cahier mémo", "🎓", "Structure", true, false, "primary"),
+                new("tile_memo", "memo", "La Règle d'or à retenir", "Formulation concise et mémorisable", "💡", "Synthèse", true, true, "primary"),
+                new("tile_vocabulaire", "vocabulaire", "Vocabulaire essentiel", "Les 3 mots indispensables de la leçon", "📖", "Lexique", true, true, "secondary"),
+                new("tile_warning", "warning", "Attention aux pièges fréquents", "L'erreur typique à éviter absolument", "⚠️", "Méthode", true, true, "accent"),
+                new("tile_cours", "cours", "Exemple type résolu", "Modèle pas à pas pour les exercices", "📘", "Contenu", true, true, "primary"),
+                new("tile_prolongement", "prolongement", "Mini-test de vérification", "2 questions flash pour s'auto-évaluer", "🚀", "Prolongement", true, true, "accent"),
+            }),
+    };
+
+    [ObservableProperty] public partial DocumentTemplatePreset? SelectedDocumentTemplate { get; set; }
+
+    private void AttachTileEvents(DocumentTileItem tile)
+    {
+        tile.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName is nameof(DocumentTileItem.Title) or
+                                   nameof(DocumentTileItem.Subtitle) or
+                                   nameof(DocumentTileItem.CustomContent) or
+                                   nameof(DocumentTileItem.CalloutVariant) or
+                                   nameof(DocumentTileItem.TintHex) or
+                                   nameof(DocumentTileItem.IsVisible))
+            {
+                RequestPreviewRefresh();
+            }
+        };
+    }
+
+    [RelayCommand]
+    public void ApplyTemplatePreset(DocumentTemplatePreset? preset)
+    {
+        if (preset is null) return;
+        SelectedDocumentTemplate = preset;
+
+        DocumentTiles.Clear();
+        foreach (var dto in preset.Tiles)
+        {
+            var tile = new DocumentTileItem(
+                dto.Id, dto.Kind, dto.Title, dto.Subtitle, dto.Icon, dto.Tag,
+                dto.IsVisible, dto.IsRemovable, dto.AccentTag,
+                dto.CustomContent, dto.CalloutVariant, dto.TintHex);
+            AttachTileEvents(tile);
+            DocumentTiles.Add(tile);
+        }
+
+        SelectedDocumentTile = DocumentTiles.FirstOrDefault();
+        StatusMessage = $"✓ Modèle « {preset.Name} » appliqué à la structure.";
+        RequestPreviewRefresh();
+    }
+
+    [RelayCommand]
+    public void SaveCurrentAsTemplate(string? name)
+    {
+        var templateName = string.IsNullOrWhiteSpace(name) ? "Mon Modèle Personnalisé" : name.Trim();
+        var id = $"custom_tpl_{Guid.NewGuid().ToString("N")[..8]}";
+        var tilesDto = DocumentTiles.Select(t => new DocumentTileDto(
+            t.Id, t.Kind, t.Title, t.Subtitle, t.Icon, t.Tag,
+            t.IsVisible, t.IsRemovable, t.AccentTag,
+            t.CustomContent, t.CalloutVariant, t.TintHex)).ToList();
+
+        var preset = new DocumentTemplatePreset(id, templateName, "Modèle personnalisé enregistré par l'enseignant·e.", "⭐", tilesDto, IsCustom: true);
+        DocumentTemplatePresets.Add(preset);
+        SelectedDocumentTemplate = preset;
+        StatusMessage = $"⭐ Modèle « {templateName} » enregistré.";
+    }
+
+    [RelayCommand]
+    public void DeleteCustomTemplate(DocumentTemplatePreset? preset)
+    {
+        if (preset is null || !preset.IsCustom) return;
+        DocumentTemplatePresets.Remove(preset);
+        if (SelectedDocumentTemplate == preset)
+            SelectedDocumentTemplate = DocumentTemplatePresets.FirstOrDefault();
+        StatusMessage = $"🗑️ Modèle « {preset.Name} » supprimé.";
+    }
+
     [ObservableProperty] public partial DocumentTileItem? SelectedDocumentTile { get; set; }
 
     [RelayCommand]
@@ -248,6 +379,7 @@ public partial class SettingsViewModel
             _ => new DocumentTileItem(id, "memo", "Nouvel encadré personnalisé", "Section personnalisée selon vos objectifs pédagogiques", "✨", "Sur-mesure", isVisible: true, isRemovable: true, accentTag: "primary"),
         };
 
+        AttachTileEvents(tile);
         DocumentTiles.Add(tile);
         SelectedDocumentTile = tile;
         StatusMessage = $"✨ Bloc « {tile.Title} » ajouté à la structure du document.";
@@ -258,15 +390,25 @@ public partial class SettingsViewModel
     public void ResetDocumentTiles()
     {
         DocumentTiles.Clear();
-        DocumentTiles.Add(new DocumentTileItem("tile_header", "header", "En-tête & Métadonnées", "Titre de leçon, niveau CM2, discipline, durée & date", "🎓", "Structure", isVisible: true, isRemovable: false, accentTag: "primary"));
-        DocumentTiles.Add(new DocumentTileItem("tile_objectifs", "objectifs", "1. Objectifs d'apprentissage", "Compétences ciblées & fraction comme partage", "🎯", "Pédagogie", isVisible: true, isRemovable: true, accentTag: "accent"));
-        DocumentTiles.Add(new DocumentTileItem("tile_cours", "cours", "2. Phase de découverte & Notion", "Bandes de papier unité et cadrage théorique", "📘", "Contenu", isVisible: true, isRemovable: true, accentTag: "primary"));
-        DocumentTiles.Add(new DocumentTileItem("tile_activites", "activites", "Déroulement de la séance", "Tableau chronologique : découverte, manipulation, structuration", "📊", "Déroulement", isVisible: true, isRemovable: true, accentTag: "default"));
-        DocumentTiles.Add(new DocumentTileItem("tile_materiel", "materiel", "Matériel & Modalités", "Grille organisationnelle, ciseaux, papier, binômes", "📦", "Organisation", isVisible: true, isRemovable: true, accentTag: "secondary"));
-        DocumentTiles.Add(new DocumentTileItem("tile_differentiation", "differentiation", "Différenciation pédagogique", "Bandes pré-pliées & prolongement vers les quarts", "🧩", "Inclusion", isVisible: true, isRemovable: true, accentTag: "accent"));
-        DocumentTiles.Add(new DocumentTileItem("tile_corrige", "corrige", "Corrigé & Critères de réussite", "Éléments de réponse et barème enseignant", "✅", "Évaluation", isVisible: true, isRemovable: true, accentTag: "success"));
+        var defaultTiles = new[]
+        {
+            new DocumentTileItem("tile_header", "header", "En-tête & Métadonnées", "Titre de leçon, niveau CM2, discipline, durée & date", "🎓", "Structure", isVisible: true, isRemovable: false, accentTag: "primary"),
+            new DocumentTileItem("tile_objectifs", "objectifs", "1. Objectifs d'apprentissage", "Compétences ciblées & fraction comme partage", "🎯", "Pédagogie", isVisible: true, isRemovable: true, accentTag: "accent"),
+            new DocumentTileItem("tile_cours", "cours", "2. Phase de découverte & Notion", "Bandes de papier unité et cadrage théorique", "📘", "Contenu", isVisible: true, isRemovable: true, accentTag: "primary"),
+            new DocumentTileItem("tile_activites", "activites", "Déroulement de la séance", "Tableau chronologique : découverte, manipulation, structuration", "📊", "Déroulement", isVisible: true, isRemovable: true, accentTag: "default"),
+            new DocumentTileItem("tile_materiel", "materiel", "Matériel & Modalités", "Grille organisationnelle, ciseaux, papier, binômes", "📦", "Organisation", isVisible: true, isRemovable: true, accentTag: "secondary"),
+            new DocumentTileItem("tile_differentiation", "differentiation", "Différenciation pédagogique", "Bandes pré-pliées & prolongement vers les quarts", "🧩", "Inclusion", isVisible: true, isRemovable: true, accentTag: "accent"),
+            new DocumentTileItem("tile_corrige", "corrige", "Corrigé & Critères de réussite", "Éléments de réponse et barème enseignant", "✅", "Évaluation", isVisible: true, isRemovable: true, accentTag: "success"),
+        };
+
+        foreach (var t in defaultTiles)
+        {
+            AttachTileEvents(t);
+            DocumentTiles.Add(t);
+        }
 
         SelectedDocumentTile = DocumentTiles[0];
+        SelectedDocumentTemplate = DocumentTemplatePresets[0];
         StatusMessage = "↺ Structure des blocs rétablie aux réglages par défaut.";
         RequestPreviewRefresh();
     }
@@ -777,53 +919,84 @@ public partial class SettingsViewModel
             {
                 case "objectifs":
                     blocks.Add(new HeadingBlock(1, tile.Title));
-                    blocks.Add(new CalloutBoxBlock("objectifs", new List<Block>
+                    if (!string.IsNullOrWhiteSpace(tile.CustomContent))
                     {
-                        new BulletListBlock(new List<List<TextRun>>
+                        blocks.Add(new CalloutBoxBlock("objectifs", new List<Block>
                         {
-                            new() { new TextRun("Comprendre la fraction comme partage de l'unité.") },
-                            new() { new TextRun("Lire, écrire et représenter les fractions usuelles (1/2, 1/3, 1/4).") },
-                            new() { new TextRun("Nommer la partie numérateur et le dénominateur.") }
-                        })
-                    }));
+                            new ParagraphBlock(tile.CustomContent)
+                        }));
+                    }
+                    else
+                    {
+                        blocks.Add(new CalloutBoxBlock("objectifs", new List<Block>
+                        {
+                            new BulletListBlock(new List<List<TextRun>>
+                            {
+                                new() { new TextRun("Comprendre la fraction comme partage de l'unité.") },
+                                new() { new TextRun("Lire, écrire et représenter les fractions usuelles (1/2, 1/3, 1/4).") },
+                                new() { new TextRun("Nommer la partie numérateur et le dénominateur.") }
+                            })
+                        }));
+                    }
                     break;
 
                 case "cours":
                     blocks.Add(new HeadingBlock(1, tile.Title));
-                    blocks.Add(new ParagraphBlock(new List<TextRun>
+                    if (!string.IsNullOrWhiteSpace(tile.CustomContent))
                     {
-                        new TextRun("Distribuer une bande de papier unité à chaque élève. ", IsBold: true),
-                        new TextRun("Consigne : « Pliez votre bande pour obtenir deux parts égales, puis coloriez-en une. »"),
-                    }));
-                    blocks.Add(new ParagraphBlock(new List<TextRun>
+                        blocks.Add(new ParagraphBlock(tile.CustomContent));
+                    }
+                    else
                     {
-                        new TextRun("Cadrage théorique : "),
-                        new TextRun("la fraction ", IsItalic: true),
-                        new TextRun("1/2", IsBold: true),
-                        new TextRun(" se lit « un demi » et représente une part sur deux parts égales."),
-                    }));
+                        blocks.Add(new ParagraphBlock(new List<TextRun>
+                        {
+                            new TextRun("Distribuer une bande de papier unité à chaque élève. ", IsBold: true),
+                            new TextRun("Consigne : « Pliez votre bande pour obtenir deux parts égales, puis coloriez-en une. »"),
+                        }));
+                        blocks.Add(new ParagraphBlock(new List<TextRun>
+                        {
+                            new TextRun("Cadrage théorique : "),
+                            new TextRun("la fraction ", IsItalic: true),
+                            new TextRun("1/2", IsBold: true),
+                            new TextRun(" se lit « un demi » et représente une part sur deux parts égales."),
+                        }));
+                    }
                     break;
 
                 case "activites":
                     blocks.Add(new HeadingBlock(2, tile.Title));
-                    blocks.Add(new TableBlock(
-                        new List<string> { "Phase", "Durée", "Activité des élèves" },
-                        new List<List<string>>
-                        {
-                            new() { "Découverte", "10 min", "Pliage de la bande unité, premier repérage du demi." },
-                            new() { "Manipulation", "20 min", "Constitution de la boîte à fractions (1/2, 1/3, 1/4)." },
-                            new() { "Structuration", "15 min", "Trace écrite : vocabulaire numérateur / dénominateur." }
-                        }));
+                    if (!string.IsNullOrWhiteSpace(tile.CustomContent))
+                    {
+                        blocks.Add(new ParagraphBlock(tile.CustomContent));
+                    }
+                    else
+                    {
+                        blocks.Add(new TableBlock(
+                            new List<string> { "Phase", "Durée", "Activité des élèves" },
+                            new List<List<string>>
+                            {
+                                new() { "Découverte", "10 min", "Pliage de la bande unité, premier repérage du demi." },
+                                new() { "Manipulation", "20 min", "Constitution de la boîte à fractions (1/2, 1/3, 1/4)." },
+                                new() { "Structuration", "15 min", "Trace écrite : vocabulaire numérateur / dénominateur." }
+                            }));
+                    }
                     break;
 
                 case "materiel":
                     blocks.Add(new HeadingBlock(2, tile.Title));
-                    blocks.Add(new KeyValueGridBlock(new List<KeyValuePair<string, string>>
+                    if (!string.IsNullOrWhiteSpace(tile.CustomContent))
                     {
-                        new("Matériel", "Bandes de papier, ciseaux, crayons de couleur"),
-                        new("Organisation", "Binômes puis collectif"),
-                        new("Différenciation", "Bandes pré-pliées pour les élèves en difficulté")
-                    }));
+                        blocks.Add(new ParagraphBlock(tile.CustomContent));
+                    }
+                    else
+                    {
+                        blocks.Add(new KeyValueGridBlock(new List<KeyValuePair<string, string>>
+                        {
+                            new("Matériel", "Bandes de papier, ciseaux, crayons de couleur"),
+                            new("Organisation", "Binômes puis collectif"),
+                            new("Différenciation", "Bandes pré-pliées pour les élèves en difficulté")
+                        }));
+                    }
                     break;
 
                 case "differentiation":
@@ -831,8 +1004,8 @@ public partial class SettingsViewModel
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Pour aller plus loin : ", IsBold: true),
-                            new TextRun("faire construire 2/4 et comparer avec 1/2 (première approche des fractions équivalentes).")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Différenciation : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "faire construire 2/4 et comparer avec 1/2 (première approche des fractions équivalentes).")
                         })
                     }));
                     break;
@@ -842,76 +1015,74 @@ public partial class SettingsViewModel
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Corrigé — ", IsBold: true),
-                            new TextRun("la bande pliée en deux parties égales illustre 1/2 ; chaque part vaut un demi de l'unité.")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Corrigé — " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "la bande pliée en deux parties égales illustre 1/2 ; chaque part vaut un demi de l'unité.")
                         })
                     }));
                     break;
 
                 case "memo":
-                    blocks.Add(new CalloutBoxBlock("memo", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "memo" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Règle d'or : ", IsBold: true),
-                            new TextRun("Le numérateur compte le nombre de parts prises. Le dénominateur indique en combien de parts égales l'unité est partagée.")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Règle d'or : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "Le numérateur compte le nombre de parts prises. Le dénominateur indique en combien de parts égales l'unité est partagée.")
                         })
                     }));
                     break;
 
                 case "vocabulaire":
-                    blocks.Add(new CalloutBoxBlock("vocabulaire", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "vocabulaire" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Numérateur : ", IsBold: true),
-                            new TextRun("nombre situé au-dessus du trait de fraction. "),
-                            new TextRun("Dénominateur : ", IsBold: true),
-                            new TextRun("nombre situé en-dessous.")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Vocabulaire : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "Numérateur : nombre situé au-dessus du trait de fraction. Dénominateur : nombre situé en-dessous.")
                         })
                     }));
                     break;
 
                 case "prolongement":
-                    blocks.Add(new CalloutBoxBlock("prolongement", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "prolongement" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Devoirs & prolongement : ", IsBold: true),
-                            new TextRun("Trouver 3 objets du quotidien partageables en parts égales (tablette de chocolat, pizza, feuille pliée).")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Devoirs & prolongement : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "Trouver 3 objets du quotidien partageables en parts égales (tablette de chocolat, pizza, feuille pliée).")
                         })
                     }));
                     break;
 
                 case "warning":
-                    blocks.Add(new CalloutBoxBlock("warning", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "warning" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Vigilance : ", IsBold: true),
-                            new TextRun("Les élèves confondent souvent numérateur et dénominateur. Astuce : Numérateur dans les Nuages (en haut) !")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Vigilance : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "Les élèves confondent souvent numérateur et dénominateur. Astuce : Numérateur dans les Nuages (en haut) !")
                         })
                     }));
                     break;
 
                 case "atelier":
-                    blocks.Add(new CalloutBoxBlock("memo", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "memo" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
-                            new TextRun("Atelier tournant : ", IsBold: true),
-                            new TextRun("3 rotations de 15 minutes en îlots avec fiches plastifiées et dominos de fractions.")
+                            new TextRun(string.IsNullOrWhiteSpace(tile.Title) ? "Atelier tournant : " : $"{tile.Title} — ", IsBold: true),
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : "3 rotations de 15 minutes en îlots avec fiches plastifiées et dominos de fractions.")
                         })
                     }));
                     break;
 
                 default:
-                    blocks.Add(new CalloutBoxBlock("memo", new List<Block>
+                    blocks.Add(new CalloutBoxBlock(string.IsNullOrWhiteSpace(tile.CalloutVariant) ? "memo" : tile.CalloutVariant, new List<Block>
                     {
                         new ParagraphBlock(new List<TextRun>
                         {
                             new TextRun(tile.Title + " — ", IsBold: true),
-                            new TextRun(tile.Subtitle)
+                            new TextRun(!string.IsNullOrWhiteSpace(tile.CustomContent) ? tile.CustomContent : tile.Subtitle)
                         })
                     }));
                     break;
@@ -1068,7 +1239,8 @@ public partial class SettingsViewModel
     {
         var list = DocumentTiles.Select(t => new DocumentTileDto(
             t.Id, t.Kind, t.Title, t.Subtitle, t.Icon, t.Tag,
-            t.IsVisible, t.IsRemovable, t.AccentTag)).ToList();
+            t.IsVisible, t.IsRemovable, t.AccentTag,
+            t.CustomContent, t.CalloutVariant, t.TintHex)).ToList();
         return JsonSerializer.Serialize(list);
     }
 
@@ -1083,9 +1255,37 @@ public partial class SettingsViewModel
             DocumentTiles.Clear();
             foreach (var d in list)
             {
-                DocumentTiles.Add(new DocumentTileItem(
+                var tile = new DocumentTileItem(
                     d.Id, d.Kind, d.Title, d.Subtitle, d.Icon, d.Tag,
-                    d.IsVisible, d.IsRemovable, d.AccentTag));
+                    d.IsVisible, d.IsRemovable, d.AccentTag,
+                    d.CustomContent ?? "", d.CalloutVariant ?? "memo", d.TintHex ?? "");
+                AttachTileEvents(tile);
+                DocumentTiles.Add(tile);
+            }
+        }
+        catch { }
+    }
+
+    public string GetDocumentTemplatesJson()
+    {
+        var custom = DocumentTemplatePresets.Where(p => p.IsCustom).ToList();
+        return JsonSerializer.Serialize(custom);
+    }
+
+    public void LoadDocumentTemplatesFromJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            var list = JsonSerializer.Deserialize<List<DocumentTemplatePreset>>(json);
+            if (list == null || list.Count == 0) return;
+
+            foreach (var preset in list)
+            {
+                if (!DocumentTemplatePresets.Any(p => p.Id == preset.Id))
+                {
+                    DocumentTemplatePresets.Add(preset with { IsCustom = true });
+                }
             }
         }
         catch { }

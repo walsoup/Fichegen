@@ -31,6 +31,13 @@ public interface IAssistantService
         AiRequestConfig config,
         CancellationToken ct);
 
+    IAsyncEnumerable<string> StreamQuestionAsync(
+        GeneratedDocument currentDoc,
+        string question,
+        IReadOnlyList<(string Role, string Content)>? conversationHistory,
+        AiRequestConfig config,
+        CancellationToken ct);
+
     void PushUndo(GeneratedDocument doc);
     bool CanUndo { get; }
     GeneratedDocument? PopUndo();

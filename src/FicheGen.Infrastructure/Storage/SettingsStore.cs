@@ -143,10 +143,17 @@ public sealed class SettingsStore : ISettingsStore
                 jsonToWrite = JsonSerializer.Serialize(settings, JsonOptions);
             }
 
-            // Atomic file write pattern: write .tmp -> flush -> Move
-            var tempPath = path + ".tmp";
-            await File.WriteAllTextAsync(tempPath, jsonToWrite, ct).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
+            // Atomic file write pattern: write unique .tmp -> flush -> Move
+            var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await File.WriteAllTextAsync(tempPath, jsonToWrite, ct).ConfigureAwait(false);
+                File.Move(tempPath, path, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            }
         }
         finally
         {

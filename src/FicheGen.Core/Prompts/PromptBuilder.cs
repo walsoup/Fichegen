@@ -400,22 +400,44 @@ Règles :
         );
     }
 
-    public static LlmRequest BuildQuestionPrompt(string currentDocumentText, string question)
+    public static LlmRequest BuildQuestionPrompt(
+        string currentDocumentText,
+        string question,
+        IReadOnlyList<(string Role, string Content)>? history = null)
     {
-        var systemPrompt = @"Tu es un assistant pédagogique expert pour les enseignants de l'Éducation Nationale.
-Réponds à la question de l'enseignant de manière concise, professionnelle et directement utile.";
+        var systemPrompt = @"Tu es un assistant pédagogique expert et bienveillant pour les enseignants.
+Tu réponds aux questions de l'enseignant de manière structurée, claire, chaleureuse et directement utile pour sa pratique en classe.
+Formate tes réponses avec un Markdown soigné et lisible (titres courts avec ###, listes à puces avec -, gras avec ** pour les termes et notions clés).";
 
-        var userPrompt = $@"Document de référence actuel :
---- DOCUMENT ---
-{currentDocumentText}
-----------------
+        var sb = new System.Text.StringBuilder();
 
-Question de l'enseignant : {question}";
+        if (!string.IsNullOrWhiteSpace(currentDocumentText) && !currentDocumentText.Contains("Assistant Général"))
+        {
+            sb.AppendLine("Document pédagogique actuellement ouvert :");
+            sb.AppendLine("--- DÉBUT DOCUMENT ---");
+            sb.AppendLine(currentDocumentText);
+            sb.AppendLine("--- FIN DOCUMENT ---");
+            sb.AppendLine();
+        }
+
+        if (history != null && history.Count > 0)
+        {
+            sb.AppendLine("Historique récent de la conversation :");
+            var recent = history.TakeLast(8);
+            foreach (var (role, content) in recent)
+            {
+                var roleName = role.Equals("User", StringComparison.OrdinalIgnoreCase) ? "Enseignant" : "Assistant";
+                sb.AppendLine($"{roleName} : {content}");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine($"Question de l'enseignant : {question}");
 
         return new LlmRequest(
             Purpose: "chat",
             SystemPrompt: systemPrompt,
-            UserPrompt: userPrompt,
+            UserPrompt: sb.ToString(),
             Temperature: 0.7,
             ResponseJson: false
         );

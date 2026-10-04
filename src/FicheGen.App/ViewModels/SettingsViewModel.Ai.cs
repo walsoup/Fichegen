@@ -95,7 +95,17 @@ public partial class SettingsViewModel
 
     partial void OnSelectedGlobalProviderChanged(ProviderOption? value)
     {
-        if (value is not null) GlobalProvider = value.Key;
+        if (value is not null)
+        {
+            GlobalProvider = value.Key;
+            if (!EnableExpertMode)
+            {
+                foreach (var item in RoutingMatrix)
+                {
+                    item.SelectedProvider = value;
+                }
+            }
+        }
     }
 
     partial void OnGlobalProviderChanged(string value)

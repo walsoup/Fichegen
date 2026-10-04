@@ -5,8 +5,10 @@
 //  WinRT AOT) · ObservableValidator · Brouillon automatique · Purge historique
 // ============================================================================
 
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +19,8 @@ using FicheGen.Core.Documents;
 using FicheGen.Core.Prompts;
 using FicheGen.Core.Services;
 using FicheGen.Core.Storage;
+using FicheGen.Core.Toc;
+using FicheGen.Infrastructure.Pdf;
 using FicheGen.Infrastructure.Services;
 using Microsoft.UI.Dispatching;
 
@@ -64,6 +68,8 @@ public partial class FicheFormViewModel : ObservableValidator
     private readonly IDraftStore? _draftStore;
     private readonly IHistoryRetentionService? _historyRetentionService;
     private readonly IReadinessService? _readinessService;
+    private readonly ParentDocumentIndexer? _parentDocumentIndexer;
+    private ParentDocumentsIndex? _cachedIndex;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly DispatcherQueueTimer? _draftTimer;
     private readonly DispatcherQueueTimer? _elapsedTimer;
@@ -76,7 +82,13 @@ public partial class FicheFormViewModel : ObservableValidator
     // ------------------------------------------------------------------
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCachedLessons))]
     public partial string ClassLevel { get; set; }
+
+    partial void OnClassLevelChanged(string value)
+    {
+        UpdateCachedLessonsForLevel(value);
+    }
 
     [ObservableProperty]
     public partial string Subject { get; set; }
@@ -178,12 +190,32 @@ public partial class FicheFormViewModel : ObservableValidator
     // Catalogues exposés à la vue
     // ------------------------------------------------------------------
 
-    public IReadOnlyList<string> ClassLevels { get; } = new[]
+    private static readonly string[] DefaultClassLevels =
     {
         "CP", "CE1", "CE2", "CM1", "CM2",
         "6e", "5e", "4e", "3e",
         "Seconde", "Première", "Terminale"
     };
+
+    public ObservableCollection<string> DocumentOptions { get; } = new();
+
+    public ObservableCollection<string> ClassLevels => DocumentOptions;
+
+    public ObservableCollection<ToCEntry> CachedLessons { get; } = new();
+
+    public bool HasCachedLessons => CachedLessons.Count > 0;
+
+    [ObservableProperty]
+    public partial ToCEntry? SelectedCachedLesson { get; set; }
+
+    partial void OnSelectedCachedLessonChanged(ToCEntry? value)
+    {
+        if (value != null && !string.IsNullOrWhiteSpace(value.Title))
+        {
+            Topic = value.Title;
+            SetStatus($"Leçon sélectionnée : « {value.Title} »", StatusSeverity.Info);
+        }
+    }
 
     public IReadOnlyList<string> Subjects { get; } = new[]
     {
@@ -223,7 +255,8 @@ public partial class FicheFormViewModel : ObservableValidator
         FicheGen.Core.Auth.IAuthService? authService = null,
         IDraftStore? draftStore = null,
         IHistoryRetentionService? historyRetentionService = null,
-        IReadinessService? readinessService = null)
+        IReadinessService? readinessService = null,
+        ParentDocumentIndexer? parentDocumentIndexer = null)
     {
         _orchestrator = orchestrator;
         _settingsStore = settingsStore;
@@ -235,6 +268,7 @@ public partial class FicheFormViewModel : ObservableValidator
         _draftStore = draftStore;
         _historyRetentionService = historyRetentionService;
         _readinessService = readinessService;
+        _parentDocumentIndexer = parentDocumentIndexer;
 
         // Les propriétés partielles ne peuvent pas avoir d'initialiseur :
         // les valeurs par défaut sont donc fixées ici.
@@ -253,6 +287,8 @@ public partial class FicheFormViewModel : ObservableValidator
         var settings = _settingsStore.GetSettings<AppSettings>();
         if (!string.IsNullOrWhiteSpace(settings.Defaults.ClassLevel)) ClassLevel = settings.Defaults.ClassLevel;
         if (!string.IsNullOrWhiteSpace(settings.Defaults.Subject)) Subject = settings.Defaults.Subject;
+
+        RefreshDocumentOptions();
 
         // Formulaire vierge : aucune erreur affichée avant la première validation explicite.
         ClearErrors();
@@ -306,8 +342,13 @@ public partial class FicheFormViewModel : ObservableValidator
             var appSettings = _settingsStore.GetSettings<AppSettings>();
             var config = BuildAiConfig(appSettings);
 
+            var effectiveLevel = _parentDocumentIndexer?.LoadIndex()?.Documents
+                .FirstOrDefault(d => string.Equals(d.DropdownLabel, ClassLevel, StringComparison.OrdinalIgnoreCase))?.Level
+                ?? LevelDetector.DetectLevel(ClassLevel)
+                ?? ClassLevel;
+
             var parameters = new FicheParameters(
-                ClassLevel,
+                effectiveLevel,
                 Subject,
                 Topic.Trim(),
                 DurationMinutes,
@@ -317,6 +358,10 @@ public partial class FicheFormViewModel : ObservableValidator
                 Language: appSettings.Ui.Language,
                 DocumentLength: DocumentLengthKey
             );
+
+            var guidesFolder = (!string.IsNullOrWhiteSpace(GuideFilePath) && File.Exists(GuideFilePath))
+                ? Path.GetDirectoryName(GuideFilePath) ?? appSettings.Folders.GuidesDir
+                : appSettings.Folders.GuidesDir;
 
             ResultViewModel.SetGenerationPhase(1, "Analyse du sujet et préparation des objectifs…", opId);
             SetStatus("Analyse du sujet et préparation de la requête…", StatusSeverity.Info);
@@ -329,12 +374,12 @@ public partial class FicheFormViewModel : ObservableValidator
                 {
                     ResultViewModel.AppendStreamedChunk(chunk, opId);
                 });
-                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, appSettings.Folders.GuidesDir, progress, ct);
+                result = await _orchestrator.GenerateFicheStreamingAsync(parameters, config, guidesFolder, progress, ct);
             }
             else
             {
                 ResultViewModel.SetGenerationPhase(3, "Rédaction de la fiche pédagogique par l'IA…", opId);
-                result = await _orchestrator.GenerateFicheAsync(parameters, config, appSettings.Folders.GuidesDir, ct);
+                result = await _orchestrator.GenerateFicheAsync(parameters, config, guidesFolder, ct);
             }
 
             if (!ResultViewModel.IsActiveOperation(opId)) return;
@@ -603,4 +648,90 @@ public partial class FicheFormViewModel : ObservableValidator
         });
 
     private static string GetPlainText(GeneratedDocument doc) => doc.ToPlainText();
+
+    public void RefreshDocumentOptions()
+    {
+        var prevSelection = ClassLevel;
+        DocumentOptions.Clear();
+
+        _cachedIndex = _parentDocumentIndexer?.LoadIndex();
+        var index = _cachedIndex;
+        if (index != null && index.Documents.Count > 0)
+        {
+            foreach (var doc in index.Documents)
+            {
+                if (!string.IsNullOrWhiteSpace(doc.DropdownLabel) && !DocumentOptions.Contains(doc.DropdownLabel))
+                {
+                    DocumentOptions.Add(doc.DropdownLabel);
+                }
+            }
+        }
+
+        if (DocumentOptions.Count == 0)
+        {
+            foreach (var level in DefaultClassLevels)
+            {
+                DocumentOptions.Add(level);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(prevSelection))
+        {
+            var match = DocumentOptions.FirstOrDefault(o => string.Equals(o, prevSelection, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                ClassLevel = match;
+            }
+            else
+            {
+                var docMatch = index?.Documents.FirstOrDefault(d => string.Equals(d.Level, prevSelection, StringComparison.OrdinalIgnoreCase));
+                if (docMatch != null && DocumentOptions.Contains(docMatch.DropdownLabel))
+                {
+                    ClassLevel = docMatch.DropdownLabel;
+                }
+            }
+        }
+        else if (DocumentOptions.Count > 0)
+        {
+            ClassLevel = DocumentOptions[0];
+        }
+
+        UpdateCachedLessonsForLevel(ClassLevel);
+    }
+
+    private void UpdateCachedLessonsForLevel(string? levelOrLabel)
+    {
+        CachedLessons.Clear();
+        SelectedCachedLesson = null;
+
+        if (string.IsNullOrWhiteSpace(levelOrLabel))
+        {
+            OnPropertyChanged(nameof(HasCachedLessons));
+            return;
+        }
+
+        var index = _cachedIndex ??= _parentDocumentIndexer?.LoadIndex();
+        if (index != null && index.Documents.Count > 0)
+        {
+            var doc = index.Documents.FirstOrDefault(d => string.Equals(d.DropdownLabel, levelOrLabel, StringComparison.OrdinalIgnoreCase))
+                   ?? index.Documents.FirstOrDefault(d => string.Equals(d.Level, levelOrLabel, StringComparison.OrdinalIgnoreCase))
+                   ?? index.Documents.FirstOrDefault(d => string.Equals(d.FileName, levelOrLabel, StringComparison.OrdinalIgnoreCase));
+
+            if (doc != null)
+            {
+                if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
+                {
+                    GuideFilePath = doc.FilePath;
+                    UsePedagogicalGuide = true;
+                }
+
+                foreach (var lesson in doc.Lessons)
+                {
+                    CachedLessons.Add(lesson);
+                }
+            }
+        }
+
+        OnPropertyChanged(nameof(HasCachedLessons));
+    }
 }

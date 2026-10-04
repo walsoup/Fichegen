@@ -867,6 +867,9 @@
   <data name="AP_ModeAuto_Caption" xml:space="preserve">
     <value>Automatically detects whether to generate, edit, or answer.</value>
   </data>
+  <data name="AP_ModeAuto_Prompt" xml:space="preserve">
+    <value>Request an edit or ask a pedagogical question…</value>
+  </data>
   <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve">
     <value>Textbook guide PDF selection area</value>
   </data>
@@ -1289,6 +1292,12 @@
   </data>
   <data name="FP_TopicBox.PlaceholderText" xml:space="preserve">
     <value>e.g., Fractions, French Revolution…</value>
+  </data>
+  <data name="FP_CachedLessons_Header.Text" xml:space="preserve">
+    <value>Parent document lessons:</value>
+  </data>
+  <data name="FP_CachedLessons_Placeholder.Text" xml:space="preserve">
+    <value>Select a lesson from table of contents…</value>
   </data>
   <data name="FP_Step3_Header.Text" xml:space="preserve">
     <value>3. Frame &amp; Duration</value>
@@ -1934,10 +1943,22 @@ Please click the link to verify your account, then sign in.</value>
     <value>Storage Locations</value>
   </data>
   <data name="SP_GuidesFolder.Header" xml:space="preserve">
-    <value>Pedagogical Guides &amp; Textbooks (PDF)</value>
+    <value>Parent Documents (PDF Guides)</value>
   </data>
   <data name="SP_GuidesFolder.Description" xml:space="preserve">
-    <value>Sources analyzed for table of contents and pedagogical context.</value>
+    <value>Folder containing reference textbooks and guides analyzed by level.</value>
+  </data>
+  <data name="SP_ScanParentDocsFolderBtn.Content" xml:space="preserve">
+    <value>Scan documents</value>
+  </data>
+  <data name="SP_ScanAllParentDocsBtn.Content" xml:space="preserve">
+    <value>Index all</value>
+  </data>
+  <data name="SP_DiscoveredDocsCombo.PlaceholderText" xml:space="preserve">
+    <value>Select a document to extract its table of contents…</value>
+  </data>
+  <data name="SP_ScanSelectedDocTocBtn.Content" xml:space="preserve">
+    <value>Scan table of contents</value>
   </data>
   <data name="SP_NoFolderSelected.PlaceholderText" xml:space="preserve">
     <value>No folder selected</value>

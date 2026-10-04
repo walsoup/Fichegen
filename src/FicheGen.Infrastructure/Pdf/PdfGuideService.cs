@@ -29,21 +29,34 @@ public sealed class PdfGuideService : IPdfGuideService
             return null;
 
         var normalizedLevel = classLevel.Trim().ToLowerInvariant();
-        var files = Directory.GetFiles(guidesDir, "*.pdf", SearchOption.AllDirectories);
 
+        // 1. If classLevel matches an exact file path directly
+        if (File.Exists(classLevel))
+            return classLevel;
+
+        var enumOptions = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            MatchCasing = MatchCasing.CaseInsensitive
+        };
+        var files = Directory.EnumerateFiles(guidesDir, "*.pdf", enumOptions).ToList();
+
+        // 2. Exact file name match (without extension)
         foreach (var file in files)
         {
             var fileName = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
-            if (fileName.Contains(normalizedLevel) && (fileName.Contains("guide") || fileName.Contains("pedagogique")))
+            if (fileName == normalizedLevel)
             {
                 return file;
             }
         }
 
+        // 3. Fallback: match by LevelDetector (uses word boundaries to prevent false substring matches)
         foreach (var file in files)
         {
-            var fileName = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
-            if (fileName.Contains(normalizedLevel))
+            var detected = LevelDetector.DetectLevel(file);
+            if (detected != null && detected.Equals(classLevel, StringComparison.OrdinalIgnoreCase))
             {
                 return file;
             }
@@ -59,7 +72,7 @@ public sealed class PdfGuideService : IPdfGuideService
             throw new FileNotFoundException("Le fichier guide n'existe pas.", pdfPath);
         }
 
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             var cached = _cacheStore.TryGetCached(pdfPath);
             if (cached != null)
@@ -92,7 +105,8 @@ public sealed class PdfGuideService : IPdfGuideService
                         var ocrPages = Math.Min(10, pageCount);
                         for (var p = 1; p <= ocrPages; p++)
                         {
-                            var pageOcr = _ocrService.ExtractTextFromPdfPageAsync(pdfPath, p, ct).GetAwaiter().GetResult();
+                            ct.ThrowIfCancellationRequested();
+                            var pageOcr = await _ocrService.ExtractTextFromPdfPageAsync(pdfPath, p, ct).ConfigureAwait(false);
                             if (!string.IsNullOrWhiteSpace(pageOcr))
                             {
                                 tocSb.AppendLine(pageOcr);
@@ -260,7 +274,7 @@ public sealed class PdfGuideService : IPdfGuideService
             return page.Text ?? string.Empty;
 
         var lines = words
-            .GroupBy(w => Math.Round(w.BoundingBox.Bottom / 4.0) * 4.0)
+            .GroupBy(w => Math.Round(w.BoundingBox.Bottom / 5.0) * 5.0)
             .OrderByDescending(g => g.Key)
             .Select(g => string.Join(" ", g.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)));
 

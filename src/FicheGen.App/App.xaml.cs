@@ -62,6 +62,10 @@ public partial class App : Application
                 services.AddSingleton<IConnectionTester, ConnectionTester>();
                 services.AddSingleton<IProxyModelScanner, ProxyModelScanner>();
                 services.AddSingleton<IOcrService, FicheGen.Infrastructure.Ocr.WindowsNativeOcrService>();
+                services.AddSingleton<TocCacheStore>();
+                services.AddSingleton<ParentDocumentIndexer>(sp => new ParentDocumentIndexer(
+                    sp.GetRequiredService<TocCacheStore>(),
+                    sp.GetService<ILlmClient>()));
                 services.AddSingleton<IPdfGuideService, PdfGuideService>();
                 services.AddSingleton<IDocxExporter, DocxExporter>();
                 services.AddSingleton<IRtfDocumentWriter, RtfDocumentWriter>();

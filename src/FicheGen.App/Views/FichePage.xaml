@@ -50,14 +50,17 @@
                         <TextBlock x:Name="Step1Header" x:Uid="FP_Step1_Header" Text="1. Classe et Matière" Style="{StaticResource CardHeaderStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="LevelCombo" x:Uid="FP_LevelCombo" Header="Niveau" HorizontalAlignment="Stretch"
-                                      ItemsSource="{Binding ClassLevels}"
+                                      IsEditable="True"
+                                      ItemsSource="{Binding DocumentOptions}"
                                       SelectedItem="{Binding ClassLevel, Mode=TwoWay}"
+                                      Text="{Binding ClassLevel, Mode=TwoWay}"
                                       SelectionChanged="LevelCombo_SelectionChanged"
-                                      AutomationProperties.Name="Niveau scolaire"/>
+                                      TextSubmitted="LevelCombo_TextSubmitted"
+                                      AutomationProperties.Name="Niveau scolaire ou document parent"/>
                             <ComboBox x:Name="SubjectCombo" Grid.Column="1" x:Uid="FP_SubjectCombo" Header="Matière" HorizontalAlignment="Stretch"
                                       IsEditable="True"
                                       PlaceholderText="Sélectionner ou saisir"
@@ -81,6 +84,34 @@
                                         SuggestionChosen="TopicBox_SuggestionChosen"
                                         QuerySubmitted="TopicBox_QuerySubmitted"
                                         AutomationProperties.Name="Sujet de la leçon"/>
+                        <StackPanel x:Name="CachedLessonsPanel" Spacing="4"
+                                    Visibility="{Binding HasCachedLessons, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock x:Name="CachedLessonsHeader" Text="Leçons du document parent :"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <ComboBox x:Name="CachedLessonsCombo"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding CachedLessons}"
+                                      SelectedItem="{Binding SelectedCachedLesson, Mode=TwoWay}"
+                                      SelectionChanged="CachedLessonsCombo_SelectionChanged"
+                                      PlaceholderText="Choisir une leçon dans la table des matières…"
+                                      AutomationProperties.Name="Leçons du document parent">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayPage}"
+                                                       FontSize="11"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

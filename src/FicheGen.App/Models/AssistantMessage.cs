@@ -23,6 +23,9 @@ public partial class AssistantMessage : ObservableObject
     public partial string Content { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial System.DateTime Timestamp { get; set; } = System.DateTime.Now;
+
+    [ObservableProperty]
     public partial bool IsStreaming { get; set; }
 
     [ObservableProperty]

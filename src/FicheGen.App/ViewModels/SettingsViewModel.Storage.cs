@@ -6,6 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using FicheGen.Core.Toc;
+using FicheGen.Infrastructure.Pdf;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
 using Windows.System;
@@ -14,7 +17,7 @@ namespace FicheGen.App.ViewModels;
 
 public partial class SettingsViewModel
 {
-    // ──────��──────── Onglet 3 · Dossiers & Emplacements ───────────────
+    // ────────────── Onglet 3 · Dossiers & Emplacements ───────────────
 
     [ObservableProperty] public partial string GuidesDir { get; set; } = string.Empty;
     [ObservableProperty] public partial string ExportsDir { get; set; } = string.Empty;
@@ -22,6 +25,12 @@ public partial class SettingsViewModel
     [ObservableProperty] public partial bool IsGuidesAccessPersistent { get; set; }
     [ObservableProperty] public partial string TocCacheSizeText { get; set; } = "Calcul en cours…";
     [ObservableProperty] public partial bool IsCacheBusy { get; set; }
+    [ObservableProperty] public partial bool IsIndexing { get; set; }
+    [ObservableProperty] public partial string IndexingProgressText { get; set; } = string.Empty;
+    [ObservableProperty] public partial string ParentDocumentsStatsText { get; set; } = "Aucun document indexé — cliquez pour analyser";
+    public ObservableCollection<ParentDocumentItem> DiscoveredDocuments { get; } = new();
+    [ObservableProperty] public partial ParentDocumentItem? SelectedDocumentToScan { get; set; }
+    [ObservableProperty] public partial bool HasDiscoveredDocuments { get; set; }
 
     private static string TocCacheDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FicheGen", "Cache", "Toc");
@@ -112,6 +121,279 @@ public partial class SettingsViewModel
     }
 
     [RelayCommand] private Task OpenGuidesFolderAsync() => OpenFolderAsync(GuidesDir);
+
+    private CancellationTokenSource? _indexingCts;
+
+    [RelayCommand]
+    private void CancelIndexing()
+    {
+        _indexingCts?.Cancel();
+    }
+
+    [RelayCommand]
+    private async Task ScanParentDocumentsFolderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(GuidesDir) || !Directory.Exists(GuidesDir))
+        {
+            StatusMessage = "⚠ Veuillez sélectionner un dossier de documents parents valide.";
+            return;
+        }
+
+        var indexer = _parentDocumentIndexer ?? App.Services.GetService<ParentDocumentIndexer>();
+        if (indexer is null)
+        {
+            StatusMessage = "⚠ Service d'indexation non disponible.";
+            return;
+        }
+
+        IsIndexing = true;
+        IndexingProgressText = "Recherche récursive des documents PDF…";
+
+        try
+        {
+            var docs = await Task.Run(() => indexer.DiscoverDocuments(GuidesDir));
+
+            DiscoveredDocuments.Clear();
+            foreach (var doc in docs)
+            {
+                DiscoveredDocuments.Add(doc);
+            }
+
+            HasDiscoveredDocuments = DiscoveredDocuments.Count > 0;
+            SelectedDocumentToScan = DiscoveredDocuments.FirstOrDefault();
+
+            var totalIndexed = DiscoveredDocuments.Count(d => d.Lessons.Count > 0);
+            var totalLessons = DiscoveredDocuments.Sum(d => d.Lessons.Count);
+
+            ParentDocumentsStatsText = $"{DiscoveredDocuments.Count} document(s) trouvé(s) · {totalIndexed} indexé(s) ({totalLessons} leçons)";
+            StatusMessage = $"🔍 {DiscoveredDocuments.Count} document(s) trouvé(s) dans le dossier.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"⚠ Erreur lors de la recherche : {ex.Message}";
+            Serilog.Log.Warning(ex, "Erreur lors de la recherche des documents parents.");
+        }
+        finally
+        {
+            IsIndexing = false;
+            IndexingProgressText = string.Empty;
+        }
+    }
+
+    private Func<string, Task<bool>> CreateConfirmOfflineCallback()
+    {
+        return async fileName =>
+        {
+            var mainWindow = App.CurrentMainWindow as MainWindow;
+            if (mainWindow == null) return false;
+
+            var tcs = new TaskCompletionSource<bool>();
+            var enqueued = mainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                try
+                {
+                    var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                    {
+                        XamlRoot = mainWindow.Content.XamlRoot,
+                        Title = "Extraction IA indisponible",
+                        Content = $"L'analyse assistée par IA n'a pas pu aboutir pour le document « {fileName} ».\n\nSouhaitez-vous poursuivre avec l'extraction heuristique hors-ligne ?",
+                        PrimaryButtonText = "Continuer hors-ligne",
+                        CloseButtonText = "Annuler",
+                        DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary
+                    };
+                    var res = await dialog.ShowAsync();
+                    tcs.TrySetResult(res == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary);
+                }
+                catch
+                {
+                    tcs.TrySetResult(false);
+                }
+            });
+
+            if (!enqueued)
+            {
+                tcs.TrySetResult(false);
+            }
+
+            return await tcs.Task;
+        };
+    }
+
+    [RelayCommand]
+    private async Task ScanSelectedDocumentTocAsync()
+    {
+        if (SelectedDocumentToScan is null || string.IsNullOrWhiteSpace(SelectedDocumentToScan.FilePath))
+        {
+            StatusMessage = "⚠ Veuillez sélectionner un document à analyser.";
+            return;
+        }
+
+        var indexer = _parentDocumentIndexer ?? App.Services.GetService<ParentDocumentIndexer>();
+        if (indexer is null)
+        {
+            StatusMessage = "⚠ Service d'indexation non disponible.";
+            return;
+        }
+
+        _indexingCts = new CancellationTokenSource();
+        var ct = _indexingCts.Token;
+
+        IsIndexing = true;
+        IndexingProgressText = $"Extraction de la table des matières pour {SelectedDocumentToScan.FileName}…";
+
+        try
+        {
+            var aiConfig = BuildAiConfig();
+            var progress = new Progress<string>(msg =>
+            {
+                IndexingProgressText = msg;
+            });
+
+            var confirmOffline = CreateConfirmOfflineCallback();
+            var targetPath = SelectedDocumentToScan.FilePath;
+            var updatedDoc = await Task.Run(() => indexer.IndexSingleDocumentAndSaveAsync(
+                GuidesDir, targetPath, aiConfig, confirmOffline, progress, forceRescan: true, ct: ct), ct);
+
+            if (updatedDoc != null)
+            {
+                var idx = DiscoveredDocuments.IndexOf(SelectedDocumentToScan);
+                if (idx >= 0)
+                {
+                    DiscoveredDocuments[idx] = updatedDoc;
+                    SelectedDocumentToScan = updatedDoc;
+                }
+
+                var totalIndexed = DiscoveredDocuments.Count(d => d.Lessons.Count > 0);
+                var totalLessons = DiscoveredDocuments.Sum(d => d.Lessons.Count);
+                ParentDocumentsStatsText = $"{DiscoveredDocuments.Count} document(s) · {totalIndexed} indexé(s) ({totalLessons} leçons)";
+                StatusMessage = $"✅ Table des matières extraite pour « {updatedDoc.DropdownLabel} » ({updatedDoc.Lessons.Count} leçons).";
+
+                var ficheVm = App.Services.GetService<FicheFormViewModel>();
+                ficheVm?.RefreshDocumentOptions();
+
+                await RefreshTocCacheSizeAsync();
+            }
+            else
+            {
+                StatusMessage = "⚠ Aucune leçon n'a pu être extraite de ce document.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Indexation annulée.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"⚠ Erreur d'extraction : {ex.Message}";
+            Serilog.Log.Warning(ex, "Erreur lors de l'extraction de la table des matières.");
+        }
+        finally
+        {
+            _indexingCts?.Dispose();
+            _indexingCts = null;
+            IsIndexing = false;
+            IndexingProgressText = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ScanAndIndexParentDocumentsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(GuidesDir) || !Directory.Exists(GuidesDir))
+        {
+            StatusMessage = "⚠ Veuillez sélectionner un dossier de documents parents valide.";
+            return;
+        }
+
+        var indexer = _parentDocumentIndexer ?? App.Services.GetService<ParentDocumentIndexer>();
+        if (indexer is null)
+        {
+            StatusMessage = "⚠ Service d'indexation non disponible.";
+            return;
+        }
+
+        _indexingCts = new CancellationTokenSource();
+        var ct = _indexingCts.Token;
+
+        IsIndexing = true;
+        IndexingProgressText = "Démarrage de l'indexation…";
+
+        try
+        {
+            var aiConfig = BuildAiConfig();
+            var progress = new Progress<string>(msg =>
+            {
+                IndexingProgressText = msg;
+            });
+
+            var confirmOffline = CreateConfirmOfflineCallback();
+            var index = await Task.Run(() => indexer.IndexAllAsync(GuidesDir, aiConfig, confirmOffline, progress, ct), ct);
+            var totalLessons = index.Documents.Sum(d => d.Lessons.Count);
+            ParentDocumentsStatsText = $"{index.Documents.Count} document(s) indexé(s) · {totalLessons} leçon(s) prête(s)";
+            StatusMessage = $"✅ {index.Documents.Count} document(s) indexé(s) ({totalLessons} leçons prêtes).";
+
+            DiscoveredDocuments.Clear();
+            foreach (var doc in index.Documents)
+            {
+                DiscoveredDocuments.Add(doc);
+            }
+            HasDiscoveredDocuments = DiscoveredDocuments.Count > 0;
+            SelectedDocumentToScan = DiscoveredDocuments.FirstOrDefault();
+
+            var ficheVm = App.Services.GetService<FicheFormViewModel>();
+            ficheVm?.RefreshDocumentOptions();
+
+            await RefreshTocCacheSizeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Indexation annulée.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"⚠ Erreur d'indexation : {ex.Message}";
+            Serilog.Log.Warning(ex, "Erreur lors de l'indexation des documents parents.");
+        }
+        finally
+        {
+            _indexingCts?.Dispose();
+            _indexingCts = null;
+            IsIndexing = false;
+            IndexingProgressText = string.Empty;
+        }
+    }
+
+    private FicheGen.Core.Ai.AiRequestConfig BuildAiConfig()
+    {
+        var s = _settingsStore.GetSettings<FicheGen.Core.Storage.AppSettings>();
+        var globalProvider = !string.IsNullOrWhiteSpace(GlobalProvider) ? GlobalProvider : s.Ai.GlobalProvider;
+        var proxyUrl = !string.IsNullOrWhiteSpace(ProxyBaseUrl) ? ProxyBaseUrl : s.Ai.ProxyBaseUrl;
+        var vertexProj = !string.IsNullOrWhiteSpace(VertexProject) ? VertexProject : s.Ai.Vertex.Project;
+        var vertexReg = !string.IsNullOrWhiteSpace(VertexRegion) ? VertexRegion : s.Ai.Vertex.Region;
+
+        var routingOverrides = EnableExpertMode
+            ? s.Ai.RoutingOverrides.ToDictionary(k => k.Key, v => new FicheGen.Core.Ai.RoutingOverride(v.Value.Provider, v.Value.Model))
+            : new Dictionary<string, FicheGen.Core.Ai.RoutingOverride>();
+
+        return new FicheGen.Core.Ai.AiRequestConfig(
+            globalProvider,
+            s.Ai.Models,
+            routingOverrides,
+            proxyUrl,
+            vertexProj,
+            vertexReg,
+            new Dictionary<string, double> { { "toc", 0.1 } },
+            async (k, ct) =>
+            {
+                if (k == "supabase_access_token" && _authService != null)
+                {
+                    return await _authService.GetValidTokenAsync(ct).ConfigureAwait(false);
+                }
+                return _credentialStore?.Get(k);
+            }
+        );
+    }
+
     [RelayCommand] private Task OpenExportsFolderAsync() => OpenFolderAsync(ExportsDir);
 
     [RelayCommand]
@@ -164,6 +446,27 @@ public partial class SettingsViewModel
         TocCacheSizeText = files == 0
             ? "Cache vide (0 octet)"
             : $"{FormatBytes(size)} utilisés · {files} fichier{(files > 1 ? "s" : "")} en cache";
+
+        var index = (_parentDocumentIndexer ?? App.Services.GetService<ParentDocumentIndexer>())?.LoadIndex();
+        if (index != null && index.Documents.Count > 0)
+        {
+            var totalLessons = index.Documents.Sum(d => d.Lessons.Count);
+            ParentDocumentsStatsText = $"{index.Documents.Count} document(s) indexé(s) · {totalLessons} leçon(s) prête(s)";
+            if (DiscoveredDocuments.Count == 0)
+            {
+                foreach (var doc in index.Documents)
+                {
+                    DiscoveredDocuments.Add(doc);
+                }
+                HasDiscoveredDocuments = DiscoveredDocuments.Count > 0;
+                SelectedDocumentToScan = DiscoveredDocuments.FirstOrDefault();
+            }
+        }
+        else
+        {
+            ParentDocumentsStatsText = "Aucun document indexé — cliquez sur « Rechercher les documents »";
+        }
+
         IsCacheBusy = false;
     }
 

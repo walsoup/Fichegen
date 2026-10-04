@@ -34,6 +34,12 @@ public class LlmRouter
         {
             model = defaultModel;
         }
+        else if (providerStr.Equals("proxy", StringComparison.OrdinalIgnoreCase) &&
+                 cfg.DefaultModels.TryGetValue("proxy.customModel", out var customProxy) &&
+                 !string.IsNullOrWhiteSpace(customProxy))
+        {
+            model = customProxy;
+        }
         else
         {
             model = ResolveDefaultModel(providerStr, canonicalPurpose);
@@ -69,10 +75,20 @@ public class LlmRouter
             "xai" => "grok-2-latest",
             "doubleword" => "doubleword-default",
             "vertex" or "vertexai" => "gemini-1.5-flash-002",
-            "cloud" or "profstudio" => purpose,
-            _ => purpose
+            "cloud" or "profstudio" => ResolveCloudTask(purpose),
+            "proxy" => "llama3.2",
+            _ => "fiche"
         };
     }
+
+    private static string ResolveCloudTask(string purpose) => purpose.ToLowerInvariant() switch
+    {
+        "eval" or "evaluation" => "eval",
+        "quiz" => "quiz",
+        "intent" => "intent",
+        "generation" => "generation",
+        _ => "fiche"
+    };
 
     private static ProviderAdapterKind NormalizeProvider(string provider)
     {

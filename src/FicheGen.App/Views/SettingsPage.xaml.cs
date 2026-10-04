@@ -359,6 +359,8 @@ public sealed partial class SettingsPage : Page, ILocalizablePage
             await StylePreviewWebView.EnsureCoreWebView2Async();
             _webViewReady = true;
             _isPreviewInitialized = true;
+            StylePreviewWebView.CoreWebView2.NavigationCompleted += OnPreviewNavigationCompleted;
+            StylePreviewWebView.CoreWebView2.WebMessageReceived += OnPreviewWebMessageReceived;
             RefreshPreview();
         }
         catch (Exception)
@@ -677,6 +679,211 @@ public sealed partial class SettingsPage : Page, ILocalizablePage
                 flyout.Hide();
             }
         }
+    }
+
+    private double _previewZoom = 1.0;
+
+    private async void PreviewZoomIn_Click(object sender, RoutedEventArgs e)
+    {
+        _previewZoom = Math.Min(2.0, _previewZoom + 0.15);
+        await ApplyPreviewZoomAsync();
+    }
+
+    private async void PreviewZoomOut_Click(object sender, RoutedEventArgs e)
+    {
+        _previewZoom = Math.Max(0.5, _previewZoom - 0.15);
+        await ApplyPreviewZoomAsync();
+    }
+
+    private async void PreviewZoomReset_Click(object sender, RoutedEventArgs e)
+    {
+        _previewZoom = 1.0;
+        await ApplyPreviewZoomAsync();
+    }
+
+    private async System.Threading.Tasks.Task ApplyPreviewZoomAsync()
+    {
+        if (PreviewZoomText != null)
+        {
+            PreviewZoomText.Text = $"{(int)Math.Round(_previewZoom * 100)} %";
+        }
+        if (StylePreviewWebView?.CoreWebView2 != null)
+        {
+            var z = _previewZoom.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            try
+            {
+                await StylePreviewWebView.ExecuteScriptAsync($"document.documentElement.style.zoom='{z}';");
+            }
+            catch { }
+        }
+    }
+
+    private async void OnPreviewNavigationCompleted(Microsoft.Web.WebView2.Core.CoreWebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
+    {
+        await ApplyPreviewZoomAsync();
+
+        var injectScript = """
+        (function() {
+            if (window.__studioInjected) return;
+            window.__studioInjected = true;
+
+            var style = document.createElement('style');
+            style.textContent = `
+                .studio-highlighted {
+                    outline: 3px solid var(--fg-couleur-accent, #2563EB) !important;
+                    background-color: rgba(37, 99, 235, 0.08) !important;
+                    box-shadow: 0 0 16px rgba(37, 99, 235, 0.35) !important;
+                    border-radius: 6px !important;
+                    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                }
+                h1, h2, .callout, table {
+                    transition: outline 0.15s ease;
+                }
+                h1:hover, h2:hover, .callout:hover, table:hover {
+                    outline: 1.5px dashed rgba(37, 99, 235, 0.5) !important;
+                    cursor: pointer;
+                }
+            `;
+            document.head.appendChild(style);
+
+            document.addEventListener('click', function(e) {
+                var target = e.target.closest('h1, h2, .callout, table');
+                if (target && window.chrome && window.chrome.webview) {
+                    var text = (target.innerText || '').substring(0, 60);
+                    window.chrome.webview.postMessage(JSON.stringify({ type: 'previewBlockClicked', text: text }));
+                }
+            });
+        })();
+        """;
+        try
+        {
+            await sender.ExecuteScriptAsync(injectScript);
+            if (ViewModel.SelectedDocumentTile != null)
+            {
+                await HighlightBlockInPreviewAsync(ViewModel.SelectedDocumentTile);
+            }
+        }
+        catch { }
+    }
+
+    private void OnPreviewWebMessageReceived(Microsoft.Web.WebView2.Core.CoreWebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs args)
+    {
+        try
+        {
+            var raw = args.WebMessageAsJson;
+            if (string.IsNullOrWhiteSpace(raw)) return;
+            using var doc = System.Text.Json.JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("type", out var typeEl) && typeEl.GetString() == "previewBlockClicked")
+            {
+                if (root.TryGetProperty("text", out var textEl))
+                {
+                    var text = textEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        var match = ViewModel.DocumentTiles.FirstOrDefault(t =>
+                            t.IsVisible && (text.Contains(t.Title, StringComparison.OrdinalIgnoreCase) ||
+                                           t.Title.Contains(text, StringComparison.OrdinalIgnoreCase)));
+                        if (match != null)
+                        {
+                            DispatcherQueue.TryEnqueue(() =>
+                            {
+                                DocumentTilesListView.SelectedItem = match;
+                                DocumentTilesListView.ScrollIntoView(match);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    private async System.Threading.Tasks.Task HighlightBlockInPreviewAsync(DocumentTileItem? tile)
+    {
+        if (tile == null || StylePreviewWebView?.CoreWebView2 == null) return;
+        var safeTitle = System.Text.Json.JsonSerializer.Serialize(tile.Title);
+        var safeKind = System.Text.Json.JsonSerializer.Serialize(tile.Kind);
+        var script = $$"""
+        (function() {
+            var targets = document.querySelectorAll('.studio-highlighted');
+            targets.forEach(function(el) { el.classList.remove('studio-highlighted'); });
+
+            var title = {{safeTitle}};
+            var kind = {{safeKind}};
+            var candidates = document.querySelectorAll('h1, h2, h3, .callout, table, ul');
+            var found = null;
+
+            for (var i = 0; i < candidates.length; i++) {
+                var el = candidates[i];
+                if (el.innerText && el.innerText.indexOf(title) !== -1) {
+                    found = el.closest('.callout') || el;
+                    break;
+                }
+            }
+            if (!found && kind) {
+                found = document.querySelector('.callout-' + kind);
+            }
+            if (found) {
+                found.classList.add('studio-highlighted');
+                found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        })();
+        """;
+        try
+        {
+            await StylePreviewWebView.ExecuteScriptAsync(script);
+        }
+        catch { }
+    }
+
+    private async void DocumentTilesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DocumentTilesListView.SelectedItem is DocumentTileItem tile)
+        {
+            ViewModel.SelectedDocumentTile = tile;
+            await HighlightBlockInPreviewAsync(tile);
+        }
+    }
+
+    private async void TileCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject dep)
+        {
+            var cur = dep;
+            while (cur != null && !ReferenceEquals(cur, sender))
+            {
+                if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+                {
+                    return;
+                }
+                cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+            }
+        }
+
+        var tile = (sender as FrameworkElement)?.DataContext as DocumentTileItem
+                ?? (sender as FrameworkElement)?.Tag as DocumentTileItem;
+        if (tile != null)
+        {
+            ViewModel.SelectedDocumentTile = tile;
+            DocumentTilesListView.SelectedItem = tile;
+            await HighlightBlockInPreviewAsync(tile);
+        }
+    }
+
+    private void TemplatePreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox cb && cb.SelectedItem is DocumentTemplatePreset preset)
+        {
+            ViewModel.ApplyTemplatePreset(preset);
+        }
+    }
+
+    private void SaveCustomTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        var name = NewTemplateNameBox?.Text;
+        ViewModel.SaveCurrentAsTemplate(name);
+        SaveTemplateFlyout?.Hide();
     }
 
     private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

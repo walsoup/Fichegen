@@ -867,6 +867,9 @@
   <data name="AP_ModeAuto_Caption" xml:space="preserve">
     <value>Détecte automatiquement s'il faut générer, modifier ou répondre.</value>
   </data>
+  <data name="AP_ModeAuto_Prompt" xml:space="preserve">
+    <value>Demandez une modification ou posez une question pédagogique…</value>
+  </data>
   <data name="PDZ_Zone.AutomationProperties.Name" xml:space="preserve">
     <value>Zone de sélection du guide pédagogique PDF</value>
   </data>
@@ -1289,6 +1292,12 @@
   </data>
   <data name="FP_TopicBox.PlaceholderText" xml:space="preserve">
     <value>ex : Les fractions décimales, La Révolution française…</value>
+  </data>
+  <data name="FP_CachedLessons_Header.Text" xml:space="preserve">
+    <value>Leçons du document parent :</value>
+  </data>
+  <data name="FP_CachedLessons_Placeholder.Text" xml:space="preserve">
+    <value>Choisir une leçon dans la table des matières…</value>
   </data>
   <data name="FP_Step3_Header.Text" xml:space="preserve">
     <value>3. Cadre &amp; Durée</value>
@@ -1934,10 +1943,22 @@ Veuillez cliquer sur le lien pour valider votre compte, puis connectez-vous.</va
     <value>Emplacements de stockage</value>
   </data>
   <data name="SP_GuidesFolder.Header" xml:space="preserve">
-    <value>Guides pédagogiques (PDF)</value>
+    <value>Documents parents (Guides PDF)</value>
   </data>
   <data name="SP_GuidesFolder.Description" xml:space="preserve">
-    <value>Sources analysées pour la table des matières et le contexte pédagogique.</value>
+    <value>Dossier contenant les manuels et guides PDF de référence analysés par niveau.</value>
+  </data>
+  <data name="SP_ScanParentDocsFolderBtn.Content" xml:space="preserve">
+    <value>Rechercher les documents</value>
+  </data>
+  <data name="SP_ScanAllParentDocsBtn.Content" xml:space="preserve">
+    <value>Tout indexer</value>
+  </data>
+  <data name="SP_DiscoveredDocsCombo.PlaceholderText" xml:space="preserve">
+    <value>Sélectionner un document pour extraire sa table des matières…</value>
+  </data>
+  <data name="SP_ScanSelectedDocTocBtn.Content" xml:space="preserve">
+    <value>Scanner sa table des matières</value>
   </data>
   <data name="SP_NoFolderSelected.PlaceholderText" xml:space="preserve">
     <value>Aucun dossier sélectionné</value>

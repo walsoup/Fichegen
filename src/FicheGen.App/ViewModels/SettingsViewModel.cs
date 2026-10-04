@@ -170,13 +170,17 @@ public sealed partial class DocumentTileItem : ObservableObject
     [NotifyPropertyChangedFor(nameof(RemovableVisibility))]
     public partial bool IsRemovable { get; set; } = true;
     [ObservableProperty] public partial string AccentTag { get; set; } = "default";
+    [ObservableProperty] public partial string CustomContent { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CalloutVariant { get; set; } = "memo";
+    [ObservableProperty] public partial string TintHex { get; set; } = string.Empty;
 
     public double VisibleOpacity => IsVisible ? 1.0 : 0.42;
     public string VisibilityIconGlyph => IsVisible ? "\uE890" : "\uE733";
     public Visibility RemovableVisibility => IsRemovable ? Visibility.Visible : Visibility.Collapsed;
 
     public DocumentTileItem(string id, string kind, string title, string subtitle, string icon, string tag,
-        bool isVisible = true, bool isRemovable = true, string accentTag = "default")
+        bool isVisible = true, bool isRemovable = true, string accentTag = "default",
+        string customContent = "", string calloutVariant = "memo", string tintHex = "")
     {
         Id = id;
         Kind = kind;
@@ -187,6 +191,9 @@ public sealed partial class DocumentTileItem : ObservableObject
         IsVisible = isVisible;
         IsRemovable = isRemovable;
         AccentTag = accentTag;
+        CustomContent = customContent;
+        CalloutVariant = calloutVariant;
+        TintHex = tintHex;
     }
 }
 
@@ -199,7 +206,21 @@ public sealed record DocumentTileDto(
     string Tag,
     bool IsVisible = true,
     bool IsRemovable = true,
-    string AccentTag = "default");
+    string AccentTag = "default",
+    string CustomContent = "",
+    string CalloutVariant = "memo",
+    string TintHex = "");
+
+public sealed record DocumentTemplatePreset(
+    string Id,
+    string Name,
+    string Description,
+    string Icon,
+    IReadOnlyList<DocumentTileDto> Tiles,
+    bool IsCustom = false)
+{
+    public string DisplayTitle => $"{Icon} {Name}";
+}
 
 public partial class ModelRoutingItem : ObservableObject
 {
@@ -379,6 +400,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IConnectionTester? _connectionTester;
     private readonly IProxyModelScanner? _proxyScanner;
     private readonly AccentColorService? _accentColorService;
+    private readonly FicheGen.Infrastructure.Pdf.ParentDocumentIndexer? _parentDocumentIndexer;
 
     public event EventHandler? PreviewRefreshRequested;
 
@@ -424,7 +446,8 @@ public partial class SettingsViewModel : ObservableObject
         IConnectionTester? connectionTester = null,
         IProxyModelScanner? proxyScanner = null,
         AccentColorService? accentColorService = null,
-        FicheGen.Core.Auth.IAuthService? authService = null)
+        FicheGen.Core.Auth.IAuthService? authService = null,
+        FicheGen.Infrastructure.Pdf.ParentDocumentIndexer? parentDocumentIndexer = null)
     {
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
@@ -435,6 +458,7 @@ public partial class SettingsViewModel : ObservableObject
         _proxyScanner = proxyScanner;
         _accentColorService = accentColorService;
         _authService = authService;
+        _parentDocumentIndexer = parentDocumentIndexer;
 
         _isLoadingSettings = true;
         SelectedAccent = AccentOptions[0];
@@ -444,6 +468,10 @@ public partial class SettingsViewModel : ObservableObject
         BuildRoutingMatrixDefaults();
         LoadSettings();
         InitializeAccountState();
+
+        foreach (var tile in DocumentTiles) AttachTileEvents(tile);
+        SelectedDocumentTile ??= DocumentTiles.FirstOrDefault();
+        SelectedDocumentTemplate ??= DocumentTemplatePresets.FirstOrDefault();
 
         _ = RefreshTocCacheSizeAsync();
     }
@@ -497,6 +525,14 @@ public partial class SettingsViewModel : ObservableObject
         if (appSettings.Ai.Models.TryGetValue("assistant", out var astM)) ApplyRoutingValue("chat", null, astM);
 
         GuidesDir = appSettings.Folders.GuidesDir;
+        if (string.IsNullOrWhiteSpace(GuidesDir))
+        {
+            var defaultGuides = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "guides");
+            if (Directory.Exists(defaultGuides))
+            {
+                GuidesDir = defaultGuides;
+            }
+        }
         ExportsDir = appSettings.Folders.ExportsDir;
         SelectedStylePresetId = appSettings.Defaults.StylePresetId;
         SelectedPreset = StylePresets.FirstOrDefault(p => p.Id == SelectedStylePresetId) ?? StylePresets[0];
@@ -561,6 +597,11 @@ public partial class SettingsViewModel : ObservableObject
             if (s.Ai.Models.TryGetValue("document.tiles.json", out var tilesJson) && !string.IsNullOrWhiteSpace(tilesJson))
             {
                 LoadDocumentTilesFromJson(tilesJson);
+            }
+
+            if (s.Ai.Models.TryGetValue("document.templates.json", out var templatesJson) && !string.IsNullOrWhiteSpace(templatesJson))
+            {
+                LoadDocumentTemplatesFromJson(templatesJson);
             }
 
             if (s.Ai.Models.TryGetValue("style.builder.json", out var builderJson))
@@ -655,20 +696,23 @@ public partial class SettingsViewModel : ObservableObject
             s.Ai.Models["intent"] = IntentModel;
 
             s.Ai.RoutingOverrides.Clear();
-            foreach (var r in RoutingMatrix)
+            if (EnableExpertMode)
             {
-                s.Ai.RoutingOverrides[r.TaskKey] = new ProviderOverride
+                foreach (var r in RoutingMatrix)
                 {
-                    Provider = r.SelectedProvider?.Key ?? "cloud",
-                    Model = string.IsNullOrWhiteSpace(r.Model) ? null : r.Model
-                };
+                    s.Ai.RoutingOverrides[r.TaskKey] = new ProviderOverride
+                    {
+                        Provider = r.SelectedProvider?.Key ?? "cloud",
+                        Model = string.IsNullOrWhiteSpace(r.Model) ? null : r.Model
+                    };
+                }
+                if (s.Ai.RoutingOverrides.TryGetValue("fiche", out var ficheOverride))
+                    s.Ai.RoutingOverrides["generation"] = ficheOverride;
+                if (s.Ai.RoutingOverrides.TryGetValue("eval", out var evalOverride))
+                    s.Ai.RoutingOverrides["evaluation"] = evalOverride;
+                if (s.Ai.RoutingOverrides.TryGetValue("chat", out var chatOverride))
+                    s.Ai.RoutingOverrides["assistant"] = chatOverride;
             }
-            if (s.Ai.RoutingOverrides.TryGetValue("fiche", out var ficheOverride))
-                s.Ai.RoutingOverrides["generation"] = ficheOverride;
-            if (s.Ai.RoutingOverrides.TryGetValue("eval", out var evalOverride))
-                s.Ai.RoutingOverrides["evaluation"] = evalOverride;
-            if (s.Ai.RoutingOverrides.TryGetValue("chat", out var chatOverride))
-                s.Ai.RoutingOverrides["assistant"] = chatOverride;
 
             s.Ai.Temperatures.Generation = GenerationTemperature;
             s.Ai.Temperatures.Intent = IntentTemperature;
@@ -691,6 +735,7 @@ public partial class SettingsViewModel : ObservableObject
             s.Ai.Models["styles.custom.json"] = GetCustomPresetsJson();
             s.Ai.Models["styles.order.json"] = GetPresetsOrderJson();
             s.Ai.Models["document.tiles.json"] = GetDocumentTilesJson();
+            s.Ai.Models["document.templates.json"] = GetDocumentTemplatesJson();
             s.Defaults.StylePresetId = SelectedStylePresetId;
             s.Ai.Models["prompts.json"] = JsonSerializer.Serialize(
                 PromptTemplates.Select(p => new PromptDto(p.Name, p.Content)));

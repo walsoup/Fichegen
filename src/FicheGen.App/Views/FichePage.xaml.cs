@@ -103,8 +103,12 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage,
         RefreshLocalizedStrings();
         if (DataContext is FicheFormViewModel vm)
         {
+            vm.RefreshDocumentOptions();
             if (LevelCombo.SelectedItem == null && !string.IsNullOrWhiteSpace(vm.ClassLevel))
+            {
                 LevelCombo.SelectedItem = vm.ClassLevel;
+                LevelCombo.Text = vm.ClassLevel;
+            }
             if (string.IsNullOrWhiteSpace(SubjectCombo.Text) && !string.IsNullOrWhiteSpace(vm.Subject))
             {
                 SubjectCombo.SelectedItem = SubjectOptions.FirstOrDefault(s => s.Name == vm.Subject);
@@ -127,6 +131,8 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage,
         SubjectCombo.PlaceholderText = Services.L10n.Get("FP_SubjectCombo.PlaceholderText", "Sélectionner ou saisir");
         Step2Header.Text = Services.L10n.Get("FP_Step2_Header.Text", "2. Sujet de la séance");
         TopicBox.PlaceholderText = Services.L10n.Get("FP_TopicBox.PlaceholderText", "ex : Les fractions décimales, La Révolution française…");
+        CachedLessonsHeader.Text = Services.L10n.Get("FP_CachedLessons_Header.Text", "Leçons du document parent :");
+        CachedLessonsCombo.PlaceholderText = Services.L10n.Get("FP_CachedLessons_Placeholder.Text", "Choisir une leçon dans la table des matières…");
         Step3Header.Text = Services.L10n.Get("FP_Step3_Header.Text", "3. Cadre & Durée");
         DurationBox.Header = Services.L10n.Get("FP_DurationBox.Header", "Durée de la séance (minutes)");
         InstructionsBox.Header = Services.L10n.Get("FP_InstructionsBox.Header", "Consignes additionnelles (optionnel)");
@@ -136,7 +142,31 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage,
 
     // ───────────────────────── Niveau & Matière ─────────────────────────
 
-    private void LevelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => ValidateForm();
+    private void LevelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LevelCombo.SelectedItem is string selected)
+        {
+            if (LevelCombo.Text != selected)
+                LevelCombo.Text = selected;
+            if (DataContext is FicheFormViewModel vm)
+                vm.ClassLevel = selected;
+        }
+        ValidateForm();
+    }
+
+    private void LevelCombo_TextSubmitted(ComboBox sender, ComboBoxTextSubmittedEventArgs args)
+    {
+        if (DataContext is FicheFormViewModel vm && !string.IsNullOrWhiteSpace(args.Text))
+        {
+            vm.ClassLevel = args.Text;
+        }
+        ValidateForm();
+    }
+
+    private void CachedLessonsCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        ValidateForm();
+    }
 
     private void SubjectCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -213,6 +243,7 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage,
         if (LevelCombo == null || SubjectCombo == null || TopicBox == null) return missing;
 
         var level = LevelCombo.SelectedItem as string
+            ?? (!string.IsNullOrWhiteSpace(LevelCombo.Text) ? LevelCombo.Text : null)
             ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
             ?? LevelCombo.SelectedValue as string
             ?? (DataContext as FicheFormViewModel)?.ClassLevel;
@@ -274,7 +305,9 @@ public sealed partial class FichePage : Page, IAssistantHostPage, ICreationPage,
         {
             if (!string.IsNullOrWhiteSpace(TopicBox.Text)) vm.Topic = TopicBox.Text;
             if (!string.IsNullOrWhiteSpace(SubjectCombo.Text)) vm.Subject = SubjectCombo.Text;
-            var lvl = LevelCombo.SelectedItem as string ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            var lvl = LevelCombo.SelectedItem as string
+                ?? (!string.IsNullOrWhiteSpace(LevelCombo.Text) ? LevelCombo.Text : null)
+                ?? (LevelCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
             if (!string.IsNullOrWhiteSpace(lvl)) vm.ClassLevel = lvl;
         }
 

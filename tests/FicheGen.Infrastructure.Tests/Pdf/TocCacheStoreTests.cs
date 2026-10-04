@@ -107,4 +107,95 @@ public class TocCacheStoreTests : IDisposable
         var cachedAfter = store.TryGetCached(_tempPdfFile);
         cachedAfter.Should().BeNull("Cache hash must differ when file contents or write time changes.");
     }
+
+    [Fact]
+    public void SaveCache_ConcurrentSaves_DoNotThrowIOException()
+    {
+        var store = new TocCacheStore(_tempCacheDir);
+        var entries = new List<ToCEntry> { new("Chapitre 1", 1, 5) };
+        var result = new TocResult(
+            PdfPath: _tempPdfFile,
+            PdfHash: TocCacheStore.ComputePdfHash(_tempPdfFile),
+            Offset: 4,
+            OffsetConfidence: 0.95,
+            LowConfidenceWarning: false,
+            IsScanned: false,
+            Entries: entries
+        );
+
+        // Concurrently save the exact same cache result across multiple threads
+        var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+        Parallel.For(0, 20, _ =>
+        {
+            try
+            {
+                store.SaveCache(result);
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        });
+
+        exceptions.Should().BeEmpty("Concurrent saves must not throw IOException or collide on temporary files.");
+
+        var cached = store.TryGetCached(_tempPdfFile);
+        cached.Should().NotBeNull();
+        cached!.Entries.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void SaveCache_ConcurrentReadsAndWrites_DoNotThrowOrCorrupt()
+    {
+        var store = new TocCacheStore(_tempCacheDir);
+        var entries = new List<ToCEntry> { new("Chapitre 1", 1, 5) };
+        var result = new TocResult(
+            PdfPath: _tempPdfFile,
+            PdfHash: TocCacheStore.ComputePdfHash(_tempPdfFile),
+            Offset: 4,
+            OffsetConfidence: 0.95,
+            LowConfidenceWarning: false,
+            IsScanned: false,
+            Entries: entries
+        );
+
+        var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+        Parallel.For(0, 30, i =>
+        {
+            try
+            {
+                if (i % 2 == 0)
+                {
+                    store.SaveCache(result);
+                }
+                else
+                {
+                    _ = store.TryGetCached(_tempPdfFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        });
+
+        exceptions.Should().BeEmpty("Concurrent reads and writes must be safe and never throw.");
+        var finalCached = store.TryGetCached(_tempPdfFile);
+        finalCached.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TryGetCached_CorruptJson_QuarantinesFile()
+    {
+        var store = new TocCacheStore(_tempCacheDir);
+        var cachePath = store.GetCachePath(_tempPdfFile);
+        File.WriteAllText(cachePath, "{ this is invalid json content !@#$");
+
+        var result = store.TryGetCached(_tempPdfFile);
+
+        result.Should().BeNull();
+        File.Exists(cachePath).Should().BeFalse("Corrupt file should have been moved");
+        var quarantinedFiles = Directory.EnumerateFiles(_tempCacheDir, "*.corrupt-*");
+        quarantinedFiles.Should().NotBeEmpty("Corrupt file should have been quarantined");
+    }
 }

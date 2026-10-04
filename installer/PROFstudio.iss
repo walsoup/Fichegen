@@ -3,7 +3,7 @@
 ; ==============================================================================
 
 #define MyAppName "PROFstudio"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "walsoup / PROFstudio"
 #define MyAppURL "https://github.com/walsoup/fichegen"
 #define MyAppExeName "FicheGen.App.exe"

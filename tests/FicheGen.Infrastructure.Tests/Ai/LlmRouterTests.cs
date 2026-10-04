@@ -48,4 +48,110 @@ public sealed class LlmRouterTests
         route.Endpoint.Should().StartWith(expectedEndpointPrefix);
         route.SecretKeyName.Should().Be(expectedSecretKey);
     }
+
+    [Fact]
+    public void Resolve_CloudProvider_TocPurpose_ResolvesToFicheModel()
+    {
+        var router = new LlmRouter();
+        var config = new AiRequestConfig(
+            GlobalProvider: "cloud",
+            DefaultModels: new Dictionary<string, string>(),
+            RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+            ProxyBaseUrl: "http://localhost:11434/v1",
+            VertexProject: "",
+            VertexRegion: "europe-west1",
+            Temperatures: new Dictionary<string, double>(),
+            SecretResolver: (_, _) => ValueTask.FromResult<string?>("test-secret")
+        );
+
+        var route = router.Resolve("toc", config, isStreaming: false);
+
+        route.Should().NotBeNull();
+        route.Model.Should().Be("fiche", "Cloud task toc must map to the active fiche model instead of falling back to broken wildcard.");
+    }
+
+    [Fact]
+    public void Resolve_CloudProvider_ChatPurpose_ResolvesToFicheModel()
+    {
+        var router = new LlmRouter();
+        var config = new AiRequestConfig(
+            GlobalProvider: "cloud",
+            DefaultModels: new Dictionary<string, string>(),
+            RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+            ProxyBaseUrl: "http://localhost:11434/v1",
+            VertexProject: "",
+            VertexRegion: "europe-west1",
+            Temperatures: new Dictionary<string, double>(),
+            SecretResolver: (_, _) => ValueTask.FromResult<string?>("test-secret")
+        );
+
+        var route = router.Resolve("chat", config, isStreaming: false);
+
+        route.Should().NotBeNull();
+        route.Model.Should().Be("fiche", "Cloud chat/assistant must resolve to a valid working model on the cloud proxy.");
+    }
+
+    [Fact]
+    public void Resolve_ProxyProvider_TocPurpose_ResolvesToValidFallbackModel()
+    {
+        var router = new LlmRouter();
+        var config = new AiRequestConfig(
+            GlobalProvider: "proxy",
+            DefaultModels: new Dictionary<string, string>(),
+            RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+            ProxyBaseUrl: "http://localhost:11434/v1",
+            VertexProject: "",
+            VertexRegion: "europe-west1",
+            Temperatures: new Dictionary<string, double>(),
+            SecretResolver: (_, _) => ValueTask.FromResult<string?>("test-secret")
+        );
+
+        var route = router.Resolve("toc", config, isStreaming: false);
+
+        route.Should().NotBeNull();
+        route.Model.Should().NotBe("toc", "Proxy provider must not send purpose name 'toc' as model name to Ollama.");
+        route.Model.Should().Be("llama3.2");
+    }
+
+    [Fact]
+    public void Resolve_ProxyProvider_CustomModel_ResolvesToConfiguredModel()
+    {
+        var router = new LlmRouter();
+        var config = new AiRequestConfig(
+            GlobalProvider: "proxy",
+            DefaultModels: new Dictionary<string, string> { { "proxy.customModel", "qwen2.5:7b" } },
+            RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+            ProxyBaseUrl: "http://localhost:11434/v1",
+            VertexProject: "",
+            VertexRegion: "europe-west1",
+            Temperatures: new Dictionary<string, double>(),
+            SecretResolver: (_, _) => ValueTask.FromResult<string?>("test-secret")
+        );
+
+        var route = router.Resolve("toc", config, isStreaming: false);
+
+        route.Should().NotBeNull();
+        route.Model.Should().Be("qwen2.5:7b");
+    }
+
+    [Fact]
+    public void Resolve_GeminiProvider_TocPurpose_ResolvesToGeminiFlash()
+    {
+        var router = new LlmRouter();
+        var config = new AiRequestConfig(
+            GlobalProvider: "aistudio",
+            DefaultModels: new Dictionary<string, string>(),
+            RoutingOverrides: new Dictionary<string, RoutingOverride>(),
+            ProxyBaseUrl: "http://localhost:11434/v1",
+            VertexProject: "",
+            VertexRegion: "europe-west1",
+            Temperatures: new Dictionary<string, double>(),
+            SecretResolver: (_, _) => ValueTask.FromResult<string?>("test-secret")
+        );
+
+        var route = router.Resolve("toc", config, isStreaming: false);
+
+        route.Should().NotBeNull();
+        route.Model.Should().Be("gemini-2.0-flash");
+    }
 }
