@@ -1,57 +1,77 @@
-# FicheGen Native for macOS
+# fichegen
 
-FicheGen is a modern, native macOS application designed to revolutionize lesson planning for educators. Built entirely in Swift, FicheGen leverages the power of Google's Gemini API to instantly generate structured, comprehensive, and perfectly formatted lesson plans ("fiches pédagogiques") directly from your curriculum documents.
+lesson prep for teachers, written by an llm so you don't have to.
 
-Gone are the days of tedious copying, formatting, and manual layout adjustments. FicheGen handles the heavy lifting, allowing educators to focus on what matters most: teaching.
+native macos app. windows build on its own branch, under the PROFstudio name. the original python version is still available separately.
 
-## Key Features
+## a look inside
 
-✨ **Native macOS Experience**
-Built from the ground up in Swift, FicheGen is blazingly fast and incredibly lightweight. It embraces modern macOS design paradigms, featuring beautiful `.ultraThinMaterial` glassmorphism, fluid spring animations, and a seamless native interface.
+![PROFstudio on Windows: lesson form, document preview and AI assistant](https://raw.githubusercontent.com/walsoup/Fichegen/windows-native/screens/fiche-generation.png)
 
-🤖 **AI-Powered Lesson Generation**
-Provide the app with your class level, subject, lesson topic, and any extracted text or instructions. FicheGen's secure integration with the Gemini API instantly drafts a robust lesson plan tailored to your exact specifications.
+*the windows app, from the screenshots already in this repo. the macos interface is different.*
 
-🎨 **Graphic Style Builder**
-Make your Fiches your own. With the built-in Style Builder, you can customize the primary and secondary colors, choose your preferred typography (Avenir, Helvetica, Georgia, etc.), and adjust global margins. See your changes instantly in a live interactive preview.
+## what it does
 
-📑 **Template Engine**
-Not a fan of the default layout? FicheGen allows you to upload custom Markdown (`.md`) structural templates. The AI will adopt your uploaded structure for all future generations, ensuring your lesson plans always match your school's official format.
+- drafts lesson plans, evaluations and quizzes from a class level, subject and topic.
+- uses text from pdf guides and textbooks as context.
+- lets you revise generated material through an ai chat panel.
+- gives you document styles, a style builder and custom structure templates.
+- keeps a local generation history.
 
-💬 **Interactive AI Editor**
-Need a quick tweak? Use the integrated AI chat command bar at the bottom of the result preview. Simply type *"Make the introduction shorter"* or *"Rewrite the conclusion to be more engaging"* and watch the document update natively on the fly.
+on macos, the result panel can export pdf, html and rtf. features and export formats differ between versions.
 
-📄 **Flawless Native PDF Export**
-FicheGen features a robust, invisible WebKit engine that seamlessly renders your Markdown into HTML using your selected custom CSS styles, and leverages macOS `NSPrintOperation` to generate pixel-perfect PDFs directly to your drive. No Python dependencies, no external services required.
+the output is ai-generated. check facts, instructions, answers and curriculum fit before using it with students.
 
-## Building from Source
+## get it
 
-FicheGen uses `XcodeGen` for project management, ensuring a clean and reproducible build environment.
+| version | download | source |
+| --- | --- | --- |
+| macos | [version 3.6, dmg](https://github.com/walsoup/Fichegen/releases/tag/v3.6) | [`macos` branch](https://github.com/walsoup/Fichegen/blob/macos/README.md) |
+| windows / PROFstudio | [version 1.2.0, installer and portable builds](https://github.com/walsoup/Fichegen/releases/tag/v1.2.0-windows) | [`windows-native` branch](https://github.com/walsoup/Fichegen/blob/windows-native/README.md) |
+| python / PyQt6 | run from source | [`python` branch](https://github.com/walsoup/Fichegen/blob/python/README.md) |
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/yourusername/fichegen.git
-cd fichegen
+macos requires macos 14 or later. the windows version targets windows 10 and 11.
+
+## using the macos app
+
+1. open preferences with `cmd + ,` and configure an ai provider. gemini is supported; other provider and routing settings are available too.
+2. choose a class level, subject and lesson topic. add a source pdf or extra instructions if needed.
+3. generate a fiche, evaluation or quiz.
+4. review the result, edit it directly or through the chat panel, then export.
+
+ai generation needs a connection to the configured provider. prompts and any document content included in a request go to that provider, whose terms and data practices apply. don't send student personal data unless you have permission to do so.
+
+on macos, api keys are stored in the keychain. other preferences are saved locally in the app's application support directory. generation history is also stored locally.
+
+## building the macos app
+
+use xcode on a mac with the macos 14 sdk or later. the repo includes an xcode project and an xcodegen configuration.
+
+```sh
+git clone --branch macos https://github.com/walsoup/Fichegen.git
+cd Fichegen
+open FicheGen.xcodeproj
 ```
 
-2. **Generate the Xcode Project**
-```bash
+select the `FicheGen` scheme, set your own signing team if xcode asks for one, then build and run.
+
+if you need to regenerate the project, install xcodegen and run:
+
+```sh
 xcodegen generate
 ```
 
-3. **Build the App**
-Open `FicheGen.xcodeproj` in Xcode and hit **Run** (⌘R), or build it directly from the command line:
-```bash
-xcodebuild -project FicheGen.xcodeproj -scheme FicheGen -configuration Release
-```
+the native macos target uses apple frameworks without third-party swift package dependencies. it bundles `marked.min.js` for markdown rendering.
 
-## Requirements
-- **macOS:** 14.0 or later
-- **Xcode:** 15.0 or later (for building)
-- **API Key:** A valid Google Gemini API key (can be securely configured in the app's Preferences).
+## license
 
-## Privacy & Security
-FicheGen communicates directly with the Gemini API via native Swift `URLSession`. Your API keys and user preferences are saved locally in the standard macOS Application Support directory (`~/Library/Application Support/FicheGen/settings.json`), ensuring full user ownership and offline persistence. No intermediate servers or analytics trackers are used.
+the macos and windows branches use PolyForm Noncommercial 1.0.0, with the additional terms in each branch's `LICENSE`:
 
----
-*FicheGen: Empowering educators, one lesson plan at a time.*
+- noncommercial use, modification and sharing are allowed.
+- schools and administrators may distribute it internally to teachers, staff and students for teaching and school work, free of charge.
+- selling it, bundling it into a paid product or service, or other commercial use needs written permission.
+- it is provided "as is", without warranty. generated material needs a qualified person's review.
+
+the python / PyQt6 branch has its own GPL-3.0-only license. the noncommercial terms above do not apply to that branch. GPL allows commercial redistribution too, subject to its conditions.
+
+read the `LICENSE` file for the branch you use. this summary does not replace it.
